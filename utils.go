@@ -7,6 +7,7 @@ import (
 	"net/url"
 	"path/filepath"
 	"regexp"
+	"runtime"
 	"strings"
 
 	"golang.org/x/net/html"
@@ -154,4 +155,11 @@ func getSyncAndRemoveList(remoteList []string, localList []string) ([]string, []
 	}
 
 	return syncList, removeList
+}
+
+func getMemUsage() uint64 {
+	var m runtime.MemStats
+	runtime.ReadMemStats(&m)
+
+	return m.TotalAlloc
 }

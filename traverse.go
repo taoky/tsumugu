@@ -2,6 +2,7 @@ package main
 
 import (
 	"fmt"
+	"io"
 	"io/ioutil"
 	"log"
 	"net/http"
@@ -15,12 +16,13 @@ import (
 )
 
 var StandardClient = &http.Client{
-	Timeout: time.Second * 30,
+	// Timeout: time.Second * 30,
 }
 
 var visited sync.Map
 var boundaryPrefix string
 var boundaryHost string // same domain with different ports is acceptable here.
+var dry = false
 
 func get(url *url.URL) (*http.Response, *url.URL, error) {
 	urlString := url.String()
@@ -57,7 +59,7 @@ func crawl(url *url.URL, queue chan *url.URL, baseFolder string) {
 				toPath := getFileRelPath(finalURL)
 				fromFullPath := filepath.Join(baseFolder, fromPath)
 				toFullPath := filepath.Join(baseFolder, toPath)
-				if fromPath != toPath {
+				if fromFullPath != toFullPath {
 					// create symlink
 					// TODO: replace ln -sr with os.Symlink
 					// TODO: change symlink when it is changed on remote
@@ -118,7 +120,6 @@ func crawl(url *url.URL, queue chan *url.URL, baseFolder string) {
 				downloadPath = filepath.Join(baseFolder, downloadPath)
 				if _, err := os.Stat(downloadPath); os.IsNotExist(err) {
 					fmt.Printf("Downloading %s -> %s\n", finalURL.String(), downloadPath)
-					fmt.Println("Dry run (not actually downloading)")
 
 					out, err := ioutil.TempFile(filepath.Dir(downloadPath), filepath.Base(downloadPath))
 					if err != nil {
@@ -127,11 +128,16 @@ func crawl(url *url.URL, queue chan *url.URL, baseFolder string) {
 					}
 					defer os.Remove(out.Name())
 
-					/* _, err = io.Copy(out, resp.Body)
-					if err != nil {
-						log.Println(err)
-						return
-					} */
+					if !dry {
+						_, err = io.Copy(out, resp.Body)
+						if err != nil {
+							log.Println(err)
+							return
+						}
+					} else {
+						fmt.Println("Dry run (not actually downloading)")
+					}
+
 					err = os.Rename(out.Name(), downloadPath)
 					if err != nil {
 						log.Printf("Move %s -> %s failed: %v\n", out.Name(), downloadPath, err)
@@ -160,13 +166,14 @@ func parseAndPush(targetString string, queue chan *url.URL, addTrailingSlash boo
 }
 
 func main() {
-	workersNum := 5
-	var queue = make(chan *url.URL, workersNum)
+	workersNum := 4
+	var queue = make(chan *url.URL, 1024)
+	var tokens = make(chan struct{}, workersNum)
 	var cnt int64
 
 	baseString := "https://download.docker.com/"
-	parseAndPush("https://download.docker.com/linux/static/", queue, true)
-	parseAndPush("https://download.docker.com/mac/static/", queue, true)
+	// parseAndPush("https://download.docker.com/linux/static/", queue, true)
+	// parseAndPush("https://download.docker.com/mac/static/", queue, true)
 	parseAndPush("https://download.docker.com/win/static/", queue, true)
 
 	base, err := url.Parse(baseString)
@@ -185,15 +192,21 @@ func main() {
 	for {
 		select {
 		case url := <-queue:
-
 			atomic.AddInt64(&cnt, 1)
 			go func() {
+				tokens <- struct{}{}
 				defer atomic.AddInt64(&cnt, -1)
 				crawl(url, queue, "/tmp/test")
+				<-tokens
 			}()
 		default:
 			if atomic.LoadInt64(&cnt) == 0 {
 				goto fin
+			}
+			time.Sleep(50 * time.Millisecond)
+			if getMemUsage() > (2 << 31) {
+				// if larger than 4GB then kill self.
+				log.Fatal("Eating too much memory (> 4GiB). This usually indicates that the website has TOO MANY links, or this program has a serious bug.")
 			}
 		}
 	}
