@@ -5,6 +5,7 @@ import (
 	"io"
 	"net/http"
 	"net/url"
+	"path/filepath"
 	"regexp"
 	"strings"
 
@@ -90,18 +91,14 @@ func IsRedirect(resp *http.Response) bool {
 	return false
 }
 
-func getRedirectLocation(resp *http.Response) (*url.URL, error) {
-	location, err := resp.Location()
-	if err != nil {
-		return nil, err
-	}
-	matched := suffixHTMLMatch.MatchString(location.Path)
+func sanitizeURL(url *url.URL) *url.URL {
+	matched := suffixHTMLMatch.MatchString(url.Path)
 	if !matched {
-		return location, nil
+		return url
 	}
-	newPath := suffixHTMLMatch.ReplaceAllString(location.Path, "$1")
-	location.Path = newPath
-	return location, nil
+	newPath := suffixHTMLMatch.ReplaceAllString(url.Path, "$1")
+	url.Path = newPath
+	return url
 }
 
 func isURLOutOfBoundary(url *url.URL) error {
@@ -116,4 +113,45 @@ func isURLOutOfBoundary(url *url.URL) error {
 
 func getFileRelPath(url *url.URL) string {
 	return strings.TrimPrefix(url.Path, boundaryPrefix)
+}
+
+func generateRemoteFileList(url *url.URL, hrefs []string) []string {
+	var list []string
+	for _, href := range hrefs {
+		newURL, err := urlBuilder(url, href)
+		if err != nil {
+			continue
+		}
+		name := filepath.Base(newURL.Path)
+		list = append(list, name)
+	}
+	return list
+}
+
+func getSyncAndRemoveList(remoteList []string, localList []string) ([]string, []string) {
+	remoteMap := make(map[string]struct{}, len(remoteList))
+	localMap := make(map[string]struct{}, len(localList))
+
+	for _, x := range remoteList {
+		remoteMap[x] = struct{}{}
+	}
+	for _, y := range localList {
+		localMap[y] = struct{}{}
+	}
+
+	var syncList []string
+	var removeList []string
+
+	for _, x := range remoteList {
+		if _, found := localMap[x]; !found {
+			syncList = append(syncList, x)
+		}
+	}
+	for _, y := range localList {
+		if _, found := remoteMap[y]; !found {
+			removeList = append(removeList, y)
+		}
+	}
+
+	return syncList, removeList
 }
