@@ -15,14 +15,23 @@ import (
 	"time"
 )
 
+// StandardClient the default client that traverse uses.
 var StandardClient = &http.Client{
 	// Timeout: time.Second * 30,
 }
 
 var visited sync.Map
 var boundaryPrefix string
+var boundaryPrefixURL *url.URL
 var boundaryHost string // same domain with different ports is acceptable here.
 var dry = false
+var excludeList []string // TODO: Implement exclusion when downloading
+
+// File a simple struct representing local files
+type File struct {
+	name  string
+	isDir bool
+}
 
 func get(url *url.URL) (*http.Response, *url.URL, error) {
 	urlString := url.String()
@@ -74,8 +83,8 @@ func crawl(url *url.URL, queue chan *url.URL, baseFolder string) {
 				}
 				queue <- finalURL
 			} else if IsHTML(resp.Header) {
-				folderPath := getFileRelPath(finalURL)
-				folderPath = filepath.Join(baseFolder, folderPath)
+				folderRelPath := getFileRelPath(finalURL)
+				folderPath := filepath.Join(baseFolder, folderRelPath)
 				err = os.MkdirAll(folderPath, 0755)
 				if err != nil {
 					log.Printf("Create %s failed: %v\n", folderPath, err)
@@ -89,16 +98,17 @@ func crawl(url *url.URL, queue chan *url.URL, baseFolder string) {
 					log.Printf("Error when reading folder %s: %v\n", folderPath, err)
 					return
 				}
-				var localList []string
+				var localList []File
 				for _, file := range localFileInfoList {
-					localList = append(localList, file.Name())
+					localList = append(localList, File{filepath.Join(folderRelPath, file.Name()), file.IsDir()})
 				}
 
-				_, removeList := getSyncAndRemoveList(remoteList, localList)
-				fmt.Println(removeList)
+				syncList, removeList := getSyncAndRemoveList(remoteList, localList)
+				fmt.Println(remoteList, localList)
+				fmt.Println(syncList, removeList)
 				for _, name := range removeList {
 					fullName := filepath.Join(folderPath, name)
-					err = os.Remove(fullName)
+					err = os.RemoveAll(fullName)
 					if err != nil {
 						log.Printf("Failed to remove old file %s: %v\n", fullName, err)
 					} else {
@@ -106,8 +116,8 @@ func crawl(url *url.URL, queue chan *url.URL, baseFolder string) {
 					}
 				}
 
-				for _, href := range hrefs {
-					newURL, err := urlBuilder(finalURL, href)
+				for _, href := range syncList {
+					newURL, err := urlBuilder(boundaryPrefixURL, href)
 					if err != nil {
 						log.Printf("Failed when building URL %s with %s: %v\n", finalURL.String(), href, err)
 					} else {
@@ -184,6 +194,7 @@ func main() {
 	validateEnterpoint(base)
 
 	boundaryPrefix = base.Path
+	boundaryPrefixURL = base
 	boundaryHost = base.Hostname()
 
 	if err != nil {
@@ -204,10 +215,10 @@ func main() {
 				goto fin
 			}
 			time.Sleep(50 * time.Millisecond)
-			if getMemUsage() > (2 << 31) {
-				// if larger than 4GB then kill self.
-				log.Fatal("Eating too much memory (> 4GiB). This usually indicates that the website has TOO MANY links, or this program has a serious bug.")
-			}
+		}
+		if getMemUsage() > (2 << 31) {
+			// if larger than 4GB then kill self.
+			log.Fatal("Eating too much memory (> 4GiB). This usually indicates that the website has TOO MANY links, or this program has a serious bug.")
 		}
 	}
 fin:

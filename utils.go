@@ -5,7 +5,6 @@ import (
 	"io"
 	"net/http"
 	"net/url"
-	"path/filepath"
 	"regexp"
 	"runtime"
 	"strings"
@@ -30,7 +29,7 @@ func getHrefsFromHTML(body io.ReadCloser) []string {
 
 			if current.DataAtom == atom.A {
 				for _, a := range current.Attr {
-					if a.Key == "href" && a.Val != "../" {
+					if a.Key == "href" && a.Val != "../" && a.Val != "Parent Directory" {
 						// fmt.Println(a.Val)
 						hrefs = append(hrefs, a.Val)
 						break
@@ -123,34 +122,37 @@ func generateRemoteFileList(url *url.URL, hrefs []string) []string {
 		if err != nil {
 			continue
 		}
-		name := filepath.Base(newURL.Path)
+		name := getFileRelPath(newURL)
 		list = append(list, name)
 	}
 	return list
 }
 
-func getSyncAndRemoveList(remoteList []string, localList []string) ([]string, []string) {
+func getSyncAndRemoveList(remoteList []string, localList []File) ([]string, []string) {
 	remoteMap := make(map[string]struct{}, len(remoteList))
-	localMap := make(map[string]struct{}, len(localList))
+	localMap := make(map[string]bool, len(localList))
 
 	for _, x := range remoteList {
 		remoteMap[x] = struct{}{}
 	}
 	for _, y := range localList {
-		localMap[y] = struct{}{}
+		localMap[y.name] = y.isDir
 	}
 
 	var syncList []string
 	var removeList []string
 
 	for _, x := range remoteList {
-		if _, found := localMap[x]; !found {
+		isDir, found := localMap[x]
+		if !found {
+			syncList = append(syncList, x)
+		} else if isDir {
 			syncList = append(syncList, x)
 		}
 	}
 	for _, y := range localList {
-		if _, found := remoteMap[y]; !found {
-			removeList = append(removeList, y)
+		if _, found := remoteMap[y.name]; !found {
+			removeList = append(removeList, y.name)
 		}
 	}
 
