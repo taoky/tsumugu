@@ -1,10 +1,12 @@
 package main
 
 import (
+	"flag"
 	"fmt"
 	"io"
 	"io/ioutil"
 	"log"
+	"net"
 	"net/http"
 	"net/url"
 	"os"
@@ -176,9 +178,32 @@ func parseAndPush(targetString string, queue chan *url.URL, addTrailingSlash boo
 }
 
 func main() {
-	workersNum := 4
+	bindIP := flag.String("bind", "", "The IP address that traverse binds to when downloading data.")
+	workersNum := flag.Int("workers", 1, "The number of workers (goroutine for crawling)")
+	flag.Parse()
+
+	if *bindIP == "" {
+		StandardClient = &http.Client{}
+	} else {
+		localAddr, err := net.ResolveIPAddr("ip", *bindIP)
+		if err != nil {
+			log.Fatal(err)
+		}
+
+		localTCPAddr := net.TCPAddr{
+			IP: localAddr.IP,
+		}
+		StandardClient = &http.Client{
+			Transport: &http.Transport{
+				DialContext: (&net.Dialer{
+					LocalAddr: &localTCPAddr,
+				}).DialContext,
+			},
+		}
+	}
+
 	var queue = make(chan *url.URL, 1024)
-	var tokens = make(chan struct{}, workersNum)
+	var tokens = make(chan struct{}, *workersNum)
 	var cnt int64
 
 	baseString := "https://download.docker.com/"
