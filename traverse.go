@@ -18,9 +18,7 @@ import (
 )
 
 // StandardClient the default client that traverse uses.
-var StandardClient = &http.Client{
-	// Timeout: time.Second * 30,
-}
+var StandardClient *http.Client
 
 var visited sync.Map
 var boundaryPrefix string
