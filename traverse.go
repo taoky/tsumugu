@@ -13,8 +13,6 @@ import (
 	"os/exec"
 	"path/filepath"
 	"sync"
-	"sync/atomic"
-	"time"
 )
 
 // StandardClient the default client that traverse uses.
@@ -26,6 +24,8 @@ var boundaryPrefixURL *url.URL
 var boundaryHost string // same domain with different ports is acceptable here.
 var dry = false
 var excludeList []string // TODO: Implement exclusion when downloading
+var getToken chan struct{}
+var wg = sync.WaitGroup{}
 
 // File a simple struct representing local files
 type File struct {
@@ -34,8 +34,10 @@ type File struct {
 }
 
 func get(url *url.URL) (*http.Response, *url.URL, error) {
+	getToken <- struct{}{}
 	urlString := url.String()
 	resp, err := StandardClient.Get(urlString)
+	<-getToken
 	if err != nil {
 		return nil, url, err
 	}
@@ -48,7 +50,8 @@ func get(url *url.URL) (*http.Response, *url.URL, error) {
 	return resp, resp.Request.URL, nil
 }
 
-func crawl(url *url.URL, queue chan *url.URL, baseFolder string) {
+func crawl(url *url.URL, baseFolder string) {
+	defer wg.Done()
 	fmt.Printf("Handling URL %s\n", url.String())
 	if _, loaded := visited.LoadOrStore(url.String(), true); !loaded {
 		resp, finalURL, err := get(url)
@@ -81,7 +84,8 @@ func crawl(url *url.URL, queue chan *url.URL, baseFolder string) {
 						}
 					}
 				}
-				queue <- finalURL
+				wg.Add(1)
+				go crawl(finalURL, baseFolder)
 			} else if IsHTML(resp.Header) {
 				folderRelPath := getFileRelPath(finalURL)
 				folderPath := filepath.Join(baseFolder, folderRelPath)
@@ -122,7 +126,8 @@ func crawl(url *url.URL, queue chan *url.URL, baseFolder string) {
 						log.Printf("Failed when building URL %s with %s: %v\n", finalURL.String(), href, err)
 					} else {
 						log.Printf("Add %s to queue\n", newURL.String())
-						queue <- newURL
+						wg.Add(1)
+						go crawl(newURL, baseFolder)
 					}
 				}
 			} else {
@@ -163,7 +168,7 @@ func crawl(url *url.URL, queue chan *url.URL, baseFolder string) {
 	}
 }
 
-func parseAndPush(targetString string, queue chan *url.URL, addTrailingSlash bool) error {
+func parseAndPush(targetString string, list *[]*url.URL, addTrailingSlash bool) error {
 	target, err := url.Parse(targetString)
 	if err != nil {
 		return err
@@ -171,7 +176,7 @@ func parseAndPush(targetString string, queue chan *url.URL, addTrailingSlash boo
 	if addTrailingSlash {
 		addTrailingSlashForAbsURL(target)
 	}
-	queue <- target
+	*list = append(*list, target)
 	return nil
 }
 
@@ -200,14 +205,13 @@ func main() {
 		}
 	}
 
-	var queue = make(chan *url.URL, 1024)
-	var tokens = make(chan struct{}, *workersNum)
-	var cnt int64
+	getToken = make(chan struct{}, *workersNum)
+	var list []*url.URL
 
 	baseString := "https://download.docker.com/"
 	// parseAndPush("https://download.docker.com/linux/static/", queue, true)
 	// parseAndPush("https://download.docker.com/mac/static/", queue, true)
-	parseAndPush("https://download.docker.com/win/static/", queue, true)
+	parseAndPush("https://download.docker.com/win/static/", &list, true)
 
 	base, err := url.Parse(baseString)
 	if err != nil {
@@ -223,27 +227,10 @@ func main() {
 	if err != nil {
 		log.Fatal(err)
 	}
-	for {
-		select {
-		case url := <-queue:
-			atomic.AddInt64(&cnt, 1)
-			go func() {
-				tokens <- struct{}{}
-				defer atomic.AddInt64(&cnt, -1)
-				crawl(url, queue, "/tmp/test")
-				<-tokens
-			}()
-		default:
-			if atomic.LoadInt64(&cnt) == 0 {
-				goto fin
-			}
-			time.Sleep(50 * time.Millisecond)
-		}
-		if getMemUsage() > (2 << 31) {
-			// if larger than 4GB then kill self.
-			log.Fatal("Eating too much memory (> 4GiB). This usually indicates that the website has TOO MANY links, or this program has a serious bug.")
-		}
+	for _, url := range list {
+		wg.Add(1)
+		go crawl(url, "/tmp/test")
 	}
-fin:
-	fmt.Println("Finished. Cleaning up...")
+
+	wg.Wait()
 }
