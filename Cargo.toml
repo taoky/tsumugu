@@ -1,0 +1,17 @@
+[package]
+name = "tsumugu"
+version = "0.0.1"
+edition = "2021"
+description = "A HTTP(S) syncing tool with lower overhead, for OSS mirrors"
+
+# See more keys and their definitions at https://doc.rust-lang.org/cargo/reference/manifest.html
+
+[dependencies]
+anyhow = "1.0.71"
+chrono = "0.4.26"
+clap = { version = "4.3.12", features = ["derive"] }
+regex = "1.9.1"
+reqwest = "0.11.18"
+scraper = "0.17.1"
+tokio = { version = "1.29.1", features = ["full"] }
+url = "2.4.0"
