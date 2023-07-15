@@ -15,3 +15,5 @@ reqwest = "0.11.18"
 scraper = "0.17.1"
 tokio = { version = "1.29.1", features = ["full"] }
 url = "2.4.0"
+tracing = "0.1"
+tracing-subscriber = "0.3"

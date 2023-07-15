@@ -1,27 +1,28 @@
 // Module for handling directory listing
 
 use anyhow::Result;
-use chrono::{DateTime, Utc, NaiveDateTime};
+use chrono::{DateTime, FixedOffset, NaiveDateTime, Utc};
 use regex::Regex;
 use reqwest::Client;
 use scraper::{Html, Selector};
+use tracing::{debug, info};
 use url::Url;
 
-#[derive(Debug)]
-enum FileType {
+#[derive(Debug, PartialEq)]
+pub enum FileType {
     File,
     Directory,
 }
 
 #[derive(Debug)]
 pub struct ListItem {
-    url: String,
+    pub url: String,
     name: String,
-    type_: FileType,
+    pub type_: FileType,
     size: Option<u64>,
+    // mtime is parsed from HTML, which is the local datetime of the "server" (not necessarily localtime or UTC)
     mtime: NaiveDateTime,
 }
-
 
 pub async fn get_list(client: &Client, url: &Url) -> Result<Vec<ListItem>> {
     let metadata_regex = Regex::new(r#"(\d{2}-\w{3}-\d{4} \d{2}:\d{2})\s+([\d-]+)$"#).unwrap();
@@ -66,4 +67,40 @@ pub async fn get_list(client: &Client, url: &Url) -> Result<Vec<ListItem>> {
         })
     }
     Ok(items)
+}
+
+pub async fn guess_remote_timezone(client: &Client, file_url: &Url) -> Result<FixedOffset> {
+    assert!(!file_url.as_str().ends_with("/"));
+    // trim after the latest '/'
+    let file_url = file_url.as_str();
+    let base_url = &file_url[..file_url.rfind('/').unwrap() + 1];
+
+    info!("base: {:?}", base_url);
+    info!("file: {:?}", file_url);
+
+    let list = get_list(client, &Url::parse(base_url).unwrap()).await?;
+    debug!("{:?}", list);
+    for item in list {
+        if item.url == file_url {
+            // access file_url with HEAD
+            let resp = client.head(file_url).send().await?;
+            let mtime = resp.headers().get("Last-Modified").unwrap();
+            let mtime = DateTime::parse_from_rfc2822(mtime.to_str().unwrap())?.with_timezone(&Utc);
+
+            // compare how many hours are there between mtime (FixedOffset) and item.mtime (Naive)
+            // assuming that Naive one is UTC
+            let unknown_mtime = DateTime::<Utc>::from_utc(item.mtime, Utc);
+            let offset = unknown_mtime - mtime;
+            let hrs = (offset.num_minutes() as f64 / 60.0).round() as i32;
+
+            // Construct timezone by hrs
+            let timezone = FixedOffset::east_opt(hrs * 3600).unwrap();
+            info!(
+                "html time: {:?}, head time: {:?}, timezone: {:?}",
+                item.mtime, mtime, timezone
+            );
+            return Ok(timezone);
+        }
+    }
+    Err(anyhow::anyhow!("File not found"))
 }
