@@ -8,20 +8,22 @@ use scraper::{Html, Selector};
 use tracing::{debug, info};
 use url::Url;
 
-#[derive(Debug, PartialEq)]
+use crate::utils;
+
+#[derive(Debug, PartialEq, Clone, Copy)]
 pub enum FileType {
     File,
     Directory,
 }
 
-#[derive(Debug)]
+#[derive(Debug, Clone)]
 pub struct ListItem {
-    pub url: String,
-    name: String,
+    pub url: Url,
+    pub name: String,
     pub type_: FileType,
-    size: Option<u64>,
+    pub size: Option<u64>,
     // mtime is parsed from HTML, which is the local datetime of the "server" (not necessarily localtime or UTC)
-    mtime: NaiveDateTime,
+    pub mtime: NaiveDateTime,
 }
 
 pub async fn get_list(client: &Client, url: &Url) -> Result<Vec<ListItem>> {
@@ -34,12 +36,12 @@ pub async fn get_list(client: &Client, url: &Url) -> Result<Vec<ListItem>> {
     for element in document.select(&selector) {
         let href = element.value().attr("href").unwrap();
         let href = url.join(href).unwrap();
-        let href = href.as_str();
         let name = element.text().collect::<Vec<_>>().join("");
-        if name == "../" {
+        let name = name.trim_end_matches('/');
+        if name == ".." {
             continue;
         }
-        let type_ = if href.ends_with('/') {
+        let type_ = if href.as_str().ends_with('/') {
             FileType::Directory
         } else {
             FileType::File
@@ -59,8 +61,8 @@ pub async fn get_list(client: &Client, url: &Url) -> Result<Vec<ListItem>> {
         let size = metadata.get(2).unwrap().as_str().parse::<u64>().ok();
         // println!("{} {} {:?} {} {:?}", href, name, type_, date, size);
         items.push(ListItem {
-            url: href.to_string(),
-            name,
+            url: href,
+            name: name.to_string(),
             type_,
             size,
             mtime: date,
@@ -69,23 +71,23 @@ pub async fn get_list(client: &Client, url: &Url) -> Result<Vec<ListItem>> {
     Ok(items)
 }
 
-pub async fn guess_remote_timezone(client: &Client, file_url: &Url) -> Result<FixedOffset> {
-    assert!(!file_url.as_str().ends_with("/"));
+pub async fn guess_remote_timezone(client: &Client, file_url: Url) -> Result<FixedOffset> {
+    assert!(!file_url.as_str().ends_with('/'));
     // trim after the latest '/'
-    let file_url = file_url.as_str();
-    let base_url = &file_url[..file_url.rfind('/').unwrap() + 1];
+    // TODO: improve this
+    let file_url_str = file_url.as_str();
+    let base_url = Url::parse(&file_url_str[..file_url_str.rfind('/').unwrap() + 1]).unwrap();
 
     info!("base: {:?}", base_url);
     info!("file: {:?}", file_url);
 
-    let list = get_list(client, &Url::parse(base_url).unwrap()).await?;
+    let list = get_list(client, &base_url).await?;
     debug!("{:?}", list);
     for item in list {
         if item.url == file_url {
             // access file_url with HEAD
             let resp = client.head(file_url).send().await?;
-            let mtime = resp.headers().get("Last-Modified").unwrap();
-            let mtime = DateTime::parse_from_rfc2822(mtime.to_str().unwrap())?.with_timezone(&Utc);
+            let mtime = utils::get_response_mtime(&resp)?;
 
             // compare how many hours are there between mtime (FixedOffset) and item.mtime (Naive)
             // assuming that Naive one is UTC
