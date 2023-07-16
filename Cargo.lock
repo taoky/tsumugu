@@ -109,6 +109,17 @@ source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "9c7d0618f0e0b7e8ff11427422b64564d5fb0be1940354bfe2e0529b18a9d9b8"
 
 [[package]]
+name = "async-trait"
+version = "0.1.71"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "a564d521dd56509c4c47480d00b80ee55f7e385ae48db5744c67ad50c92d2ebf"
+dependencies = [
+ "proc-macro2",
+ "quote",
+ "syn 2.0.25",
+]
+
+[[package]]
 name = "autocfg"
 version = "1.1.0"
 source = "registry+https://github.com/rust-lang/crates.io-index"
@@ -1624,6 +1635,7 @@ name = "tsumugu"
 version = "0.0.1"
 dependencies = [
  "anyhow",
+ "async-trait",
  "chrono",
  "clap",
  "filetime",

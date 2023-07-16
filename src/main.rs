@@ -1,12 +1,13 @@
-use std::{collections::VecDeque, fs::File, io::{copy, Write}, path::Path};
+use std::{collections::VecDeque, fs::File, io::Write, path::Path};
 
 use tracing::{info, warn};
 use url::Url;
 
 mod list;
+mod parser;
 use list::ListItem;
 
-use crate::compare::should_download;
+use crate::{compare::should_download, parser::Parser};
 
 mod compare;
 mod utils;
@@ -30,8 +31,10 @@ async fn main() {
         .user_agent("tsumugu 0.0.1")
         .build()
         .unwrap();
+    let parser = parser::nginx::NginxListingParser::default();
 
     let timezone = list::guess_remote_timezone(
+        &parser,
         &client,
         Url::parse("https://mirrors.ustc.edu.cn/monitoring-plugins/timestamp").unwrap(),
     )
@@ -61,7 +64,7 @@ async fn main() {
         match task.task {
             TaskType::Listing => {
                 info!("Listing {}", task.url);
-                let items = list::get_list(&client, &task.url).await.unwrap();
+                let items = parser.get_list(&client, &task.url).await.unwrap();
                 for item in items {
                     if item.type_ == list::FileType::Directory {
                         let mut relative = task.relative.clone();
