@@ -2,7 +2,7 @@ use std::{
     collections::HashSet,
     fs::File,
     io::Write,
-    path::Path,
+    path::PathBuf,
     sync::{
         atomic::{AtomicUsize, Ordering},
         Arc, Mutex,
@@ -46,8 +46,28 @@ struct Args {
     #[clap(long, default_value = "tsumugu")]
     user_agent: String,
 
+    /// Do not download files and cleanup.
     #[clap(long)]
     dry_run: bool,
+
+    #[clap(long, default_value_t = 2)]
+    threads: usize,
+
+    #[clap(long)]
+    no_delete: bool,
+
+    #[clap(long, default_value_t = 100)]
+    max_delete: usize,
+
+    #[clap(value_parser)]
+    upstream: Url,
+
+    #[clap(value_parser)]
+    local: PathBuf,
+
+    /// Default: auto. You can set a valid URL for guessing, or an invalid one for disabling.
+    #[clap(long)]
+    timezone_file: Option<String>,
 }
 
 fn main() {
@@ -62,6 +82,7 @@ fn main() {
         .init();
 
     let args = Args::parse();
+    debug!("{:?}", args);
 
     let client = reqwest::blocking::Client::builder()
         .user_agent(args.user_agent.clone())
@@ -76,27 +97,51 @@ fn main() {
         .build()
         .unwrap();
 
-    let timezone = list::guess_remote_timezone(
-        &parser,
-        &client,
-        Url::parse("https://mirrors.ustc.edu.cn/monitoring-plugins/timestamp").unwrap(),
-    );
-    let timezone = match timezone {
-        Ok(tz) => Some(tz),
-        Err(e) => {
-            warn!("Failed to guess timezone: {:?}", e);
-            None
+    // Check if to guess timezone
+    let timezone_file = match args.timezone_file {
+        Some(f) => match Url::parse(&f) {
+            Ok(url) => Some(url),
+            Err(_) => {
+                warn!("Invalid timezone file URL, disabling timezone guessing");
+                None
+            }
+        },
+        None => {
+            // eek, try getting first file in root index
+            let list = parser.get_list(&client, &args.upstream).unwrap();
+            match list.iter().find(|x| x.type_ == list::FileType::File) {
+                None => {
+                    warn!("No files in root index, disabling timezone guessing");
+                    None
+                }
+                Some(x) => Some(x.url.clone()),
+            }
         }
     };
-    info!("Guessed timezone: {:?}", timezone);
+    let timezone = match timezone_file {
+        Some(timezone_url) => {
+            let timezone = list::guess_remote_timezone(&parser, &client, timezone_url);
+            let timezone = match timezone {
+                Ok(tz) => Some(tz),
+                Err(e) => {
+                    warn!("Failed to guess timezone: {:?}", e);
+                    None
+                }
+            };
+            info!("Guessed timezone: {:?}", timezone);
+            timezone
+        }
+        None => None,
+    };
 
-    let download_dir = Path::new("/tmp/tsumugu/");
-    std::fs::create_dir_all(download_dir).unwrap();
+    let download_dir = args.local.as_path();
+    if !args.dry_run {
+        std::fs::create_dir_all(download_dir).unwrap();
+    }
 
     let remote_list = Arc::new(Mutex::new(HashSet::new()));
 
-    const THREADS_NUM: usize = 2;
-    let workers: Vec<_> = (0..THREADS_NUM)
+    let workers: Vec<_> = (0..args.threads)
         .map(|_| Worker::<Task>::new_fifo())
         .collect();
     let stealers: Vec<_> = workers.iter().map(|w| w.stealer()).collect();
@@ -105,7 +150,7 @@ fn main() {
     global.push(Task {
         task: TaskType::Listing,
         relative: vec![],
-        url: Url::parse("https://mirrors.ustc.edu.cn/monitoring-plugins/").unwrap(),
+        url: args.upstream,
     });
 
     let active_cnt = AtomicUsize::new(0);
@@ -168,7 +213,9 @@ fn main() {
                             }
                             TaskType::Download(item) => {
                                 // create path in case for first sync
-                                std::fs::create_dir_all(&cwd).unwrap();
+                                if !args.dry_run {
+                                    std::fs::create_dir_all(&cwd).unwrap();
+                                }
                                 let expected_path = cwd.join(&item.name);
                                 {
                                     remote_list.lock().unwrap().insert(expected_path.clone());
@@ -199,7 +246,6 @@ fn main() {
                                         let mtime = utils::get_async_response_mtime(&resp).unwrap();
                                         let mut dest_file = File::create(&expected_path).unwrap();
                                         let mut stream = resp.bytes_stream();
-                                        // let mut downloaded_bytes = 0;
 
                                         while let Some(item) = stream.next().await {
                                             let chunk = item.unwrap();
@@ -252,11 +298,26 @@ fn main() {
     });
 
     // Removing files that are not in remote list
+    let mut del_cnt = 0;
     for entry in walkdir::WalkDir::new(download_dir).contents_first(true) {
         let entry = entry.unwrap();
         let path = entry.path();
         if !remote_list.lock().unwrap().contains(&path.to_path_buf()) {
             info!("{:?} not in remote", path);
+            if !args.dry_run && !args.no_delete {
+                // always make sure that we are deleting the right thing
+                if del_cnt >= args.max_delete {
+                    info!("Exceeding max delete count, aborting");
+                    break;
+                }
+                del_cnt += 1;
+                assert!(path.starts_with(download_dir));
+                if entry.file_type().is_dir() {
+                    std::fs::remove_dir(path).unwrap();
+                } else {
+                    std::fs::remove_file(path).unwrap();
+                }
+            }
         }
     }
 }
