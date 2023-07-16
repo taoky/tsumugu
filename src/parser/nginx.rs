@@ -1,4 +1,4 @@
-use crate::list::{FileType, ListItem};
+use crate::{list::{FileType, ListItem}, utils::get};
 use chrono::NaiveDateTime;
 use scraper::{Html, Selector};
 
@@ -25,7 +25,7 @@ impl Parser for NginxListingParser {
         client: &reqwest::blocking::Client,
         url: &url::Url,
     ) -> Result<Vec<ListItem>> {
-        let body = client.get(url.as_str()).send()?.text()?;
+        let body = get(client, url.clone())?.text()?;
         let document = Html::parse_document(&body);
         let selector = Selector::parse("a").unwrap();
         let mut items = Vec::new();

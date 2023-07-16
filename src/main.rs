@@ -12,7 +12,7 @@ use std::{
 use clap::Parser;
 use crossbeam_deque::{Injector, Worker};
 use futures_util::StreamExt;
-use indicatif::{ProgressBar, ProgressStyle, MultiProgress};
+use indicatif::{MultiProgress, ProgressBar, ProgressStyle};
 
 use tracing::{debug, info, warn};
 use tracing_subscriber::EnvFilter;
@@ -22,7 +22,11 @@ mod list;
 mod parser;
 use list::ListItem;
 
-use crate::{compare::should_download, parser::Parser as HTMLParser};
+use crate::{
+    compare::{should_download_by_list, should_download_by_head},
+    parser::Parser as HTMLParser,
+    utils::{again, again_async, get_async, head},
+};
 
 mod compare;
 mod utils;
@@ -68,6 +72,21 @@ struct Args {
     /// Default: auto. You can set a valid URL for guessing, or an invalid one for disabling.
     #[clap(long)]
     timezone_file: Option<String>,
+
+    #[clap(long, default_value_t = 3)]
+    retry: usize,
+
+    #[clap(long)]
+    head_before_get: bool,
+}
+
+macro_rules! build_client {
+    ($client: ty, $args: expr) => {
+        <$client>::builder()
+            .user_agent($args.user_agent.clone())
+            .build()
+            .unwrap()
+    };
 }
 
 fn main() {
@@ -84,18 +103,12 @@ fn main() {
     let args = Args::parse();
     debug!("{:?}", args);
 
-    let client = reqwest::blocking::Client::builder()
-        .user_agent(args.user_agent.clone())
-        .build()
-        .unwrap();
+    let client = build_client!(reqwest::blocking::Client, args);
     let parser = parser::nginx::NginxListingParser::default();
 
     // async support
     let runtime = tokio::runtime::Runtime::new().unwrap();
-    let async_client = reqwest::Client::builder()
-        .user_agent(args.user_agent)
-        .build()
-        .unwrap();
+    let async_client = build_client!(reqwest::Client, args);
 
     let mprogress = MultiProgress::new();
 
@@ -194,7 +207,8 @@ fn main() {
                                 {
                                     remote_list.lock().unwrap().insert(cwd.clone());
                                 }
-                                let items = parser.get_list(&client, &task.url).unwrap();
+
+                                let items = again(|| parser.get_list(&client, &task.url), args.retry).unwrap();
                                 for item in items {
                                     if item.type_ == list::FileType::Directory {
                                         let mut relative = task.relative.clone();
@@ -224,22 +238,24 @@ fn main() {
                                 {
                                     remote_list.lock().unwrap().insert(expected_path.clone());
                                 }
-                                if !should_download(&expected_path, &item, timezone) {
+                                if !should_download_by_list(&expected_path, &item, timezone) {
                                     info!("Skipping {}", task.url);
                                     continue;
+                                }
+
+                                if args.head_before_get {
+                                    let resp = again(|| head(&client, item.url.clone()), args.retry).unwrap();
+                                    if !should_download_by_head(&expected_path, &resp) {
+                                        info!("Skipping (by HEAD) {}", task.url);
+                                        continue;
+                                    }
                                 }
 
                                 if !args.dry_run {
                                     let future = async {
                                         // Here we use async to allow streaming and progress bar
                                         // Ref: https://gist.github.com/giuliano-oliveira/4d11d6b3bb003dba3a1b53f43d81b30d
-                                        let resp = async_client
-                                            .get(item.url.clone())
-                                            .send()
-                                            .await
-                                            .unwrap()
-                                            .error_for_status()
-                                            .unwrap();
+                                        let resp = again_async(|| get_async(&async_client, item.url.clone()), args.retry).await.unwrap();
                                         let total_size = resp.content_length().unwrap();
                                         let pb = mprogress.add(ProgressBar::new(total_size));
                                         pb.set_style(ProgressStyle::default_bar()
@@ -307,7 +323,6 @@ fn main() {
         let entry = entry.unwrap();
         let path = entry.path();
         if !remote_list.lock().unwrap().contains(&path.to_path_buf()) {
-            info!("{:?} not in remote", path);
             if !args.dry_run && !args.no_delete {
                 // always make sure that we are deleting the right thing
                 if del_cnt >= args.max_delete {
@@ -316,11 +331,14 @@ fn main() {
                 }
                 del_cnt += 1;
                 assert!(path.starts_with(download_dir));
+                info!("Deleting {:?}", path);
                 if entry.file_type().is_dir() {
                     std::fs::remove_dir(path).unwrap();
                 } else {
                     std::fs::remove_file(path).unwrap();
                 }
+            } else {
+                info!("{:?} not in remote", path);
             }
         }
     }
