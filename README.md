@@ -4,6 +4,14 @@
 
 Instead of `HEAD`ing every single file, tsumugu parses directory listing HTML and `HEAD`s only the files that do not seem to be up-to-date.
 
+## Design goals
+
+To successfully sync from these domains, where lftp/rclone fails or finds difficulties:
+
+- [ ] http://download.proxmox.com
+- [ ] https://download.docker.com/
+- [ ] https://dl.winehq.org/wine-builds/
+
 ## Usage
 
 todo!()
