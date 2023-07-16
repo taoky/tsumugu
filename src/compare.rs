@@ -3,7 +3,10 @@ use std::path::Path;
 use chrono::{DateTime, FixedOffset, TimeZone, Utc};
 use tracing::{debug, warn};
 
-use crate::{list::{FileType, ListItem}, utils};
+use crate::{
+    list::{FileType, ListItem},
+    utils,
+};
 
 pub fn compare_filetype(fstype: std::fs::FileType, tsumugu_type: &FileType) -> bool {
     match tsumugu_type {
@@ -67,10 +70,7 @@ pub fn should_download_by_list(
     }
 }
 
-pub fn should_download_by_head(
-    path: &Path,
-    resp: &reqwest::blocking::Response,
-) -> bool {
+pub fn should_download_by_head(path: &Path, resp: &reqwest::blocking::Response) -> bool {
     // Construct a valid "ListItem" and pass to should_download_by_list
     debug!("Checking {:?} by HEAD: {:?}", path, resp);
     let item = ListItem {
@@ -82,7 +82,9 @@ pub fn should_download_by_head(
             FileType::File
         },
         size: resp.content_length(),
-        mtime: utils::get_blocking_response_mtime(resp).unwrap().naive_utc(),
+        mtime: utils::get_blocking_response_mtime(resp)
+            .unwrap()
+            .naive_utc(),
     };
     should_download_by_list(path, &item, FixedOffset::east_opt(0))
 }

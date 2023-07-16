@@ -23,7 +23,7 @@ mod parser;
 use list::ListItem;
 
 use crate::{
-    compare::{should_download_by_list, should_download_by_head},
+    compare::{should_download_by_head, should_download_by_list},
     parser::Parser as HTMLParser,
     utils::{again, again_async, get_async, head},
 };

@@ -1,4 +1,7 @@
-use crate::{list::{FileType, ListItem}, utils::get};
+use crate::{
+    list::{FileType, ListItem},
+    utils::get,
+};
 use chrono::NaiveDateTime;
 use scraper::{Html, Selector};
 
