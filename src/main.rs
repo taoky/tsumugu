@@ -12,7 +12,7 @@ use std::{
 use clap::Parser;
 use crossbeam_deque::{Injector, Worker};
 use futures_util::StreamExt;
-use indicatif::{ProgressBar, ProgressStyle};
+use indicatif::{ProgressBar, ProgressStyle, MultiProgress};
 
 use tracing::{debug, info, warn};
 use tracing_subscriber::EnvFilter;
@@ -97,6 +97,8 @@ fn main() {
         .build()
         .unwrap();
 
+    let mprogress = MultiProgress::new();
+
     // Check if to guess timezone
     let timezone_file = match args.timezone_file {
         Some(f) => match Url::parse(&f) {
@@ -170,6 +172,8 @@ fn main() {
 
             let async_client = async_client.clone();
             let runtime = &runtime;
+
+            let mprogress = mprogress.clone();
             scope.spawn(move || {
                 loop {
                     active_cnt.fetch_add(1, Ordering::SeqCst);
@@ -237,7 +241,7 @@ fn main() {
                                             .error_for_status()
                                             .unwrap();
                                         let total_size = resp.content_length().unwrap();
-                                        let pb = ProgressBar::new(total_size);
+                                        let pb = mprogress.add(ProgressBar::new(total_size));
                                         pb.set_style(ProgressStyle::default_bar()
                                             .template("{msg}\n{spinner:.green} [{elapsed_precise}] [{wide_bar:.cyan/blue}] {bytes}/{total_bytes} ({bytes_per_sec}, {eta})").unwrap()
                                             .progress_chars("#>-"));
