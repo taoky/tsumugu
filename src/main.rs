@@ -1,7 +1,17 @@
-use std::{fs::File, io::Write, path::Path, sync::atomic::{AtomicUsize, Ordering, AtomicBool}};
+use std::{
+    collections::HashSet,
+    fs::File,
+    io::Write,
+    path::Path,
+    sync::{
+        atomic::{AtomicUsize, Ordering},
+        Arc, Mutex,
+    },
+};
 
 use crossbeam_deque::{Injector, Worker};
-use tracing::{info, warn, debug};
+use tracing::{debug, info, warn};
+use tracing_subscriber::EnvFilter;
 use url::Url;
 
 mod list;
@@ -27,7 +37,10 @@ struct Task {
 }
 
 fn main() {
-    tracing_subscriber::fmt().with_thread_ids(true).init();
+    tracing_subscriber::fmt()
+        .with_thread_ids(true)
+        .with_env_filter(EnvFilter::from_default_env())
+        .init();
 
     let client = reqwest::blocking::Client::builder()
         .user_agent("tsumugu 0.0.1")
@@ -51,6 +64,8 @@ fn main() {
 
     let download_dir = Path::new("/tmp/tsumugu/");
     std::fs::create_dir_all(download_dir).unwrap();
+
+    let remote_list = Arc::new(Mutex::new(HashSet::new()));
 
     const THREADS_NUM: usize = 2;
     let workers: Vec<_> = (0..THREADS_NUM)
@@ -77,6 +92,8 @@ fn main() {
 
             let active_cnt = &active_cnt;
             let wake = &wake;
+
+            let remote_list = remote_list.clone();
             scope.spawn(move || {
                 loop {
                     active_cnt.fetch_add(1, Ordering::SeqCst);
@@ -94,6 +111,9 @@ fn main() {
                         match task.task {
                             TaskType::Listing => {
                                 info!("Listing {}", task.url);
+                                {
+                                    remote_list.lock().unwrap().insert(cwd.clone());
+                                }
                                 let items = parser.get_list(&client, &task.url).unwrap();
                                 for item in items {
                                     if item.type_ == list::FileType::Directory {
@@ -119,6 +139,9 @@ fn main() {
                                 // create path in case for first sync
                                 std::fs::create_dir_all(&cwd).unwrap();
                                 let expected_path = cwd.join(&item.name);
+                                {
+                                    remote_list.lock().unwrap().insert(expected_path.clone());
+                                }
                                 if !should_download(&expected_path, &item, timezone) {
                                     info!("Skipping {}", task.url);
                                     continue;
@@ -155,12 +178,15 @@ fn main() {
                             let old_wake = wake.load(Ordering::SeqCst);
                             if old_wake > 0 {
                                 let new_wake = old_wake - 1;
-                                if wake.compare_exchange(
-                                    old_wake,
-                                    new_wake,
-                                    Ordering::SeqCst,
-                                    Ordering::SeqCst,
-                                ).is_ok() {
+                                if wake
+                                    .compare_exchange(
+                                        old_wake,
+                                        new_wake,
+                                        Ordering::SeqCst,
+                                        Ordering::SeqCst,
+                                    )
+                                    .is_ok()
+                                {
                                     break;
                                 }
                             }
@@ -171,4 +197,13 @@ fn main() {
             });
         }
     });
+
+    // Removing files that are not in remote list
+    for entry in walkdir::WalkDir::new(download_dir).contents_first(true) {
+        let entry = entry.unwrap();
+        let path = entry.path();
+        if !remote_list.lock().unwrap().contains(&path.to_path_buf()) {
+            info!("{:?} not in remote", path);
+        }
+    }
 }
