@@ -282,21 +282,27 @@ fn main() {
                                         pb.set_message(format!("Downloading {}", item.url));
 
                                         let mtime = utils::get_async_response_mtime(&resp).unwrap();
-                                        let mut dest_file = File::create(&expected_path).unwrap();
-                                        let mut stream = resp.bytes_stream();
 
-                                        while let Some(item) = stream.next().await {
-                                            let chunk = item.unwrap();
-                                            dest_file.write_all(&chunk).unwrap();
-                                            let new = std::cmp::min(pb.position() + (chunk.len() as u64), total_size);
-                                            pb.set_position(new);
+                                        let tmp_path = cwd.join(format!(".tmp.{}", item.name));
+                                        {
+                                            let mut dest_file = File::create(&tmp_path).unwrap();
+                                            let mut stream = resp.bytes_stream();
+
+                                            while let Some(item) = stream.next().await {
+                                                let chunk = item.unwrap();
+                                                dest_file.write_all(&chunk).unwrap();
+                                                let new = std::cmp::min(pb.position() + (chunk.len() as u64), total_size);
+                                                pb.set_position(new);
+                                            }
+                                            filetime::set_file_handle_times(
+                                                &dest_file,
+                                                None,
+                                                Some(filetime::FileTime::from_system_time(mtime.into())),
+                                            )
+                                            .unwrap();
                                         }
-                                        filetime::set_file_handle_times(
-                                            &dest_file,
-                                            None,
-                                            Some(filetime::FileTime::from_system_time(mtime.into())),
-                                        )
-                                        .unwrap();
+                                        // move tmp file to expected path
+                                        std::fs::rename(&tmp_path, &expected_path).unwrap();
                                     };
                                     runtime.block_on(future);
                                 }
