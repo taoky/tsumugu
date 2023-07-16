@@ -2,7 +2,7 @@
 
 use anyhow::Result;
 use chrono::{DateTime, FixedOffset, NaiveDateTime, Utc};
-use reqwest::Client;
+use reqwest::blocking::Client;
 use tracing::{debug, info};
 use url::Url;
 
@@ -25,7 +25,7 @@ pub struct ListItem {
     pub mtime: NaiveDateTime,
 }
 
-pub async fn guess_remote_timezone(
+pub fn guess_remote_timezone(
     parser: &impl parser::Parser,
     client: &Client,
     file_url: Url,
@@ -39,12 +39,12 @@ pub async fn guess_remote_timezone(
     info!("base: {:?}", base_url);
     info!("file: {:?}", file_url);
 
-    let list = parser.get_list(client, &base_url).await?;
+    let list = parser.get_list(client, &base_url)?;
     debug!("{:?}", list);
     for item in list {
         if item.url == file_url {
             // access file_url with HEAD
-            let resp = client.head(file_url).send().await?;
+            let resp = client.head(file_url).send()?;
             let mtime = utils::get_response_mtime(&resp)?;
 
             // compare how many hours are there between mtime (FixedOffset) and item.mtime (Naive)

@@ -1,5 +1,4 @@
 use crate::list::{FileType, ListItem};
-use async_trait::async_trait;
 use chrono::NaiveDateTime;
 use scraper::{Html, Selector};
 
@@ -7,6 +6,7 @@ use super::Parser;
 use anyhow::Result;
 use regex::Regex;
 
+#[derive(Debug, Clone)]
 pub struct NginxListingParser {
     metadata_regex: Regex,
 }
@@ -19,10 +19,13 @@ impl Default for NginxListingParser {
     }
 }
 
-#[async_trait]
 impl Parser for NginxListingParser {
-    async fn get_list(&self, client: &reqwest::Client, url: &url::Url) -> Result<Vec<ListItem>> {
-        let body = client.get(url.as_str()).send().await?.text().await?;
+    fn get_list(
+        &self,
+        client: &reqwest::blocking::Client,
+        url: &url::Url,
+    ) -> Result<Vec<ListItem>> {
+        let body = client.get(url.as_str()).send()?.text()?;
         let document = Html::parse_document(&body);
         let selector = Selector::parse("a").unwrap();
         let mut items = Vec::new();
