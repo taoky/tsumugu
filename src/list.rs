@@ -45,7 +45,7 @@ pub fn guess_remote_timezone(
         if item.url == file_url {
             // access file_url with HEAD
             let resp = client.head(file_url).send()?;
-            let mtime = utils::get_response_mtime(&resp)?;
+            let mtime = utils::get_blocking_response_mtime(&resp)?;
 
             // compare how many hours are there between mtime (FixedOffset) and item.mtime (Naive)
             // assuming that Naive one is UTC

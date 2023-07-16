@@ -9,7 +9,11 @@ use std::{
     },
 };
 
+use clap::Parser;
 use crossbeam_deque::{Injector, Worker};
+use futures_util::StreamExt;
+use indicatif::{ProgressBar, ProgressStyle};
+
 use tracing::{debug, info, warn};
 use tracing_subscriber::EnvFilter;
 use url::Url;
@@ -18,7 +22,7 @@ mod list;
 mod parser;
 use list::ListItem;
 
-use crate::{compare::should_download, parser::Parser};
+use crate::{compare::should_download, parser::Parser as HTMLParser};
 
 mod compare;
 mod utils;
@@ -36,17 +40,41 @@ struct Task {
     url: Url,
 }
 
+#[derive(Parser, Debug)]
+#[clap(about, version)]
+struct Args {
+    #[clap(long, default_value = "tsumugu")]
+    user_agent: String,
+
+    #[clap(long)]
+    dry_run: bool,
+}
+
 fn main() {
+    // https://github.com/tokio-rs/tracing/issues/735#issuecomment-957884930
+    std::env::set_var(
+        "RUST_LOG",
+        format!("info,{}", std::env::var("RUST_LOG").unwrap_or_default()),
+    );
     tracing_subscriber::fmt()
         .with_thread_ids(true)
         .with_env_filter(EnvFilter::from_default_env())
         .init();
 
+    let args = Args::parse();
+
     let client = reqwest::blocking::Client::builder()
-        .user_agent("tsumugu 0.0.1")
+        .user_agent(args.user_agent.clone())
         .build()
         .unwrap();
     let parser = parser::nginx::NginxListingParser::default();
+
+    // async support
+    let runtime = tokio::runtime::Runtime::new().unwrap();
+    let async_client = reqwest::Client::builder()
+        .user_agent(args.user_agent)
+        .build()
+        .unwrap();
 
     let timezone = list::guess_remote_timezone(
         &parser,
@@ -94,6 +122,9 @@ fn main() {
             let wake = &wake;
 
             let remote_list = remote_list.clone();
+
+            let async_client = async_client.clone();
+            let runtime = &runtime;
             scope.spawn(move || {
                 loop {
                     active_cnt.fetch_add(1, Ordering::SeqCst);
@@ -146,23 +177,45 @@ fn main() {
                                     info!("Skipping {}", task.url);
                                     continue;
                                 }
-                                info!("Downloading {}", task.url);
-                                let resp = client
-                                    .get(item.url)
-                                    .send()
-                                    .unwrap()
-                                    .error_for_status()
-                                    .unwrap();
-                                let mtime = utils::get_response_mtime(&resp).unwrap();
-                                let mut dest_file = File::create(&expected_path).unwrap();
-                                let content = resp.bytes().unwrap();
-                                dest_file.write_all(&content).unwrap();
-                                filetime::set_file_handle_times(
-                                    &dest_file,
-                                    None,
-                                    Some(filetime::FileTime::from_system_time(mtime.into())),
-                                )
-                                .unwrap();
+
+                                if !args.dry_run {
+                                    let future = async {
+                                        // Here we use async to allow streaming and progress bar
+                                        // Ref: https://gist.github.com/giuliano-oliveira/4d11d6b3bb003dba3a1b53f43d81b30d
+                                        let resp = async_client
+                                            .get(item.url.clone())
+                                            .send()
+                                            .await
+                                            .unwrap()
+                                            .error_for_status()
+                                            .unwrap();
+                                        let total_size = resp.content_length().unwrap();
+                                        let pb = ProgressBar::new(total_size);
+                                        pb.set_style(ProgressStyle::default_bar()
+                                            .template("{msg}\n{spinner:.green} [{elapsed_precise}] [{wide_bar:.cyan/blue}] {bytes}/{total_bytes} ({bytes_per_sec}, {eta})").unwrap()
+                                            .progress_chars("#>-"));
+                                        pb.set_message(format!("Downloading {}", item.url));
+
+                                        let mtime = utils::get_async_response_mtime(&resp).unwrap();
+                                        let mut dest_file = File::create(&expected_path).unwrap();
+                                        let mut stream = resp.bytes_stream();
+                                        // let mut downloaded_bytes = 0;
+
+                                        while let Some(item) = stream.next().await {
+                                            let chunk = item.unwrap();
+                                            dest_file.write_all(&chunk).unwrap();
+                                            let new = std::cmp::min(pb.position() + (chunk.len() as u64), total_size);
+                                            pb.set_position(new);
+                                        }
+                                        filetime::set_file_handle_times(
+                                            &dest_file,
+                                            None,
+                                            Some(filetime::FileTime::from_system_time(mtime.into())),
+                                        )
+                                        .unwrap();
+                                    };
+                                    runtime.block_on(future);
+                                }
                             }
                         }
                     }
