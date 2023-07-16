@@ -14,7 +14,7 @@ use crossbeam_deque::{Injector, Worker};
 use futures_util::StreamExt;
 use indicatif::{MultiProgress, ProgressBar, ProgressStyle};
 
-use tracing::{debug, info, warn};
+use tracing::{debug, info, warn, error};
 use tracing_subscriber::EnvFilter;
 use url::Url;
 
@@ -208,7 +208,13 @@ fn main() {
                                     remote_list.lock().unwrap().insert(cwd.clone());
                                 }
 
-                                let items = again(|| parser.get_list(&client, &task.url), args.retry).unwrap();
+                                let items = match again(|| parser.get_list(&client, &task.url), args.retry) {
+                                    Ok(items) => items,
+                                    Err(e) => {
+                                        error!("Failed to list {}: {:?}", task.url, e);
+                                        continue;
+                                    }
+                                };
                                 for item in items {
                                     if item.type_ == list::FileType::Directory {
                                         let mut relative = task.relative.clone();
@@ -244,7 +250,13 @@ fn main() {
                                 }
 
                                 if args.head_before_get {
-                                    let resp = again(|| head(&client, item.url.clone()), args.retry).unwrap();
+                                    let resp = match again(|| head(&client, item.url.clone()), args.retry) {
+                                        Ok(resp) => resp,
+                                        Err(e) => {
+                                            error!("Failed to HEAD {}: {:?}", task.url, e);
+                                            continue;
+                                        }
+                                    };
                                     if !should_download_by_head(&expected_path, &resp) {
                                         info!("Skipping (by HEAD) {}", task.url);
                                         continue;
@@ -255,7 +267,13 @@ fn main() {
                                     let future = async {
                                         // Here we use async to allow streaming and progress bar
                                         // Ref: https://gist.github.com/giuliano-oliveira/4d11d6b3bb003dba3a1b53f43d81b30d
-                                        let resp = again_async(|| get_async(&async_client, item.url.clone()), args.retry).await.unwrap();
+                                        let resp = match again_async(|| get_async(&async_client, item.url.clone()), args.retry).await {
+                                            Ok(resp) => resp,
+                                            Err(e) => {
+                                                error!("Failed to GET {}: {:?}", task.url, e);
+                                                return;
+                                            }
+                                        };
                                         let total_size = resp.content_length().unwrap();
                                         let pb = mprogress.add(ProgressBar::new(total_size));
                                         pb.set_style(ProgressStyle::default_bar()
@@ -319,10 +337,11 @@ fn main() {
 
     // Removing files that are not in remote list
     let mut del_cnt = 0;
+    let remote_list = remote_list.lock().unwrap();
     for entry in walkdir::WalkDir::new(download_dir).contents_first(true) {
         let entry = entry.unwrap();
         let path = entry.path();
-        if !remote_list.lock().unwrap().contains(&path.to_path_buf()) {
+        if !remote_list.contains(&path.to_path_buf()) {
             if !args.dry_run && !args.no_delete {
                 // always make sure that we are deleting the right thing
                 if del_cnt >= args.max_delete {
