@@ -37,8 +37,13 @@ impl Parser for NginxListingParser {
                 Some(href) => href,
                 None => continue,
             };
+            // It's not proper to get filename by <a> text
+            // As when it is too long, this could happen:
+            // ceph-immutable-object-cache_17.2.6-pve1+3_amd64..> 03-May-2023 23:52              150048
+            // So we should get filename from href
+            let name: String = url::form_urlencoded::parse(href.as_bytes()).map(|(k, v)| [k, v].concat()).collect();
             let href = url.join(href)?;
-            let name = element.text().collect::<Vec<_>>().join("");
+            
             let name = name.trim_end_matches('/');
             if name == ".." {
                 continue;
