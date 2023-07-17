@@ -1,5 +1,7 @@
 // Module for handling directory listing
 
+use std::fmt::Display;
+
 use anyhow::Result;
 use chrono::{DateTime, FixedOffset, NaiveDateTime, Utc};
 use reqwest::blocking::Client;
@@ -23,6 +25,25 @@ pub struct ListItem {
     pub size: Option<u64>,
     // mtime is parsed from HTML, which is the local datetime of the "server" (not necessarily localtime or UTC)
     pub mtime: NaiveDateTime,
+}
+
+impl Display for ListItem {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        let size_str = match self.size {
+            Some(size) => size.to_string(),
+            None => String::from("(none)"),
+        };
+        let mtime_str = self.mtime.format("%Y-%m-%d %H:%M:%S").to_string();
+        write!(
+            f,
+            "{} {:?} {} {} {}",
+            self.url,
+            self.type_,
+            size_str,
+            mtime_str,
+            self.name
+        )
+    }
 }
 
 pub fn guess_remote_timezone(

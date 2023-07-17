@@ -9,7 +9,7 @@ use std::{
     },
 };
 
-use clap::Parser;
+use clap::{Parser, Subcommand};
 use crossbeam_deque::{Injector, Worker};
 use futures_util::StreamExt;
 use indicatif::{MultiProgress, ProgressBar, ProgressStyle};
@@ -45,8 +45,21 @@ struct Task {
 }
 
 #[derive(Parser, Debug)]
-#[clap(about, version)]
-struct Args {
+#[command(about, version)]
+#[command(propagate_version = true)]
+struct Cli {
+    #[command(subcommand)]
+    command: Commands,
+}
+
+#[derive(Subcommand, Debug)]
+enum Commands {
+    Sync(SyncArgs),
+    List(ListArgs),
+}
+
+#[derive(Parser, Debug)]
+struct SyncArgs {
     #[clap(long, default_value = "tsumugu")]
     user_agent: String,
 
@@ -80,6 +93,15 @@ struct Args {
     head_before_get: bool,
 }
 
+#[derive(Parser, Debug)]
+struct ListArgs {
+    #[clap(long, default_value = "tsumugu")]
+    user_agent: String,
+
+    #[clap(value_parser)]
+    upstream: Url,
+}
+
 macro_rules! build_client {
     ($client: ty, $args: expr) => {
         <$client>::builder()
@@ -100,7 +122,19 @@ fn main() {
         .with_env_filter(EnvFilter::from_default_env())
         .init();
 
-    let args = Args::parse();
+    let args = Cli::parse();
+    let args = match args.command {
+        Commands::Sync(args) => args,
+        Commands::List(args) => {
+            let client = build_client!(reqwest::blocking::Client, args);
+            let parser = parser::nginx::NginxListingParser::default();
+            let list = parser.get_list(&client, &args.upstream).unwrap();
+            for item in list {
+                println!("{}", item);
+            }
+            return;
+        }
+    };
     debug!("{:?}", args);
 
     let client = build_client!(reqwest::blocking::Client, args);
@@ -358,9 +392,13 @@ fn main() {
                 assert!(path.starts_with(download_dir));
                 info!("Deleting {:?}", path);
                 if entry.file_type().is_dir() {
-                    std::fs::remove_dir(path).unwrap();
+                    if let Err(e) = std::fs::remove_dir(path) {
+                        error!("Failed to remove {:?}: {:?}", path, e);
+                    }
                 } else {
-                    std::fs::remove_file(path).unwrap();
+                    if let Err(e) = std::fs::remove_file(path) {
+                        error!("Failed to remove {:?}: {:?}", path, e);
+                    }
                 }
             } else {
                 info!("{:?} not in remote", path);
