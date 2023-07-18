@@ -37,11 +37,7 @@ impl Display for ListItem {
         write!(
             f,
             "{} {:?} {} {} {}",
-            self.url,
-            self.type_,
-            size_str,
-            mtime_str,
-            self.name
+            self.url, self.type_, size_str, mtime_str, self.name
         )
     }
 }

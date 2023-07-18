@@ -395,10 +395,8 @@ fn main() {
                     if let Err(e) = std::fs::remove_dir(path) {
                         error!("Failed to remove {:?}: {:?}", path, e);
                     }
-                } else {
-                    if let Err(e) = std::fs::remove_file(path) {
-                        error!("Failed to remove {:?}: {:?}", path, e);
-                    }
+                } else if let Err(e) = std::fs::remove_file(path) {
+                    error!("Failed to remove {:?}: {:?}", path, e);
                 }
             } else {
                 info!("{:?} not in remote", path);
