@@ -14,6 +14,7 @@ use crossbeam_deque::{Injector, Worker};
 use futures_util::StreamExt;
 use indicatif::{MultiProgress, ProgressBar, ProgressStyle};
 
+use parser::ParserType;
 use tracing::{debug, error, info, warn};
 use tracing_subscriber::EnvFilter;
 use url::Url;
@@ -91,6 +92,9 @@ struct SyncArgs {
 
     #[clap(long)]
     head_before_get: bool,
+
+    #[clap(long, value_enum, default_value_t = ParserType::Nginx)]
+    parser: ParserType,
 }
 
 #[derive(Parser, Debug)]
@@ -100,14 +104,21 @@ struct ListArgs {
 
     #[clap(value_parser)]
     upstream: Url,
+
+    #[clap(long, value_enum, default_value_t=ParserType::Nginx)]
+    parser: ParserType,
 }
 
 macro_rules! build_client {
-    ($client: ty, $args: expr) => {
-        <$client>::builder()
-            .user_agent($args.user_agent.clone())
-            .build()
-            .unwrap()
+    ($client: ty, $args: expr, $parser: expr) => {
+        {
+            let mut builder = <$client>::builder()
+                .user_agent($args.user_agent.clone());
+            if !$parser.is_auto_redirect() {
+                builder = builder.redirect(reqwest::redirect::Policy::none());
+            }
+            builder.build().unwrap()
+        }
     };
 }
 
@@ -126,8 +137,8 @@ fn main() {
     let args = match args.command {
         Commands::Sync(args) => args,
         Commands::List(args) => {
-            let client = build_client!(reqwest::blocking::Client, args);
-            let parser = parser::nginx::NginxListingParser::default();
+            let parser = args.parser.build();
+            let client = build_client!(reqwest::blocking::Client, args, parser);
             let list = parser.get_list(&client, &args.upstream).unwrap();
             for item in list {
                 println!("{}", item);
@@ -137,12 +148,12 @@ fn main() {
     };
     debug!("{:?}", args);
 
-    let client = build_client!(reqwest::blocking::Client, args);
-    let parser = parser::nginx::NginxListingParser::default();
+    let parser = args.parser.build();
+    let client = build_client!(reqwest::blocking::Client, args, parser);
 
     // async support
     let runtime = tokio::runtime::Runtime::new().unwrap();
-    let async_client = build_client!(reqwest::Client, args);
+    let async_client = build_client!(reqwest::Client, args, parser);
 
     let mprogress = MultiProgress::new();
 

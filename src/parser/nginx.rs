@@ -28,7 +28,10 @@ impl Parser for NginxListingParser {
         client: &reqwest::blocking::Client,
         url: &url::Url,
     ) -> Result<Vec<ListItem>> {
-        let body = get(client, url.clone())?.text()?;
+        let resp = get(client, url.clone())?;
+        let url = resp.url().clone();
+        let body = resp.text()?;
+        assert!(url.path().ends_with('/'), "URL for listing should have a trailing slash");
         let document = Html::parse_document(&body);
         let selector = Selector::parse("a").unwrap();
         let mut items = Vec::new();
