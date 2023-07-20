@@ -15,6 +15,7 @@ use futures_util::StreamExt;
 use indicatif::{MultiProgress, ProgressBar, ProgressStyle};
 
 use parser::ParserType;
+use regex::Regex;
 use tracing::{debug, error, info, warn};
 use tracing_subscriber::EnvFilter;
 use url::Url;
@@ -95,6 +96,9 @@ struct SyncArgs {
 
     #[clap(long, value_enum, default_value_t = ParserType::Nginx)]
     parser: ParserType,
+
+    #[clap(long, value_parser)]
+    exclude: Vec<Regex>,
 }
 
 #[derive(Parser, Debug)]
@@ -217,6 +221,7 @@ fn main() {
     let wake = AtomicUsize::new(0);
 
     std::thread::scope(|scope| {
+        let exclude = args.exclude.clone();
         for worker in workers.into_iter() {
             let stealers = &stealers;
             let parser = parser.clone();
@@ -232,6 +237,7 @@ fn main() {
             let runtime = &runtime;
 
             let mprogress = mprogress.clone();
+            let exclude = exclude.clone();
             scope.spawn(move || {
                 loop {
                     active_cnt.fetch_add(1, Ordering::SeqCst);
@@ -244,8 +250,20 @@ fn main() {
                         .find(|s| !s.is_retry())
                         .and_then(|s| s.success())
                     }) {
-                        let cwd = download_dir.join(task.relative.join("/"));
-                        debug!("CWD: {:?}", cwd);
+                        let relative = task.relative.join("/");
+                        let cwd = download_dir.join(&relative);
+                        debug!("cwd: {:?}, relative: {:?}", cwd, relative);
+                        // exclude this?
+                        let mut stop_task = false;
+                        for excl in exclude.iter() {
+                            if excl.is_match(&relative) {
+                                info!("Skipping excluded {:?}", &relative);
+                                stop_task = true;
+                            }
+                        }
+                        if stop_task {
+                            continue;
+                        }
                         match task.task {
                             TaskType::Listing => {
                                 info!("Listing {}", task.url);
