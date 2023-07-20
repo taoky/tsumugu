@@ -94,4 +94,11 @@ todo!()
 
 The name "tsumugu", and current branch name "pudding", are derived from the manga *A Drift Girl and a Noble Moon*.
 
+<details>
+<summary>And...</summary>
+<a href="https://github.com/taoky/paintings/blob/master/tsumugu_github_comic_20230721.png"><img alt="tsumugu, drawn as simplified version of hitori" src="https://github.com/taoky/paintings/blob/master/tsumugu_github_comic_20230721.png?raw=true"></img></a>
+
+Tsumugu in the appearance of a very simplified version of Hitori (Obviously I am not very good at drawing though).
+</details>
+
 Old (2020), unfinished golang version is named as "traverse", under the `main-old` branch.
