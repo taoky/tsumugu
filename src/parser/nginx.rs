@@ -31,7 +31,10 @@ impl Parser for NginxListingParser {
         let resp = get(client, url.clone())?;
         let url = resp.url().clone();
         let body = resp.text()?;
-        assert!(url.path().ends_with('/'), "URL for listing should have a trailing slash");
+        assert!(
+            url.path().ends_with('/'),
+            "URL for listing should have a trailing slash"
+        );
         let document = Html::parse_document(&body);
         let selector = Selector::parse("a").unwrap();
         let mut items = Vec::new();

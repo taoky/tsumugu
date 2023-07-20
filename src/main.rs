@@ -26,7 +26,6 @@ use list::ListItem;
 
 use crate::{
     compare::{should_download_by_head, should_download_by_list},
-    parser::Parser as HTMLParser,
     utils::{again, again_async, get_async, head},
 };
 
@@ -114,16 +113,13 @@ struct ListArgs {
 }
 
 macro_rules! build_client {
-    ($client: ty, $args: expr, $parser: expr) => {
-        {
-            let mut builder = <$client>::builder()
-                .user_agent($args.user_agent.clone());
-            if !$parser.is_auto_redirect() {
-                builder = builder.redirect(reqwest::redirect::Policy::none());
-            }
-            builder.build().unwrap()
+    ($client: ty, $args: expr, $parser: expr) => {{
+        let mut builder = <$client>::builder().user_agent($args.user_agent.clone());
+        if !$parser.is_auto_redirect() {
+            builder = builder.redirect(reqwest::redirect::Policy::none());
         }
-    };
+        builder.build().unwrap()
+    }};
 }
 
 fn main() {
@@ -224,7 +220,7 @@ fn main() {
         let exclude = args.exclude.clone();
         for worker in workers.into_iter() {
             let stealers = &stealers;
-            let parser = parser.clone();
+            let parser = &parser;
             let client = client.clone();
             let global = &global;
 

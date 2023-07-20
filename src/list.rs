@@ -43,7 +43,7 @@ impl Display for ListItem {
 }
 
 pub fn guess_remote_timezone(
-    parser: &impl parser::Parser,
+    parser: &Box<dyn parser::Parser>,
     client: &Client,
     file_url: Url,
 ) -> Result<FixedOffset> {
