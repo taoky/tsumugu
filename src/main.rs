@@ -313,7 +313,7 @@ fn main() {
                                         }
                                     }
                                     ListResult::Redirect(url) => {
-                                        todo!()
+                                        warn!("(Ignored now) Redirected to {}", url);
                                     }
                                 }
                             }

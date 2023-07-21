@@ -90,7 +90,7 @@ impl FileSize {
         let unit = unit.trim();
 
         let numeric = numeric.parse::<f64>().unwrap();
-        let unit = match unit.chars().nth(0) {
+        let unit = match unit.chars().next() {
             None => SizeUnit::B,
             Some(u) => match u {
                 'b' => SizeUnit::B,
@@ -100,7 +100,7 @@ impl FileSize {
                 't' => SizeUnit::T,
                 'p' => SizeUnit::P,
                 _ => panic!("Unknown unit: {}", unit),
-            }
+            },
         };
 
         (numeric, unit)
