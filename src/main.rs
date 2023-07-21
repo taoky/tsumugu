@@ -180,7 +180,7 @@ fn main() {
     };
     let timezone = match timezone_file {
         Some(timezone_url) => {
-            let timezone = list::guess_remote_timezone(&parser, &client, timezone_url);
+            let timezone = list::guess_remote_timezone(&*parser, &client, timezone_url);
             let timezone = match timezone {
                 Ok(tz) => Some(tz),
                 Err(e) => {

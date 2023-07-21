@@ -12,14 +12,8 @@ use chrono::NaiveDateTime;
 use scraper::{Html, Selector};
 // use tracing::debug;
 
-#[derive(Debug, Clone)]
+#[derive(Debug, Clone, Default)]
 pub struct ApacheF2ListingParser;
-
-impl Default for ApacheF2ListingParser {
-    fn default() -> Self {
-        Self {}
-    }
-}
 
 impl Parser for ApacheF2ListingParser {
     fn get_list(
@@ -71,7 +65,7 @@ impl Parser for ApacheF2ListingParser {
 
             // debug!("{} {} {} {}", href, name, lastmod, size);
 
-            let date = NaiveDateTime::parse_from_str(&lastmod, "%Y-%m-%d %H:%M")?;
+            let date = NaiveDateTime::parse_from_str(lastmod, "%Y-%m-%d %H:%M")?;
 
             items.push(ListItem {
                 url: href,
@@ -81,14 +75,14 @@ impl Parser for ApacheF2ListingParser {
                     if size == "-" {
                         None
                     } else {
-                        let (n_size, unit) = FileSize::get_humanized(&size);
+                        let (n_size, unit) = FileSize::get_humanized(size);
                         Some(FileSize::HumanizedBinary(n_size, unit))
                     }
                 },
                 mtime: date,
             })
         }
-        
+
         Ok(items)
     }
 }

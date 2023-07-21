@@ -1,5 +1,5 @@
 use crate::{
-    list::{FileType, ListItem, FileSize},
+    list::{FileSize, FileType, ListItem},
     utils::get,
 };
 use chrono::NaiveDateTime;

@@ -131,7 +131,7 @@ impl Display for ListItem {
 }
 
 pub fn guess_remote_timezone(
-    parser: &Box<dyn parser::Parser>,
+    parser: &dyn parser::Parser,
     client: &Client,
     file_url: Url,
 ) -> Result<FixedOffset> {

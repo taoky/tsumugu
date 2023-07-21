@@ -5,8 +5,8 @@ use url::Url;
 
 use crate::list::ListItem;
 
-pub mod nginx;
 pub mod apache_f2;
+pub mod nginx;
 
 pub trait Parser: Sync {
     fn get_list(&self, client: &Client, url: &Url) -> Result<Vec<ListItem>>;

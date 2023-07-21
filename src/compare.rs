@@ -4,7 +4,7 @@ use chrono::{DateTime, FixedOffset, TimeZone, Utc};
 use tracing::{debug, warn};
 
 use crate::{
-    list::{FileType, ListItem, FileSize},
+    list::{FileSize, FileType, ListItem},
     utils,
 };
 
@@ -36,19 +36,17 @@ pub fn should_download_by_list(
     }
     let local_size = local_metadata.len();
     let is_size_match = match remote.size.unwrap_or(FileSize::Precise(0)) {
-        FileSize::Precise(size) => {
-            local_size == size
-        }
+        FileSize::Precise(size) => local_size == size,
         // A very rough size check is used here,
         // as it looks like size returned by server may not be very accurate
         FileSize::HumanizedBinary(size, unit) => {
             let base = 1024_f64.powf(unit.get_exp().into());
-            let lsize = local_size as f64 / base as f64;
+            let lsize = local_size as f64 / base;
             (lsize - size).abs() < 2.0
         }
         FileSize::HumanizedDecimal(size, unit) => {
             let base = 1000_f64.powf(unit.get_exp().into());
-            let lsize = local_size as f64 / base as f64;
+            let lsize = local_size as f64 / base;
             (lsize - size).abs() < 2.0
         }
     };
