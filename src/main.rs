@@ -455,7 +455,9 @@ fn main() {
                 // always make sure that we are deleting the right thing
                 if del_cnt >= args.max_delete {
                     info!("Exceeding max delete count, aborting");
-                    break;
+                    // exit with 25 to indicate that the deletion has been aborted
+                    // this is the same as rsync
+                    std::process::exit(25);
                 }
                 del_cnt += 1;
                 assert!(path.starts_with(download_dir));
