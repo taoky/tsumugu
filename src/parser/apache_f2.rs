@@ -6,7 +6,7 @@ use crate::{
     utils::get,
 };
 
-use super::Parser;
+use super::{ListResult, Parser};
 use anyhow::Result;
 use chrono::NaiveDateTime;
 use scraper::{Html, Selector};
@@ -16,11 +16,7 @@ use scraper::{Html, Selector};
 pub struct ApacheF2ListingParser;
 
 impl Parser for ApacheF2ListingParser {
-    fn get_list(
-        &self,
-        client: &reqwest::blocking::Client,
-        url: &url::Url,
-    ) -> Result<Vec<crate::list::ListItem>> {
+    fn get_list(&self, client: &reqwest::blocking::Client, url: &url::Url) -> Result<ListResult> {
         let resp = get(client, url.clone())?;
         let url = resp.url().clone();
         let body = resp.text()?;
@@ -84,7 +80,7 @@ impl Parser for ApacheF2ListingParser {
             })
         }
 
-        Ok(items)
+        Ok(ListResult::List(items))
     }
 }
 
@@ -103,23 +99,28 @@ mod tests {
                 &url::Url::parse("http://localhost:1921/wine-builds").unwrap(),
             )
             .unwrap();
-        assert_eq!(items.len(), 8);
-        assert_eq!(items[0].name, "android");
-        assert_eq!(items[0].type_, FileType::Directory);
-        assert_eq!(items[0].size, None);
-        assert_eq!(
-            items[0].mtime,
-            NaiveDateTime::parse_from_str("2022-01-18 15:14", "%Y-%m-%d %H:%M").unwrap()
-        );
-        assert_eq!(items[6].name, "Release.key");
-        assert_eq!(items[6].type_, FileType::File);
-        assert_eq!(
-            items[6].size,
-            Some(FileSize::HumanizedBinary(3.0, SizeUnit::K))
-        );
-        assert_eq!(
-            items[6].mtime,
-            NaiveDateTime::parse_from_str("2017-03-28 14:54", "%Y-%m-%d %H:%M").unwrap()
-        );
+        match items {
+            ListResult::List(items) => {
+                assert_eq!(items.len(), 8);
+                assert_eq!(items[0].name, "android");
+                assert_eq!(items[0].type_, FileType::Directory);
+                assert_eq!(items[0].size, None);
+                assert_eq!(
+                    items[0].mtime,
+                    NaiveDateTime::parse_from_str("2022-01-18 15:14", "%Y-%m-%d %H:%M").unwrap()
+                );
+                assert_eq!(items[6].name, "Release.key");
+                assert_eq!(items[6].type_, FileType::File);
+                assert_eq!(
+                    items[6].size,
+                    Some(FileSize::HumanizedBinary(3.0, SizeUnit::K))
+                );
+                assert_eq!(
+                    items[6].mtime,
+                    NaiveDateTime::parse_from_str("2017-03-28 14:54", "%Y-%m-%d %H:%M").unwrap()
+                );
+            }
+            _ => unreachable!(),
+        }
     }
 }

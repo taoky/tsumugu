@@ -90,15 +90,17 @@ impl FileSize {
         let unit = unit.trim();
 
         let numeric = numeric.parse::<f64>().unwrap();
-        let unit = match unit {
-            "" => SizeUnit::B,
-            "b" => SizeUnit::B,
-            "k" => SizeUnit::K,
-            "m" => SizeUnit::M,
-            "g" => SizeUnit::G,
-            "t" => SizeUnit::T,
-            "p" => SizeUnit::P,
-            _ => panic!("Unknown unit: {}", unit),
+        let unit = match unit.chars().nth(0) {
+            None => SizeUnit::B,
+            Some(u) => match u {
+                'b' => SizeUnit::B,
+                'k' => SizeUnit::K,
+                'm' => SizeUnit::M,
+                'g' => SizeUnit::G,
+                't' => SizeUnit::T,
+                'p' => SizeUnit::P,
+                _ => panic!("Unknown unit: {}", unit),
+            }
         };
 
         (numeric, unit)
@@ -145,6 +147,12 @@ pub fn guess_remote_timezone(
     info!("file: {:?}", file_url);
 
     let list = parser.get_list(client, &base_url)?;
+    let list = match list {
+        parser::ListResult::Redirect(_) => {
+            return Err(anyhow::anyhow!("Redirection not supported"));
+        }
+        parser::ListResult::List(list) => list,
+    };
     debug!("{:?}", list);
     for item in list {
         if item.url == file_url {

@@ -5,7 +5,7 @@ use crate::{
 use chrono::NaiveDateTime;
 use scraper::{Html, Selector};
 
-use super::Parser;
+use super::{ListResult, Parser};
 use anyhow::Result;
 use regex::Regex;
 
@@ -23,11 +23,7 @@ impl Default for NginxListingParser {
 }
 
 impl Parser for NginxListingParser {
-    fn get_list(
-        &self,
-        client: &reqwest::blocking::Client,
-        url: &url::Url,
-    ) -> Result<Vec<ListItem>> {
+    fn get_list(&self, client: &reqwest::blocking::Client, url: &url::Url) -> Result<ListResult> {
         let resp = get(client, url.clone())?;
         let url = resp.url().clone();
         let body = resp.text()?;
@@ -83,7 +79,7 @@ impl Parser for NginxListingParser {
                 mtime: date,
             })
         }
-        Ok(items)
+        Ok(ListResult::List(items))
     }
 }
 
@@ -100,20 +96,25 @@ mod tests {
                 &url::Url::parse("http://localhost:1921/monitoring-plugins").unwrap(),
             )
             .unwrap();
-        assert_eq!(items.len(), 23);
-        assert_eq!(items[0].name, "archive");
-        assert_eq!(items[0].type_, FileType::Directory);
-        assert_eq!(items[0].size, None);
-        assert_eq!(
-            items[0].mtime,
-            NaiveDateTime::parse_from_str("09-Oct-2015 16:12", "%d-%b-%Y %H:%M").unwrap()
-        );
-        assert_eq!(items[4].name, "monitoring-plugins-2.0.tar.gz");
-        assert_eq!(items[4].type_, FileType::File);
-        assert_eq!(items[4].size, Some(FileSize::Precise(2610000)));
-        assert_eq!(
-            items[4].mtime,
-            NaiveDateTime::parse_from_str("11-Jul-2014 23:17", "%d-%b-%Y %H:%M").unwrap()
-        );
+        match items {
+            ListResult::List(items) => {
+                assert_eq!(items.len(), 23);
+                assert_eq!(items[0].name, "archive");
+                assert_eq!(items[0].type_, FileType::Directory);
+                assert_eq!(items[0].size, None);
+                assert_eq!(
+                    items[0].mtime,
+                    NaiveDateTime::parse_from_str("09-Oct-2015 16:12", "%d-%b-%Y %H:%M").unwrap()
+                );
+                assert_eq!(items[4].name, "monitoring-plugins-2.0.tar.gz");
+                assert_eq!(items[4].type_, FileType::File);
+                assert_eq!(items[4].size, Some(FileSize::Precise(2610000)));
+                assert_eq!(
+                    items[4].mtime,
+                    NaiveDateTime::parse_from_str("11-Jul-2014 23:17", "%d-%b-%Y %H:%M").unwrap()
+                );
+            }
+            _ => unreachable!(),
+        }
     }
 }

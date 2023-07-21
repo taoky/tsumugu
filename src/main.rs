@@ -26,6 +26,7 @@ use list::ListItem;
 
 use crate::{
     compare::{should_download_by_head, should_download_by_list},
+    parser::ListResult,
     utils::{again, again_async, get_async, head},
 };
 
@@ -140,8 +141,15 @@ fn main() {
             let parser = args.parser.build();
             let client = build_client!(reqwest::blocking::Client, args, parser);
             let list = parser.get_list(&client, &args.upstream).unwrap();
-            for item in list {
-                println!("{}", item);
+            match list {
+                ListResult::Redirect(url) => {
+                    println!("Redirect to {}", url);
+                }
+                ListResult::List(list) => {
+                    for item in list {
+                        println!("{}", item);
+                    }
+                }
             }
             return;
         }
@@ -169,12 +177,20 @@ fn main() {
         None => {
             // eek, try getting first file in root index
             let list = parser.get_list(&client, &args.upstream).unwrap();
-            match list.iter().find(|x| x.type_ == list::FileType::File) {
-                None => {
-                    warn!("No files in root index, disabling timezone guessing");
+            match list {
+                ListResult::List(list) => {
+                    match list.iter().find(|x| x.type_ == list::FileType::File) {
+                        None => {
+                            warn!("No files in root index, disabling timezone guessing");
+                            None
+                        }
+                        Some(x) => Some(x.url.clone()),
+                    }
+                }
+                ListResult::Redirect(_) => {
+                    warn!("Root index is a redirect, disabling timezone guessing");
                     None
                 }
-                Some(x) => Some(x.url.clone()),
             }
         }
     };
@@ -274,23 +290,30 @@ fn main() {
                                         continue;
                                     }
                                 };
-                                for item in items {
-                                    if item.type_ == list::FileType::Directory {
-                                        let mut relative = task.relative.clone();
-                                        relative.push(item.name);
-                                        worker.push(Task {
-                                            task: TaskType::Listing,
-                                            relative,
-                                            url: item.url,
-                                        });
-                                        wake.fetch_add(1, Ordering::SeqCst);
-                                    } else {
-                                        worker.push(Task {
-                                            task: TaskType::Download(item.clone()),
-                                            relative: task.relative.clone(),
-                                            url: item.url,
-                                        });
-                                        wake.fetch_add(1, Ordering::SeqCst);
+                                match items {
+                                    ListResult::List(items) => {
+                                        for item in items {
+                                            if item.type_ == list::FileType::Directory {
+                                                let mut relative = task.relative.clone();
+                                                relative.push(item.name);
+                                                worker.push(Task {
+                                                    task: TaskType::Listing,
+                                                    relative,
+                                                    url: item.url,
+                                                });
+                                                wake.fetch_add(1, Ordering::SeqCst);
+                                            } else {
+                                                worker.push(Task {
+                                                    task: TaskType::Download(item.clone()),
+                                                    relative: task.relative.clone(),
+                                                    url: item.url,
+                                                });
+                                                wake.fetch_add(1, Ordering::SeqCst);
+                                            }
+                                        }
+                                    }
+                                    ListResult::Redirect(url) => {
+                                        todo!()
                                     }
                                 }
                             }
