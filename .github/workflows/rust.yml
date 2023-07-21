@@ -14,7 +14,7 @@ jobs:
     - uses: actions/checkout@v3
       with:
         submodules: 'recursive'
-    - uses: actions/cache@v2
+    - uses: actions/cache@v3
       with:
         path: |
           ~/.cargo/registry/index
@@ -26,7 +26,7 @@ jobs:
       run: |
         fixtures/start_fileserver.sh &
 
-    - name: Compile base features
+    - name: Test & Compile
       run: |
         mkdir -p ~/.cargo/{git,registry}
         docker run --rm -t \
@@ -43,6 +43,8 @@ jobs:
             --network=host \
             clux/muslrust:stable \
             cargo build --release
+        sudo chown -R runner ~/.cargo/
+        sudo chown -R runner target/
 
     - name: Deploy - Create and Upload Release
       if: startsWith(github.ref, 'refs/tags/')
