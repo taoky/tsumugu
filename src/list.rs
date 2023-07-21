@@ -105,6 +105,20 @@ impl FileSize {
 
         (numeric, unit)
     }
+
+    pub fn get_estimated(&self) -> u64 {
+        match self {
+            FileSize::Precise(size) => *size,
+            FileSize::HumanizedBinary(size, unit) => {
+                let exp = unit.get_exp();
+                (size * 1024_f64.powi(exp as i32)) as u64
+            }
+            FileSize::HumanizedDecimal(size, unit) => {
+                let exp = unit.get_exp();
+                (size * 1000_f64.powi(exp as i32)) as u64
+            }
+        }
+    }
 }
 
 #[derive(Debug, Clone)]

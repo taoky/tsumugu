@@ -6,7 +6,7 @@ use std::{
     os::unix::fs::symlink,
     path::PathBuf,
     sync::{
-        atomic::{AtomicUsize, Ordering},
+        atomic::{AtomicBool, AtomicU64, AtomicUsize, Ordering},
         Arc, Mutex,
     },
 };
@@ -243,6 +243,12 @@ fn main() {
     let active_cnt = AtomicUsize::new(0);
     let wake = AtomicUsize::new(0);
 
+    let stat_objects = AtomicUsize::new(0);
+    let stat_size = AtomicU64::new(0);
+
+    let failure_listing = AtomicBool::new(false);
+    let failure_downloading = AtomicBool::new(false);
+
     std::thread::scope(|scope| {
         let exclude = args.exclude.clone();
         for worker in workers.into_iter() {
@@ -261,6 +267,12 @@ fn main() {
 
             let mprogress = mprogress.clone();
             let exclude = exclude.clone();
+
+            let stat_objects = &stat_objects;
+            let stat_size = &stat_size;
+
+            let failure_listing = &failure_listing;
+            let failure_downloading = &failure_downloading;
             scope.spawn(move || {
                 loop {
                     active_cnt.fetch_add(1, Ordering::SeqCst);
@@ -298,6 +310,7 @@ fn main() {
                                     Ok(items) => items,
                                     Err(e) => {
                                         error!("Failed to list {}: {:?}", task.url, e);
+                                        failure_listing.store(true, Ordering::SeqCst);
                                         continue;
                                     }
                                 };
@@ -320,7 +333,12 @@ fn main() {
                                                     url: item.url,
                                                 });
                                                 wake.fetch_add(1, Ordering::SeqCst);
+                                                stat_size.fetch_add(match item.size {
+                                                    Some(size) => size.get_estimated(),
+                                                    None => 0,
+                                                }, Ordering::SeqCst);
                                             }
+                                            stat_objects.fetch_add(1, Ordering::SeqCst);
                                         }
                                     }
                                     ListResult::Redirect(target_url) => {
@@ -367,6 +385,7 @@ fn main() {
                                         Ok(resp) => resp,
                                         Err(e) => {
                                             error!("Failed to HEAD {}: {:?}", task.url, e);
+                                            failure_downloading.store(true, Ordering::SeqCst);
                                             continue;
                                         }
                                     };
@@ -384,6 +403,7 @@ fn main() {
                                             Ok(resp) => resp,
                                             Err(e) => {
                                                 error!("Failed to GET {}: {:?}", task.url, e);
+                                                failure_downloading.store(true, Ordering::SeqCst);
                                                 return;
                                             }
                                         };
@@ -454,34 +474,56 @@ fn main() {
         }
     });
 
+    let mut exit_code = 0;
+
     // Removing files that are not in remote list
     let mut del_cnt = 0;
     let remote_list = remote_list.lock().unwrap();
-    for entry in walkdir::WalkDir::new(download_dir).contents_first(true) {
-        let entry = entry.unwrap();
-        let path = entry.path();
-        if !remote_list.contains(&path.to_path_buf()) {
-            if !args.dry_run && !args.no_delete {
-                // always make sure that we are deleting the right thing
-                if del_cnt >= args.max_delete {
-                    info!("Exceeding max delete count, aborting");
-                    // exit with 25 to indicate that the deletion has been aborted
-                    // this is the same as rsync
-                    std::process::exit(25);
-                }
-                del_cnt += 1;
-                assert!(path.starts_with(download_dir));
-                info!("Deleting {:?}", path);
-                if entry.file_type().is_dir() {
-                    if let Err(e) = std::fs::remove_dir(path) {
+    if failure_listing.load(Ordering::SeqCst) {
+        error!("Failed to list remote, not to delete anything");
+        exit_code = 1;
+    } else {
+        for entry in walkdir::WalkDir::new(download_dir).contents_first(true) {
+            let entry = entry.unwrap();
+            let path = entry.path();
+            if !remote_list.contains(&path.to_path_buf()) {
+                if !args.dry_run && !args.no_delete {
+                    // always make sure that we are deleting the right thing
+                    if del_cnt >= args.max_delete {
+                        info!("Exceeding max delete count, aborting");
+                        // exit with 25 to indicate that the deletion has been aborted
+                        // this is the same as rsync
+                        exit_code = 25;
+                        break;
+                    }
+                    del_cnt += 1;
+                    assert!(path.starts_with(download_dir));
+                    info!("Deleting {:?}", path);
+                    if entry.file_type().is_dir() {
+                        if let Err(e) = std::fs::remove_dir(path) {
+                            error!("Failed to remove {:?}: {:?}", path, e);
+                        }
+                    } else if let Err(e) = std::fs::remove_file(path) {
                         error!("Failed to remove {:?}: {:?}", path, e);
                     }
-                } else if let Err(e) = std::fs::remove_file(path) {
-                    error!("Failed to remove {:?}: {:?}", path, e);
+                } else {
+                    info!("{:?} not in remote", path);
                 }
-            } else {
-                info!("{:?} not in remote", path);
             }
         }
     }
+
+    if failure_downloading.load(Ordering::SeqCst) {
+        error!("Failed to download some files");
+        exit_code = 2;
+    }
+
+    // Show stat
+    info!(
+        "(Estimated) Total objects: {}, total size: {}",
+        stat_objects.load(Ordering::SeqCst),
+        humansize::format_size(stat_size.load(Ordering::SeqCst), humansize::BINARY)
+    );
+
+    std::process::exit(exit_code);
 }
