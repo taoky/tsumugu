@@ -6,7 +6,7 @@ use url::Url;
 use crate::list::ListItem;
 
 pub mod nginx;
-pub mod winehq;
+pub mod apache_f2;
 
 pub trait Parser: Sync {
     fn get_list(&self, client: &Client, url: &Url) -> Result<Vec<ListItem>>;
@@ -18,14 +18,14 @@ pub trait Parser: Sync {
 #[derive(ValueEnum, Clone, Debug)]
 pub enum ParserType {
     Nginx,
-    Winehq,
+    ApacheF2,
 }
 
 impl ParserType {
     pub fn build(&self) -> Box<dyn Parser> {
         match self {
             Self::Nginx => Box::<nginx::NginxListingParser>::default(),
-            Self::Winehq => Box::<winehq::WineHQListingParser>::default(),
+            Self::ApacheF2 => Box::<apache_f2::ApacheF2ListingParser>::default(),
         }
     }
 }

@@ -17,12 +17,100 @@ pub enum FileType {
     Directory,
 }
 
+#[derive(Debug, PartialEq, Clone, Copy)]
+pub enum SizeUnit {
+    B,
+    K,
+    M,
+    G,
+    T,
+    P,
+}
+
+impl Display for SizeUnit {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        let unit = match self {
+            SizeUnit::B => "B",
+            SizeUnit::K => "K",
+            SizeUnit::M => "M",
+            SizeUnit::G => "G",
+            SizeUnit::T => "T",
+            SizeUnit::P => "P",
+        };
+        write!(f, "{}", unit)
+    }
+}
+
+impl SizeUnit {
+    pub fn get_exp(&self) -> u32 {
+        match self {
+            SizeUnit::B => 0,
+            SizeUnit::K => 1,
+            SizeUnit::M => 2,
+            SizeUnit::G => 3,
+            SizeUnit::T => 4,
+            SizeUnit::P => 5,
+        }
+    }
+}
+
+#[derive(Debug, Clone, Copy)]
+pub enum FileSize {
+    Precise(u64),
+    /// 1024B -> 1KiB
+    HumanizedBinary(f64, SizeUnit),
+    #[allow(dead_code)]
+    /// 1000B -> 1KB
+    HumanizedDecimal(f64, SizeUnit),
+}
+
+impl Display for FileSize {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        match self {
+            FileSize::Precise(size) => write!(f, "{}", size),
+            FileSize::HumanizedBinary(size, unit) => write!(f, "{} {}", size, unit),
+            FileSize::HumanizedDecimal(size, unit) => write!(f, "{} {}", size, unit),
+        }
+    }
+}
+
+impl FileSize {
+    pub fn get_humanized(s: &str) -> (f64, SizeUnit) {
+        // seperate numeric and unit
+        let mut numeric = String::new();
+        let mut unit = String::new();
+        for c in s.chars() {
+            if c.is_ascii_digit() || c == '.' {
+                numeric.push(c);
+            } else {
+                unit.push(c);
+            }
+        }
+        let unit = unit.to_lowercase();
+        let unit = unit.trim();
+
+        let numeric = numeric.parse::<f64>().unwrap();
+        let unit = match unit {
+            "" => SizeUnit::B,
+            "b" => SizeUnit::B,
+            "k" => SizeUnit::K,
+            "m" => SizeUnit::M,
+            "g" => SizeUnit::G,
+            "t" => SizeUnit::T,
+            "p" => SizeUnit::P,
+            _ => panic!("Unknown unit: {}", unit),
+        };
+
+        (numeric, unit)
+    }
+}
+
 #[derive(Debug, Clone)]
 pub struct ListItem {
     pub url: Url,
     pub name: String,
     pub type_: FileType,
-    pub size: Option<u64>,
+    pub size: Option<FileSize>,
     // mtime is parsed from HTML, which is the local datetime of the "server" (not necessarily localtime or UTC)
     pub mtime: NaiveDateTime,
 }

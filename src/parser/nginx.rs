@@ -1,5 +1,5 @@
 use crate::{
-    list::{FileType, ListItem},
+    list::{FileType, ListItem, FileSize},
     utils::get,
 };
 use chrono::NaiveDateTime;
@@ -79,7 +79,7 @@ impl Parser for NginxListingParser {
                 url: href,
                 name: name.to_string(),
                 type_,
-                size,
+                size: size.map(FileSize::Precise),
                 mtime: date,
             })
         }

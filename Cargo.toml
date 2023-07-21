@@ -7,7 +7,7 @@ description = "A HTTP(S) syncing tool with lower overhead, for OSS mirrors"
 # See more keys and their definitions at https://doc.rust-lang.org/cargo/reference/manifest.html
 
 [dependencies]
-anyhow = "1.0.71"
+anyhow = { version = "1.0.71", features = ["backtrace"] }
 chrono = { version = "0.4.26", default-features = false, features = ["clock"] }
 clap = { version = "4.3.12", features = ["derive"] }
 regex = "1.9.1"
