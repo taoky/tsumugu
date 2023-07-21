@@ -2,6 +2,7 @@ use std::{
     collections::HashSet,
     fs::File,
     io::Write,
+    os::unix::fs::symlink,
     path::PathBuf,
     sync::{
         atomic::{AtomicUsize, Ordering},
@@ -312,8 +313,28 @@ fn main() {
                                             }
                                         }
                                     }
-                                    ListResult::Redirect(url) => {
-                                        warn!("(Ignored now) Redirected to {}", url);
+                                    ListResult::Redirect(target_url) => {
+                                        // This "Redirect" only supports creating symlink of current directory
+                                        info!("Redirected {} -> {}. Try to create a symlink", task.url, target_url);
+                                        if cwd.symlink_metadata().is_ok() {
+                                            info!("Skipping symlink creation because symlink {:?} already exists", cwd);
+                                            continue;
+                                        } else if cwd.exists() {
+                                            warn!("Skipping symlink creation because {:?} already exists, but it is not a symlink", cwd);
+                                            continue;
+                                        }
+                                        // get last segment of target_url
+                                        let target_name = match target_url.split('/').nth_back(1) {
+                                            Some(name) => name,
+                                            None => {
+                                                error!("Failed to get last segment of target_url: {}", target_url);
+                                                continue;
+                                            }
+                                        };
+                                        info!("Try symlink {:?} -> {}", cwd, target_name);
+                                        if let Err(e) = symlink(target_name, cwd.clone()) {
+                                            error!("Failed to create symlink {:?} -> {}: {:?}", cwd, target_name, e);
+                                        }
                                     }
                                 }
                             }

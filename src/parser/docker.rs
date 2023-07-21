@@ -66,8 +66,10 @@ impl Parser for DockerListingParser {
                 continue;
             }
 
+            let displayed_name = element.inner_html();
+
             let (type_, size, date) = {
-                if href.as_str().ends_with('/') {
+                if href.as_str().ends_with('/') || displayed_name.ends_with('/') {
                     (FileType::Directory, None, NaiveDateTime::default())
                 } else {
                     let metadata_raw = element
@@ -82,9 +84,7 @@ impl Parser for DockerListingParser {
                     let date = metadata.get(1).unwrap().as_str();
                     let date = match NaiveDateTime::parse_from_str(date, "%Y-%m-%d %H:%M:%S") {
                         Ok(date) => date,
-                        Err(_) => {
-                            NaiveDateTime::parse_from_str(date, "%Y-%m-%d %H:%M").unwrap()
-                        }
+                        Err(_) => NaiveDateTime::parse_from_str(date, "%Y-%m-%d %H:%M").unwrap(),
                     };
                     let size = metadata.get(3).unwrap().as_str();
                     if size == "-" {
