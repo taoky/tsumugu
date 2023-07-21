@@ -18,8 +18,10 @@ pub struct DockerListingParser {
 impl Default for DockerListingParser {
     fn default() -> Self {
         Self {
-            metadata_regex: Regex::new(r#"(\d{4}-\d{2}-\d{2} \d{2}:\d{2}:\d{2})\s+([\d \w\.]+)$"#)
-                .unwrap(),
+            metadata_regex: Regex::new(
+                r#"(\d{4}-\d{2}-\d{2} \d{2}:\d{2}(:\d{2})?)\s+([\d \w\.-]+)$"#,
+            )
+            .unwrap(),
         }
     }
 }
@@ -57,28 +59,39 @@ impl Parser for DockerListingParser {
             if name == ".." {
                 continue;
             }
-            let type_ = if href.as_str().ends_with('/') {
-                FileType::Directory
-            } else {
-                FileType::File
-            };
-            let (size, date) = if type_ == FileType::File {
-                let metadata_raw = element
-                    .next_sibling()
-                    .unwrap()
-                    .value()
-                    .as_text()
-                    .unwrap()
-                    .to_string();
-                let metadata_raw = metadata_raw.trim();
-                let metadata = self.metadata_regex.captures(metadata_raw).unwrap();
-                let date = metadata.get(1).unwrap().as_str();
-                let date = NaiveDateTime::parse_from_str(date, "%Y-%m-%d %H:%M:%S")?;
-                let size = metadata.get(2).unwrap().as_str();
-                let (n_size, unit) = FileSize::get_humanized(size);
-                (Some(FileSize::HumanizedBinary(n_size, unit)), date)
-            } else {
-                (None, NaiveDateTime::default())
+
+            let (type_, size, date) = {
+                if href.as_str().ends_with('/') {
+                    (FileType::Directory, None, NaiveDateTime::default())
+                } else {
+                    let metadata_raw = element
+                        .next_sibling()
+                        .unwrap()
+                        .value()
+                        .as_text()
+                        .unwrap()
+                        .to_string();
+                    let metadata_raw = metadata_raw.trim();
+                    let metadata = self.metadata_regex.captures(metadata_raw).unwrap();
+                    let date = metadata.get(1).unwrap().as_str();
+                    let date = match NaiveDateTime::parse_from_str(date, "%Y-%m-%d %H:%M:%S") {
+                        Ok(date) => date,
+                        Err(_) => {
+                            NaiveDateTime::parse_from_str(date, "%Y-%m-%d %H:%M").unwrap()
+                        }
+                    };
+                    let size = metadata.get(3).unwrap().as_str();
+                    if size == "-" {
+                        (FileType::Directory, None, date)
+                    } else {
+                        let (n_size, unit) = FileSize::get_humanized(size);
+                        (
+                            FileType::File,
+                            Some(FileSize::HumanizedBinary(n_size, unit)),
+                            date,
+                        )
+                    }
+                }
             };
             items.push(ListItem {
                 url: href,
@@ -113,16 +126,48 @@ mod tests {
                 assert_eq!(items[0].name, "7.0");
                 assert_eq!(items[0].type_, FileType::Directory);
                 assert_eq!(items[0].size, None);
-                assert_eq!(
-                    items[0].mtime,
-                    NaiveDateTime::default()
-                );
+                assert_eq!(items[0].mtime, NaiveDateTime::default());
                 assert_eq!(items[42].name, "docker-ce-staging.repo");
                 assert_eq!(items[42].type_, FileType::File);
-                assert_eq!(items[42].size, Some(FileSize::HumanizedBinary(2.0, SizeUnit::K)));
+                assert_eq!(
+                    items[42].size,
+                    Some(FileSize::HumanizedBinary(2.0, SizeUnit::K))
+                );
                 assert_eq!(
                     items[42].mtime,
-                    NaiveDateTime::parse_from_str("2023-07-07 20:20:56", "%Y-%m-%d %H:%M:%S").unwrap()
+                    NaiveDateTime::parse_from_str("2023-07-07 20:20:56", "%Y-%m-%d %H:%M:%S")
+                        .unwrap()
+                );
+            }
+            _ => unreachable!(),
+        }
+    }
+
+    #[test]
+    fn test_docker_2() {
+        let client = reqwest::blocking::Client::new();
+        let items = DockerListingParser::default()
+            .get_list(
+                &client,
+                &url::Url::parse("http://localhost:1921/docker/armv7l/").unwrap(),
+            )
+            .unwrap();
+        match items {
+            ListResult::List(items) => {
+                assert_eq!(items.len(), 2);
+                assert_eq!(items[0].name, "nightly");
+                assert_eq!(items[0].type_, FileType::Directory);
+                assert_eq!(items[0].size, None);
+                assert_eq!(
+                    items[0].mtime,
+                    NaiveDateTime::parse_from_str("2020-01-21 07:38", "%Y-%m-%d %H:%M").unwrap()
+                );
+                assert_eq!(items[1].name, "test");
+                assert_eq!(items[1].type_, FileType::Directory);
+                assert_eq!(items[1].size, None);
+                assert_eq!(
+                    items[1].mtime,
+                    NaiveDateTime::parse_from_str("2020-01-21 07:38", "%Y-%m-%d %H:%M").unwrap()
                 );
             }
             _ => unreachable!(),
