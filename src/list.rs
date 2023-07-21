@@ -54,7 +54,7 @@ impl SizeUnit {
     }
 }
 
-#[derive(Debug, Clone, Copy)]
+#[derive(Debug, Clone, Copy, PartialEq)]
 pub enum FileSize {
     Precise(u64),
     /// 1024B -> 1KiB

@@ -88,6 +88,14 @@ user	0m3.468s
 sys	0m3.385s
 ```
 
+### https://download.docker.com/
+
+todo!() (302 -> symlink support not implemented yet)
+
+### https://dl.winehq.org/wine-builds/
+
+lftp/rclone fails to handle complex HTML.
+
 todo!()
 
 ## Naming

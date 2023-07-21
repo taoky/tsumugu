@@ -86,3 +86,39 @@ impl Parser for ApacheF2ListingParser {
         Ok(items)
     }
 }
+
+#[cfg(test)]
+mod tests {
+    use crate::list::SizeUnit;
+
+    use super::*;
+
+    #[test]
+    fn test_winehq_root() {
+        let client = reqwest::blocking::Client::new();
+        let items = ApacheF2ListingParser::default()
+            .get_list(
+                &client,
+                &url::Url::parse("http://localhost:1921/wine-builds").unwrap(),
+            )
+            .unwrap();
+        assert_eq!(items.len(), 8);
+        assert_eq!(items[0].name, "android/");
+        assert_eq!(items[0].type_, FileType::Directory);
+        assert_eq!(items[0].size, None);
+        assert_eq!(
+            items[0].mtime,
+            NaiveDateTime::parse_from_str("2022-01-18 15:14", "%Y-%m-%d %H:%M").unwrap()
+        );
+        assert_eq!(items[6].name, "Release.key");
+        assert_eq!(items[6].type_, FileType::File);
+        assert_eq!(
+            items[6].size,
+            Some(FileSize::HumanizedBinary(3.0, SizeUnit::K))
+        );
+        assert_eq!(
+            items[6].mtime,
+            NaiveDateTime::parse_from_str("2017-03-28 14:54", "%Y-%m-%d %H:%M").unwrap()
+        );
+    }
+}
