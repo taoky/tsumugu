@@ -23,8 +23,8 @@ A HTTP(S) syncing tool with lower overhead, for OSS mirrors
 Usage: tsumugu <COMMAND>
 
 Commands:
-  sync  
-  list  
+  sync  Sync files from upstream to local
+  list  List files from upstream
   help  Print this message or the help of the given subcommand(s)
 
 Options:
@@ -36,20 +36,20 @@ Options:
 Usage: tsumugu sync [OPTIONS] <UPSTREAM> <LOCAL>
 
 Arguments:
-  <UPSTREAM>  
-  <LOCAL>     
+  <UPSTREAM>  The upstream URL
+  <LOCAL>     The local directory
 
 Options:
-      --user-agent <USER_AGENT>        [default: tsumugu]
+      --user-agent <USER_AGENT>        Customize tsumugu's user agent [default: tsumugu]
       --dry-run                        Do not download files and cleanup
-      --threads <THREADS>              [default: 2]
-      --no-delete                      
-      --max-delete <MAX_DELETE>        [default: 100]
+      --threads <THREADS>              Threads at work [default: 2]
+      --no-delete                      Do not clean up after sync
+      --max-delete <MAX_DELETE>        Set max delete count [default: 100]
       --timezone-file <TIMEZONE_FILE>  Default: auto. You can set a valid URL for guessing, or an invalid one for disabling
-      --retry <RETRY>                  [default: 3]
-      --head-before-get                
-      --parser <PARSER>                [default: nginx] [possible values: nginx, apache-f2, docker]
-      --exclude <EXCLUDE>              
+      --retry <RETRY>                  Retry count for each request [default: 3]
+      --head-before-get                Do an HEAD before actual GET. Add this if you are not sure if the results from parser is correct
+      --parser <PARSER>                Choose a parser [default: nginx] [possible values: nginx, apache-f2, docker]
+      --exclude <EXCLUDE>              Excluded file regex. Supports multiple
   -h, --help                           Print help
   -V, --version                        Print version
 > cargo run -- list --help
@@ -58,11 +58,11 @@ Options:
 Usage: tsumugu list [OPTIONS] <UPSTREAM>
 
 Arguments:
-  <UPSTREAM>  
+  <UPSTREAM>  The upstream URL
 
 Options:
-      --user-agent <USER_AGENT>  [default: tsumugu]
-      --parser <PARSER>          [default: nginx] [possible values: nginx, apache-f2, docker]
+      --user-agent <USER_AGENT>  Customize tsumugu's user agent [default: tsumugu]
+      --parser <PARSER>          Choose a parser [default: nginx] [possible values: nginx, apache-f2, docker]
   -h, --help                     Print help
   -V, --version                  Print version
 ```

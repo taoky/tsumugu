@@ -58,12 +58,16 @@ struct Cli {
 
 #[derive(Subcommand, Debug)]
 enum Commands {
+    /// Sync files from upstream to local.
     Sync(SyncArgs),
+
+    /// List files from upstream.
     List(ListArgs),
 }
 
 #[derive(Parser, Debug)]
 struct SyncArgs {
+    /// Customize tsumugu's user agent.
     #[clap(long, default_value = "tsumugu")]
     user_agent: String,
 
@@ -71,18 +75,23 @@ struct SyncArgs {
     #[clap(long)]
     dry_run: bool,
 
+    /// Threads at work.
     #[clap(long, default_value_t = 2)]
     threads: usize,
 
+    /// Do not clean up after sync.
     #[clap(long)]
     no_delete: bool,
 
+    /// Set max delete count.
     #[clap(long, default_value_t = 100)]
     max_delete: usize,
 
+    /// The upstream URL.
     #[clap(value_parser)]
     upstream: Url,
 
+    /// The local directory.
     #[clap(value_parser)]
     local: PathBuf,
 
@@ -90,27 +99,34 @@ struct SyncArgs {
     #[clap(long)]
     timezone_file: Option<String>,
 
+    /// Retry count for each request.
     #[clap(long, default_value_t = 3)]
     retry: usize,
 
+    /// Do an HEAD before actual GET. Add this if you are not sure if the results from parser is correct.
     #[clap(long)]
     head_before_get: bool,
 
+    /// Choose a parser.
     #[clap(long, value_enum, default_value_t = ParserType::Nginx)]
     parser: ParserType,
 
+    /// Excluded file regex. Supports multiple.
     #[clap(long, value_parser)]
     exclude: Vec<Regex>,
 }
 
 #[derive(Parser, Debug)]
 struct ListArgs {
+    /// Customize tsumugu's user agent.
     #[clap(long, default_value = "tsumugu")]
     user_agent: String,
 
+    /// The upstream URL.
     #[clap(value_parser)]
     upstream: Url,
 
+    /// Choose a parser.
     #[clap(long, value_enum, default_value_t=ParserType::Nginx)]
     parser: ParserType,
 }
