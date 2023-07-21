@@ -48,6 +48,7 @@ impl Parser for ApacheF2ListingParser {
             let name: String = url::form_urlencoded::parse(href.as_bytes())
                 .map(|(k, v)| [k, v].concat())
                 .collect();
+            let name = name.trim_end_matches('/');
             let href = url.join(href)?;
             let type_ = if href.as_str().ends_with('/') {
                 FileType::Directory
@@ -69,7 +70,7 @@ impl Parser for ApacheF2ListingParser {
 
             items.push(ListItem {
                 url: href,
-                name,
+                name: name.to_string(),
                 type_,
                 size: {
                     if size == "-" {
@@ -103,7 +104,7 @@ mod tests {
             )
             .unwrap();
         assert_eq!(items.len(), 8);
-        assert_eq!(items[0].name, "android/");
+        assert_eq!(items[0].name, "android");
         assert_eq!(items[0].type_, FileType::Directory);
         assert_eq!(items[0].size, None);
         assert_eq!(
