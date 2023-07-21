@@ -190,6 +190,13 @@ fn main() {
     let runtime = tokio::runtime::Runtime::new().unwrap();
     let async_client = build_client!(reqwest::Client, args, parser, bind_address.as_ref());
 
+    // terminate whole process when a thread panics
+    let orig_hook = std::panic::take_hook();
+    std::panic::set_hook(Box::new(move |panic_info| {
+        orig_hook(panic_info);
+        std::process::exit(3);
+    }));
+
     let mprogress = MultiProgress::new();
 
     // Check if to guess timezone
@@ -518,9 +525,11 @@ fn main() {
                     if entry.file_type().is_dir() {
                         if let Err(e) = std::fs::remove_dir(path) {
                             error!("Failed to remove {:?}: {:?}", path, e);
+                            exit_code = 4;
                         }
                     } else if let Err(e) = std::fs::remove_file(path) {
                         error!("Failed to remove {:?}: {:?}", path, e);
+                        exit_code = 4;
                     }
                 } else {
                     info!("{:?} not in remote", path);

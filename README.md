@@ -67,6 +67,15 @@ Options:
   -V, --version                  Print version
 ```
 
+## Exit code
+
+- 0: Success
+- 1: Failed to list
+- 2: Failed to download
+- 3: A panic!() occurred
+- 4: Error when cleaning up
+- 25: The limit stopped deletions
+
 ## Building with musl
 
 Unfortunately, this requires openssl-sys, which is not included in cross's prebuilt images. Try https://github.com/clux/muslrust.
