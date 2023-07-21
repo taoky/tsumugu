@@ -39,7 +39,13 @@ impl Parser for DockerListingParser {
         let resp = get(client, url.clone())?;
         // if is a redirect?
         if let Some(url) = resp.headers().get("location") {
-            return Ok(ListResult::Redirect(url.to_str()?.to_string()));
+            let mut url = url.to_str()?.to_string();
+            // replace /index.html at the end to /
+            if url.ends_with("/index.html") {
+                url = url.trim_end_matches("/index.html").to_string();
+                url.push('/');
+            }
+            return Ok(ListResult::Redirect(url));
         }
         let body = resp.text()?;
         let document = Html::parse_document(&body);
@@ -53,7 +59,7 @@ impl Parser for DockerListingParser {
             let name: String = url::form_urlencoded::parse(href.as_bytes())
                 .map(|(k, v)| [k, v].concat())
                 .collect();
-            let href = url.join(href)?;
+            let mut href = url.join(href)?;
 
             let name = name.trim_end_matches('/');
             if name == ".." {
@@ -93,6 +99,10 @@ impl Parser for DockerListingParser {
                     }
                 }
             };
+            if type_ == FileType::Directory && !href.path().ends_with('/') {
+                href.set_path(&format!("{}/", href.path()));
+            }
+
             items.push(ListItem {
                 url: href,
                 name: name.to_string(),
