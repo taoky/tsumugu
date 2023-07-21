@@ -86,3 +86,34 @@ impl Parser for NginxListingParser {
         Ok(items)
     }
 }
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    #[test]
+    fn test_monitoring_plugins() {
+        let client = reqwest::blocking::Client::new();
+        let items = NginxListingParser::default()
+            .get_list(
+                &client,
+                &url::Url::parse("http://localhost:1921/monitoring-plugins").unwrap(),
+            )
+            .unwrap();
+        assert_eq!(items.len(), 23);
+        assert_eq!(items[0].name, "archive");
+        assert_eq!(items[0].type_, FileType::Directory);
+        assert_eq!(items[0].size, None);
+        assert_eq!(
+            items[0].mtime,
+            NaiveDateTime::parse_from_str("09-Oct-2015 16:12", "%d-%b-%Y %H:%M").unwrap()
+        );
+        assert_eq!(items[4].name, "monitoring-plugins-2.0.tar.gz");
+        assert_eq!(items[4].type_, FileType::File);
+        assert_eq!(items[4].size, Some(FileSize::Precise(2610000)));
+        assert_eq!(
+            items[4].mtime,
+            NaiveDateTime::parse_from_str("11-Jul-2014 23:17", "%d-%b-%Y %H:%M").unwrap()
+        );
+    }
+}
