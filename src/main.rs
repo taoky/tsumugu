@@ -2,6 +2,7 @@ use std::{
     collections::HashSet,
     fs::File,
     io::Write,
+    net::IpAddr,
     os::unix::fs::symlink,
     path::PathBuf,
     sync::{
@@ -115,8 +116,10 @@ struct ListArgs {
 }
 
 macro_rules! build_client {
-    ($client: ty, $args: expr, $parser: expr) => {{
-        let mut builder = <$client>::builder().user_agent($args.user_agent.clone());
+    ($client: ty, $args: expr, $parser: expr, $bind_address: expr) => {{
+        let mut builder = <$client>::builder()
+            .user_agent($args.user_agent.clone())
+            .local_address($bind_address.map(|x| x.parse::<IpAddr>().unwrap()));
         if !$parser.is_auto_redirect() {
             builder = builder.redirect(reqwest::redirect::Policy::none());
         }
@@ -135,12 +138,14 @@ fn main() {
         .with_env_filter(EnvFilter::from_default_env())
         .init();
 
+    let bind_address = std::env::var("BIND_ADDRESS").ok();
+
     let args = Cli::parse();
     let args = match args.command {
         Commands::Sync(args) => args,
         Commands::List(args) => {
             let parser = args.parser.build();
-            let client = build_client!(reqwest::blocking::Client, args, parser);
+            let client = build_client!(reqwest::blocking::Client, args, parser, bind_address);
             let list = parser.get_list(&client, &args.upstream).unwrap();
             match list {
                 ListResult::Redirect(url) => {
@@ -158,11 +163,16 @@ fn main() {
     debug!("{:?}", args);
 
     let parser = args.parser.build();
-    let client = build_client!(reqwest::blocking::Client, args, parser);
+    let client = build_client!(
+        reqwest::blocking::Client,
+        args,
+        parser,
+        bind_address.as_ref()
+    );
 
     // async support
     let runtime = tokio::runtime::Runtime::new().unwrap();
-    let async_client = build_client!(reqwest::Client, args, parser);
+    let async_client = build_client!(reqwest::Client, args, parser, bind_address.as_ref());
 
     let mprogress = MultiProgress::new();
 
