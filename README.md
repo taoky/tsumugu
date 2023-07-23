@@ -12,6 +12,13 @@ To successfully sync from these domains, where lftp/rclone fails or finds diffic
 - [x] https://download.docker.com/
 - [x] https://dl.winehq.org/wine-builds/
 
+## TODOs
+
+- [ ] Add "--include": Sync even if the file is excluded by `--exclude` regex.
+- [ ] Add supported Debian, Ubuntu, Fedora and RHEL versions support to `--include` regex.
+  - Something like `--include debian/${DEBIAN_VERSIONS}`?
+- [ ] Check for APT/YUM repo integrity (avoid keeping old invalid metadata files)
+
 ## Usage
 
 ```console
