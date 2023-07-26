@@ -38,6 +38,70 @@ impl ExpandedRegex {
     }
 }
 
+#[derive(Debug, Clone, Copy, PartialEq)]
+pub enum Comparison {
+    Stop,
+    ListOnly,
+    Ok
+}
+
+#[derive(Debug, Clone)]
+pub struct ExclusionManager {
+    /// Stop the task immediately if any of these regexes match.
+    instant_stop_regexes: Vec<ExpandedRegex>,
+    /// Continue, but don't download anything if any of these regexes match.
+    list_only_regexes: Vec<ExpandedRegex>,
+    /// Include only these regexes.
+    include_regexes: Vec<ExpandedRegex>,
+}
+
+impl ExclusionManager {
+    pub fn new(exclusions: Vec<ExpandedRegex>, inclusions: Vec<ExpandedRegex>) -> Self {
+        let mut instant_stop_regexes = Vec::new();
+        let mut list_only_regexes = Vec::new();
+
+        for exclusion in exclusions {
+            let regex_str = exclusion.inner.as_str();
+            let mut flag = false;
+            for inclusion in &inclusions {
+                if inclusion.inner.as_str().starts_with(regex_str) {
+                    list_only_regexes.push(exclusion.clone());
+                    flag = true;
+                    break;
+                }
+            }
+            if !flag {
+                instant_stop_regexes.push(exclusion.clone());
+            }
+        }
+
+        Self {
+            instant_stop_regexes,
+            list_only_regexes,
+            include_regexes: inclusions,
+        }
+    }
+
+    pub fn match_str(&self, text: &str) -> Comparison {
+        for regex in &self.include_regexes {
+            if regex.is_match(text) {
+                return Comparison::Ok;
+            }
+        }
+        for regex in &self.instant_stop_regexes {
+            if regex.is_match(text) {
+                return Comparison::Stop;
+            }
+        }
+        for regex in &self.list_only_regexes {
+            if regex.is_match(text) {
+                return Comparison::ListOnly;
+            }
+        }
+        Comparison::Ok
+    }
+}
+
 #[cfg(test)]
 mod tests {
     use super::*;

@@ -28,7 +28,7 @@ use list::ListItem;
 use crate::{
     compare::{should_download_by_head, should_download_by_list},
     parser::ListResult,
-    utils::{again, again_async, get_async, head},
+    utils::{again, again_async, get_async, head}, regex::ExclusionManager,
 };
 
 mod compare;
@@ -184,6 +184,8 @@ fn main() {
     };
     debug!("{:?}", args);
 
+    let exclusion_manager = ExclusionManager::new(args.exclude, args.include);
+
     let parser = args.parser.build();
     let client = build_client!(
         reqwest::blocking::Client,
@@ -279,8 +281,6 @@ fn main() {
     let failure_downloading = AtomicBool::new(false);
 
     std::thread::scope(|scope| {
-        let exclude = args.exclude.clone();
-        let include = args.include.clone();
         for worker in workers.into_iter() {
             let stealers = &stealers;
             let parser = &parser;
@@ -296,8 +296,7 @@ fn main() {
             let runtime = &runtime;
 
             let mprogress = mprogress.clone();
-            let exclude = exclude.clone();
-            let include = include.clone();
+            let exclusion_manager = exclusion_manager.clone();
 
             let stat_objects = &stat_objects;
             let stat_size = &stat_size;
@@ -320,25 +319,12 @@ fn main() {
                         let cwd = download_dir.join(&relative);
                         debug!("cwd: {:?}, relative: {:?}", cwd, relative);
                         // exclude this?
-                        let mut stop_task = false;
-                        for excl in exclude.iter() {
-                            if excl.is_match(&relative) {
-                                let mut included = false;
-                                for incl in include.iter() {
-                                    if incl.is_match(&relative) {
-                                        debug!("Included (not skipping) {:?}", &relative);
-                                        included = true;
-                                        break;
-                                    }
-                                }
-                                if !included {
-                                    info!("Skipping excluded {:?}", &relative);
-                                    stop_task = true;
-                                }
-                            }
-                        }
-                        if stop_task {
+                        let exclusion_result = exclusion_manager.match_str(&relative);
+                        if exclusion_result == regex::Comparison::Stop {
+                            info!("Skipping excluded {:?}", &relative);
                             continue;
+                        } else if exclusion_result == regex::Comparison::ListOnly {
+                            info!("List only in {:?}", &relative);
                         }
                         match task.task {
                             TaskType::Listing => {
@@ -368,6 +354,10 @@ fn main() {
                                                 });
                                                 wake.fetch_add(1, Ordering::SeqCst);
                                             } else {
+                                                if exclusion_result == regex::Comparison::ListOnly {
+                                                    info!("Skipping (by list only) {}", task.url);
+                                                    continue;
+                                                }
                                                 worker.push(Task {
                                                     task: TaskType::Download(item.clone()),
                                                     relative: task.relative.clone(),
