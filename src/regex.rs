@@ -42,7 +42,7 @@ impl ExpandedRegex {
 pub enum Comparison {
     Stop,
     ListOnly,
-    Ok
+    Ok,
 }
 
 #[derive(Debug, Clone)]

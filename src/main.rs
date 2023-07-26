@@ -28,7 +28,8 @@ use list::ListItem;
 use crate::{
     compare::{should_download_by_head, should_download_by_list},
     parser::ListResult,
-    utils::{again, again_async, get_async, head}, regex::ExclusionManager,
+    regex::ExclusionManager,
+    utils::{again, again_async, get_async, head},
 };
 
 mod compare;
@@ -355,7 +356,7 @@ fn main() {
                                                 wake.fetch_add(1, Ordering::SeqCst);
                                             } else {
                                                 if exclusion_result == regex::Comparison::ListOnly {
-                                                    info!("Skipping (by list only) {}", task.url);
+                                                    info!("Skipping (by list only) {}", item.url);
                                                     continue;
                                                 }
                                                 worker.push(Task {
@@ -514,33 +515,36 @@ fn main() {
         error!("Failed to list remote, not to delete anything");
         exit_code = 1;
     } else {
-        for entry in walkdir::WalkDir::new(download_dir).contents_first(true) {
-            let entry = entry.unwrap();
-            let path = entry.path();
-            if !remote_list.contains(&path.to_path_buf()) {
-                if !args.dry_run && !args.no_delete {
-                    // always make sure that we are deleting the right thing
-                    if del_cnt >= args.max_delete {
-                        info!("Exceeding max delete count, aborting");
-                        // exit with 25 to indicate that the deletion has been aborted
-                        // this is the same as rsync
-                        exit_code = 25;
-                        break;
-                    }
-                    del_cnt += 1;
-                    assert!(path.starts_with(download_dir));
-                    info!("Deleting {:?}", path);
-                    if entry.file_type().is_dir() {
-                        if let Err(e) = std::fs::remove_dir(path) {
+        // Don't even walkdir when dry_run, to prevent no dir error
+        if !args.dry_run {
+            for entry in walkdir::WalkDir::new(download_dir).contents_first(true) {
+                let entry = entry.unwrap();
+                let path = entry.path();
+                if !remote_list.contains(&path.to_path_buf()) {
+                    if !args.no_delete {
+                        // always make sure that we are deleting the right thing
+                        if del_cnt >= args.max_delete {
+                            info!("Exceeding max delete count, aborting");
+                            // exit with 25 to indicate that the deletion has been aborted
+                            // this is the same as rsync
+                            exit_code = 25;
+                            break;
+                        }
+                        del_cnt += 1;
+                        assert!(path.starts_with(download_dir));
+                        info!("Deleting {:?}", path);
+                        if entry.file_type().is_dir() {
+                            if let Err(e) = std::fs::remove_dir(path) {
+                                error!("Failed to remove {:?}: {:?}", path, e);
+                                exit_code = 4;
+                            }
+                        } else if let Err(e) = std::fs::remove_file(path) {
                             error!("Failed to remove {:?}: {:?}", path, e);
                             exit_code = 4;
                         }
-                    } else if let Err(e) = std::fs::remove_file(path) {
-                        error!("Failed to remove {:?}: {:?}", path, e);
-                        exit_code = 4;
+                    } else {
+                        info!("{:?} not in remote", path);
                     }
-                } else {
-                    info!("{:?} not in remote", path);
                 }
             }
         }

@@ -127,9 +127,11 @@ lftp/rclone fails to handle complex HTML.
 > time ./tsumugu sync --parser apache-f2 --dry-run --exclude '^mageia' --exclude '^macosx' --exclude '^debian' --exclude '^ubuntu' --exclude '^fedora' --include '^debian/dists/${DEBIAN_CURRENT}' --include '^ubuntu/dists/${UBUNTU_LTS}' --include '^fedora/${FEDORA_CURRENT}' https://dl.winehq.org/wine-builds/ /srv/repo/wine/wine-builds/
 ...
 
-real	1m35.083s
-user	0m3.373s
-sys	0m0.771s
+<TIMESTAMP>  INFO ThreadId(01) tsumugu: (Estimated) Total objects: 17659, total size: 342.28 GiB
+
+real	1m59.606s
+user	0m3.761s
+sys	0m1.160s
 ```
 
 ## Notes
@@ -140,6 +142,8 @@ Currently tsumugu follows a simple algorithm to determine whether a path should 
 
 1. First, users' exclusions and inclusions are preprocessed. For all exclusions, if it is a prefix of any inclusion, it will be put into the `list_only_regexes`, otherwise it will be put into `instant_stop_regexes`.
 2. While working threads are handling listing requests, they will first check if it matches any inclusions regexes. If not so, check if the path matches any `instant_stop_regexes`. If so, the path will be completely excluded. If the path matches `list_only_regexes`, files under this directory will be ignored, but subdirectories will still be listed.
+
+In this process some paths, which would be unnecessary, will still be listed. Consider it as a trade-off for simplicity and performance.
 
 ## Naming
 
