@@ -156,9 +156,11 @@ fn main() {
         "RUST_LOG",
         format!("info,{}", std::env::var("RUST_LOG").unwrap_or_default()),
     );
+    let enable_color = std::env::var("NO_COLOR").is_err();
     tracing_subscriber::fmt()
         .with_thread_ids(true)
         .with_env_filter(EnvFilter::from_default_env())
+        .with_ansi(enable_color)
         .init();
 
     let bind_address = std::env::var("BIND_ADDRESS").ok();
@@ -219,7 +221,7 @@ fn main() {
         },
         None => {
             // eek, try getting first file in root index
-            let list = parser.get_list(&client, &args.upstream).unwrap();
+            let list = again(|| parser.get_list(&client, &args.upstream), args.retry).unwrap();
             match list {
                 ListResult::List(list) => {
                     match list.iter().find(|x| x.type_ == list::FileType::File) {
