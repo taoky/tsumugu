@@ -3,30 +3,40 @@ use std::str::FromStr;
 use regex::Regex;
 
 // Submit an issue if you find this out-of-date!
+// And assuming that all vars are distro_ver
 const REGEX_REPLACEMENTS: &[(&str, &str)] = &[
-    ("${DEBIAN_CURRENT}", "(buster|bullseye|bookworm)"),
-    ("${UBUNTU_LTS}", "(bionic|focal|jammy)"),
-    ("${FEDORA_CURRENT}", "(37|38)"),
-    ("${CENTOS_CURRENT}", "(7)"),
-    ("${RHEL_CURRENT}", "(7|8|9)"),
-    ("${OPENSUSE_CURRENT}", "(15.4|15.5)"),
+    (
+        "${DEBIAN_CURRENT}",
+        "(?<distro_ver>buster|bullseye|bookworm)",
+    ),
+    ("${UBUNTU_LTS}", "(?<distro_ver>bionic|focal|jammy)"),
+    ("${FEDORA_CURRENT}", "(?<distro_ver>37|38)"),
+    ("${CENTOS_CURRENT}", "(?<distro_ver>7)"),
+    ("${RHEL_CURRENT}", "(?<distro_ver>7|8|9)"),
+    ("${OPENSUSE_CURRENT}", "(?<distro_ver>15.4|15.5)"),
 ];
 
 #[derive(Debug, Clone)]
 pub struct ExpandedRegex {
     inner: Regex,
+    rev_inner: Regex,
 }
 
 impl FromStr for ExpandedRegex {
     type Err = regex::Error;
 
     fn from_str(s: &str) -> Result<Self, Self::Err> {
-        let mut s = s.to_string();
+        let mut s1 = s.to_string();
         for (from, to) in REGEX_REPLACEMENTS {
-            s = s.replace(from, to);
+            s1 = s1.replace(from, to);
+        }
+        let mut s2 = s.to_string();
+        for (from, _) in REGEX_REPLACEMENTS.iter().rev() {
+            s2 = s2.replace(from, "(?<distro_ver>.+)");
         }
         Ok(Self {
-            inner: Regex::new(&s)?,
+            inner: Regex::new(&s1)?,
+            rev_inner: Regex::new(&s2)?,
         })
     }
 }
@@ -35,6 +45,10 @@ impl FromStr for ExpandedRegex {
 impl ExpandedRegex {
     pub fn is_match(&self, text: &str) -> bool {
         self.inner.is_match(text)
+    }
+
+    pub fn is_others_match(&self, text: &str) -> bool {
+        !self.inner.is_match(text) && self.rev_inner.is_match(text)
     }
 }
 
@@ -90,6 +104,15 @@ impl ExclusionManager {
         }
         for regex in &self.instant_stop_regexes {
             if regex.is_match(text) {
+                return Comparison::Stop;
+            }
+        }
+        // Performance: it is possible that a regex for inclusion shown like this:
+        // ^fedora/${FEDORA_CURRENT}
+        // And the remote corresponding folder has a lot of subfolders.
+        // This is a "shortcut" to avoid checking all subfolders.
+        for regex in &self.include_regexes {
+            if regex.is_others_match(text) {
                 return Comparison::Stop;
             }
         }
