@@ -57,6 +57,7 @@ Options:
       --head-before-get                Do an HEAD before actual GET. Add this if you are not sure if the results from parser is correct
       --parser <PARSER>                Choose a parser [default: nginx] [possible values: nginx, apache-f2, docker]
       --exclude <EXCLUDE>              Excluded file regex. Supports multiple
+      --include <INCLUDE>              Included file regex (even if excluded). Supports multiple
   -h, --help                           Print help
   -V, --version                        Print version
 > cargo run -- list --help
