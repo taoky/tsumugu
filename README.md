@@ -14,8 +14,8 @@ To successfully sync from these domains, where lftp/rclone fails or finds diffic
 
 ## TODOs
 
-- [ ] Add "--include": Sync even if the file is excluded by `--exclude` regex.
-- [ ] Add supported Debian, Ubuntu, Fedora and RHEL versions support to `--include` regex.
+- [x] Add "--include": Sync even if the file is excluded by `--exclude` regex.
+- [x] Add supported Debian, Ubuntu, Fedora and RHEL versions support to `--include` regex.
   - Something like `--include debian/${DEBIAN_VERSIONS}`?
 - [ ] Check for APT/YUM repo integrity (avoid keeping old invalid metadata files)
 

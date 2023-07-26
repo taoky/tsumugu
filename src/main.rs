@@ -17,7 +17,6 @@ use futures_util::StreamExt;
 use indicatif::{MultiProgress, ProgressBar, ProgressStyle};
 
 use parser::ParserType;
-use regex::Regex;
 use tracing::{debug, error, info, warn};
 use tracing_subscriber::EnvFilter;
 use url::Url;
@@ -33,7 +32,10 @@ use crate::{
 };
 
 mod compare;
+mod regex;
 mod utils;
+
+use crate::regex::ExpandedRegex;
 
 #[derive(Debug, Clone)]
 enum TaskType {
@@ -113,7 +115,11 @@ struct SyncArgs {
 
     /// Excluded file regex. Supports multiple.
     #[clap(long, value_parser)]
-    exclude: Vec<Regex>,
+    exclude: Vec<ExpandedRegex>,
+
+    /// Included file regex (even if excluded). Supports multiple.
+    #[clap(long, value_parser)]
+    include: Vec<ExpandedRegex>,
 }
 
 #[derive(Parser, Debug)]
@@ -274,6 +280,7 @@ fn main() {
 
     std::thread::scope(|scope| {
         let exclude = args.exclude.clone();
+        let include = args.include.clone();
         for worker in workers.into_iter() {
             let stealers = &stealers;
             let parser = &parser;
@@ -290,6 +297,7 @@ fn main() {
 
             let mprogress = mprogress.clone();
             let exclude = exclude.clone();
+            let include = include.clone();
 
             let stat_objects = &stat_objects;
             let stat_size = &stat_size;
@@ -315,8 +323,18 @@ fn main() {
                         let mut stop_task = false;
                         for excl in exclude.iter() {
                             if excl.is_match(&relative) {
-                                info!("Skipping excluded {:?}", &relative);
-                                stop_task = true;
+                                let mut included = false;
+                                for incl in include.iter() {
+                                    if incl.is_match(&relative) {
+                                        debug!("Included (not skipping) {:?}", &relative);
+                                        included = true;
+                                        break;
+                                    }
+                                }
+                                if !included {
+                                    info!("Skipping excluded {:?}", &relative);
+                                    stop_task = true;
+                                }
                             }
                         }
                         if stop_task {
