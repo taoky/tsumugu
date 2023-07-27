@@ -14,7 +14,7 @@ use std::{
 use clap::{Parser, Subcommand};
 use crossbeam_deque::{Injector, Worker};
 use futures_util::StreamExt;
-use indicatif::{MultiProgress, ProgressBar, ProgressStyle};
+use indicatif::{MultiProgress, ProgressBar, ProgressDrawTarget, ProgressStyle};
 
 use parser::ParserType;
 use tracing::{debug, error, info, warn};
@@ -29,6 +29,7 @@ use crate::{
     compare::{should_download_by_head, should_download_by_list},
     parser::ListResult,
     regex::ExclusionManager,
+    term::AlternativeTerm,
     utils::{again, again_async, get_async, head},
 };
 
@@ -37,6 +38,8 @@ mod regex;
 mod utils;
 
 use crate::regex::ExpandedRegex;
+
+mod term;
 
 #[derive(Debug, Clone)]
 enum TaskType {
@@ -208,7 +211,10 @@ fn main() {
         std::process::exit(3);
     }));
 
-    let mprogress = MultiProgress::new();
+    let mprogress = MultiProgress::with_draw_target(ProgressDrawTarget::term_like_with_hz(
+        Box::new(AlternativeTerm::buffered_stdout()),
+        1,
+    ));
 
     // Check if to guess timezone
     let timezone_file = match args.timezone_file {
@@ -444,7 +450,7 @@ fn main() {
                                         let total_size = resp.content_length().unwrap();
                                         let pb = mprogress.add(ProgressBar::new(total_size));
                                         pb.set_style(ProgressStyle::default_bar()
-                                            .template("{msg}\n{spinner:.green} [{elapsed_precise}] [{wide_bar:.cyan/blue}] {bytes}/{total_bytes} ({bytes_per_sec}, {eta})").unwrap()
+                                            .template("{msg}\n[{elapsed_precise}] {bytes}/{total_bytes} ({bytes_per_sec}, {eta})").unwrap()
                                             .progress_chars("#>-"));
                                         pb.set_message(format!("Downloading {}", item.url));
 

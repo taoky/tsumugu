@@ -1754,6 +1754,7 @@ dependencies = [
  "anyhow",
  "chrono",
  "clap",
+ "console",
  "crossbeam-deque",
  "filetime",
  "futures-util",
