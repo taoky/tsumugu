@@ -327,6 +327,10 @@ fn main() {
                         let relative = task.relative.join("/");
                         let cwd = download_dir.join(&relative);
                         debug!("cwd: {:?}, relative: {:?}", cwd, relative);
+                        if cwd.symlink_metadata().is_ok() {
+                            info!("{:?} is a symlink, ignored", cwd);
+                            continue;
+                        }
                         // exclude this?
                         let exclusion_result = exclusion_manager.match_str(&relative);
                         if exclusion_result == regex::Comparison::Stop {
@@ -384,10 +388,7 @@ fn main() {
                                     ListResult::Redirect(target_url) => {
                                         // This "Redirect" only supports creating symlink of current directory
                                         info!("Redirected {} -> {}. Try to create a symlink", task.url, target_url);
-                                        if cwd.symlink_metadata().is_ok() {
-                                            info!("Skipping symlink creation because symlink {:?} already exists", cwd);
-                                            continue;
-                                        } else if cwd.exists() {
+                                        if cwd.exists() {
                                             warn!("Skipping symlink creation because {:?} already exists, but it is not a symlink", cwd);
                                             continue;
                                         }
