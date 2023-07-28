@@ -23,7 +23,7 @@ use crate::{
     regex_process::{self, ExclusionManager},
     term::AlternativeTerm,
     utils::{self, again, again_async, get_async, head, is_symlink},
-    SyncArgs
+    SyncArgs,
 };
 
 #[derive(Debug, Clone)]
@@ -180,6 +180,8 @@ pub fn sync(args: SyncArgs, bind_address: Option<String>) -> ! {
                         let cwd = download_dir.join(&relative);
                         debug!("cwd: {:?}, relative: {:?}", cwd, relative);
                         // exclude this?
+                        // note that it only checks the relative folder!
+                        // Downloading files will still be checked again.
                         let exclusion_result = exclusion_manager.match_str(&relative);
                         if exclusion_result == regex_process::Comparison::Stop {
                             info!("Skipping excluded {:?}", &relative);
@@ -194,7 +196,7 @@ pub fn sync(args: SyncArgs, bind_address: Option<String>) -> ! {
                                     remote_list.lock().unwrap().insert(cwd.clone());
                                 }
 
-                                if is_symlink(&cwd) && relative != "/" {
+                                if is_symlink(&cwd) && !relative.is_empty() {
                                     info!("{:?} is a symlink, ignored", cwd);
                                     continue;
                                 }
@@ -266,9 +268,16 @@ pub fn sync(args: SyncArgs, bind_address: Option<String>) -> ! {
                                     std::fs::create_dir_all(&cwd).unwrap();
                                 }
                                 let expected_path = cwd.join(&item.name);
+
                                 {
                                     remote_list.lock().unwrap().insert(expected_path.clone());
                                 }
+
+                                if exclusion_manager.match_str(&expected_path.to_string_lossy()) == regex_process::Comparison::Stop {
+                                    info!("Skipping excluded {:?}", &expected_path);
+                                    continue;
+                                }
+
                                 if !should_download_by_list(&expected_path, &item, timezone) {
                                     info!("Skipping {}", task.url);
                                     continue;
@@ -425,4 +434,19 @@ pub fn sync(args: SyncArgs, bind_address: Option<String>) -> ! {
     );
 
     std::process::exit(exit_code);
+}
+
+#[cfg(test)]
+mod tests {
+    // use super::*;
+
+    #[test]
+    fn test_relative() {
+        let mut relative: Vec<String> = vec![];
+        assert_eq!(relative.join("/"), "");
+        relative.push("debian".to_string());
+        assert_eq!(relative.join("/"), "debian");
+        relative.push("dists".to_string());
+        assert_eq!(relative.join("/"), "debian/dists");
+    }
 }

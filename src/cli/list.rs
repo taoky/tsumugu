@@ -10,15 +10,12 @@ pub fn list(args: ListArgs, bind_address: Option<String>) -> ! {
     // get relative
     let upstream = args.upstream_folder;
     let upstream_path = PathBuf::from(upstream.path());
-    let mut relative = upstream_path
+    let relative = upstream_path
         .strip_prefix(&args.upstream_base)
         .unwrap()
         .to_str()
         .unwrap()
         .to_owned();
-    if !relative.starts_with('/') {
-        relative = format!("/{}", relative);
-    }
     let list = parser.get_list(&client, &upstream).unwrap();
 
     println!("Relative: {}", relative);

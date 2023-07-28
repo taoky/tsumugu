@@ -6,13 +6,13 @@ use parser::ParserType;
 use tracing_subscriber::EnvFilter;
 use url::Url;
 
-mod listing;
-mod parser;
 mod cli;
 mod compare;
+mod listing;
+mod parser;
 mod regex_process;
-mod utils;
 mod term;
+mod utils;
 
 use crate::regex_process::ExpandedRegex;
 
@@ -136,6 +136,10 @@ fn main() {
             cli::sync(args, bind_address);
         }
         Commands::List(args) => {
+            // extra arg check
+            if !args.upstream_folder.path().ends_with('/') {
+                panic!("upstream_folder should end with /");
+            }
             cli::list(args, bind_address);
         }
     };
