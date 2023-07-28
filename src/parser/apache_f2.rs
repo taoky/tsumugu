@@ -2,7 +2,7 @@
 // > F=2 formats the listing as an HTMLTable FancyIndexed list
 
 use crate::{
-    list::{FileSize, FileType, ListItem},
+    listing::{FileSize, FileType, ListItem},
     utils::get,
 };
 
@@ -86,7 +86,7 @@ impl Parser for ApacheF2ListingParser {
 
 #[cfg(test)]
 mod tests {
-    use crate::list::SizeUnit;
+    use crate::listing::SizeUnit;
 
     use super::*;
 

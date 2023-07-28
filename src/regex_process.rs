@@ -135,4 +135,15 @@ mod tests {
         assert!(regex.is_match("/deb/dists/bookworm/Release"));
         assert!(!regex.is_match("/deb/dists/wheezy/Release"));
     }
+
+    #[test]
+    fn test_exclusion() {
+        let target =
+            "/debian/pmg/dists/stretch/pmgtest/binary-amd64/grub-efi-amd64-bin_2.02-pve6.changelog";
+        let exclusions =
+            vec![ExpandedRegex::from_str("pmg/dists/.+/pmgtest/.+changelog$").unwrap()];
+        let inclusions = vec![];
+        let exclusion_manager = ExclusionManager::new(exclusions, inclusions);
+        assert_eq!(exclusion_manager.match_str(target), Comparison::Stop);
+    }
 }

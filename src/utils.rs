@@ -18,6 +18,19 @@ macro_rules! get_resp_mtime {
     };
 }
 
+#[macro_export]
+macro_rules! build_client {
+    ($client: ty, $args: expr, $parser: expr, $bind_address: expr) => {{
+        let mut builder = <$client>::builder()
+            .user_agent($args.user_agent.clone())
+            .local_address($bind_address.map(|x| x.parse::<std::net::IpAddr>().unwrap()));
+        if !$parser.is_auto_redirect() {
+            builder = builder.redirect(reqwest::redirect::Policy::none());
+        }
+        builder.build().unwrap()
+    }};
+}
+
 pub fn get_async_response_mtime(resp: &reqwest::Response) -> Result<DateTime<Utc>> {
     get_resp_mtime!(resp)
 }
@@ -76,4 +89,10 @@ pub fn get(client: &reqwest::blocking::Client, url: Url) -> Result<reqwest::bloc
 
 pub fn head(client: &reqwest::blocking::Client, url: Url) -> Result<reqwest::blocking::Response> {
     Ok(client.head(url).send()?.error_for_status()?)
+}
+
+pub fn is_symlink(path: &std::path::Path) -> bool {
+    path.symlink_metadata()
+        .map(|m| m.file_type().is_symlink())
+        .unwrap_or(false)
 }

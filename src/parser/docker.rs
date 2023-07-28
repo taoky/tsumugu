@@ -1,5 +1,5 @@
 use crate::{
-    list::{FileSize, FileType, ListItem},
+    listing::{FileSize, FileType, ListItem},
     utils::get,
 };
 use chrono::NaiveDateTime;
@@ -117,7 +117,7 @@ impl Parser for DockerListingParser {
 
 #[cfg(test)]
 mod tests {
-    use crate::list::SizeUnit;
+    use crate::listing::SizeUnit;
 
     use super::*;
 
