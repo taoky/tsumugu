@@ -142,7 +142,7 @@ sys	0m0.294s
 
 ### Regex variables
 
-See [./src/regex.rs](./src/regex.rs).
+See [./src/regex_process.rs](./src/regex_process.rs).
 
 ### Exclusion and inclusion
 
