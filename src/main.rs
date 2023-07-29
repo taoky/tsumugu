@@ -110,7 +110,7 @@ pub struct ListArgs {
     #[clap(long, value_parser)]
     include: Vec<ExpandedRegex>,
 
-    /// The upstream base. By default "/".
+    /// The upstream base ending with "/". 
     #[clap(long, default_value = "/")]
     upstream_base: String,
 }
