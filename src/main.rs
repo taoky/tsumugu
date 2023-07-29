@@ -110,7 +110,7 @@ pub struct ListArgs {
     #[clap(long, value_parser)]
     include: Vec<ExpandedRegex>,
 
-    /// The upstream base ending with "/". 
+    /// The upstream base ending with "/".
     #[clap(long, default_value = "/")]
     upstream_base: String,
 }
@@ -129,6 +129,13 @@ fn main() {
         .init();
 
     let bind_address = std::env::var("BIND_ADDRESS").ok();
+
+    // terminate whole process when a thread panics
+    let orig_hook = std::panic::take_hook();
+    std::panic::set_hook(Box::new(move |panic_info| {
+        orig_hook(panic_info);
+        std::process::exit(3);
+    }));
 
     let args = Cli::parse();
     match args.command {
