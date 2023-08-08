@@ -1,11 +1,13 @@
 use anyhow::Result;
 use clap::ValueEnum;
 use reqwest::blocking::Client;
+use tracing::warn;
 use url::Url;
 
 use crate::listing::ListItem;
 
 pub mod apache_f2;
+pub mod directory_lister;
 pub mod docker;
 pub mod nginx;
 
@@ -27,6 +29,7 @@ pub enum ParserType {
     Nginx,
     ApacheF2,
     Docker,
+    DirectoryLister,
 }
 
 impl ParserType {
@@ -35,6 +38,10 @@ impl ParserType {
             Self::Nginx => Box::<nginx::NginxListingParser>::default(),
             Self::ApacheF2 => Box::<apache_f2::ApacheF2ListingParser>::default(),
             Self::Docker => Box::<docker::DockerListingParser>::default(),
+            Self::DirectoryLister => {
+                warn!("html5ever parser does not support foster parenting. The result may be incorrect.");
+                Box::<directory_lister::DirectoryListerListingParser>::default()
+            }
         }
     }
 }

@@ -1,0 +1,296 @@
+<!DOCTYPE html>
+
+<meta charset="utf-8">
+<meta name="description" content="dev.packages.vyos.net">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+
+<link rel="icon" href="app/assets/images/favicon.light.png?id=4be061744d10326a8783">
+<link rel="dns-prefetch" href="//fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com">
+<link rel="stylesheet" href="app/assets/app.css?id=cff4a9c92605331993ba">
+
+<script src="app/assets/app.js?id=02137bacb14deea8b0c5" defer></script>
+
+
+
+<title>repositories/crux/vyos/pool/main/v/vyos-accel-ppp &bull; dev.packages.vyos.net</title>
+
+<div class="light" x-data="application" x-effect="storeThemeCookie(theme)" :class="{ 'dark': theme === 'dark' }">
+    <div class="flex flex-col min-h-screen font-sans dark:bg-gray-800">
+            <header class="bg-blue-600 shadow sticky top-0 dark:bg-purple-700">
+    <div class="border-b border-blue-700 dark:border-purple-800">
+        <div class="container flex flex-wrap justify-between items-center space-x-6 mx-auto p-4 md:flex-row xl:max-w-screen-xl">
+            <a href="." class="flex items-center space-x-2 p-1" title="dev.packages.vyos.net">
+                <svg aria-hidden="true" focusable="false" data-prefix="fas" data-icon="folder-tree" class="inline-block fill-current text-white w-8 h-8" role="img" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 576 512">
+                    <path fill="currentColor" d="M544 32H432L400 0h-80a32 32 0 0 0-32 32v160a32 32 0 0 0 32 32h224a32 32 0 0 0 32-32V64a32 32 0 0 0-32-32zm0 288H432l-32-32h-80a32 32 0 0 0-32 32v160a32 32 0 0 0 32 32h224a32 32 0 0 0 32-32V352a32 32 0 0 0-32-32zM64 16A16 16 0 0 0 48 0H16A16 16 0 0 0 0 16v400a32 32 0 0 0 32 32h224v-64H64V160h192V96H64z"></path>
+                </svg>
+            </a>
+
+            <div class="flex-1 max-w-xl">
+                <form action="." method="get" class="group relative block bg-blue-700 rounded-full shadow-inner dark:bg-purple-800">
+    <input type="text" value="" name="search" placeholder="Search..."
+        class="bg-transparent placeholder-gray-900 text-white w-full px-10 py-2"
+        @keyup.?.prevent.window="$el.focus()" @focus="$event.target.select()"
+    >
+
+    <div class="flex items-center absolute left-0 inset-y-0 ml-2 pointer-events-none">
+        <div class="flex justify-center items-center text-gray-900 text-opacity-50 w-6 h-6">
+            <i class="fas fa-search fa-fw"></i>
+        </div>
+    </div>
+
+    </form>
+            </div>
+
+            <div class="flex items-center justify-center w-6">
+                <div class="flex flex-col justify-center items-center bg-gray-900 bg-opacity-30 rounded-full cursor-pointer w-4 h-8" title="Toggle Light/Dark Mode" @click="toggleTheme()">
+    <div class="flex justify-center items-center bg-white w-5 h-5 rounded-full shadow-md transform duration-300 ease-in-out -translate-y-2 dark:translate-y-2">
+        <i class="fas fa-lightbulb fa-xs text-yellow-400 dark:text-gray-600"></i>
+    </div>
+</div>
+            </div>
+        </div>
+    </div>
+
+    <div class="border-t border-blue-500 dark:border-purple-600">
+        <div class="container flex flex-wrap justify-between items-center space-x-6 mx-auto px-4 py-1 md:flex-row xl:max-w-screen-xl">
+            <div class="flex-1 font-mono text-white text-sm tracking-tight overflow-x-auto whitespace-nowrap py-1">
+    <a href="." class="inline-block hover:underline">
+        Home
+    </a>
+
+                        / <a href="?dir=repositories" class="inline-block hover:underline">repositories</a>
+                    / <a href="?dir=repositories/crux" class="inline-block hover:underline">crux</a>
+                    / <a href="?dir=repositories/crux/vyos" class="inline-block hover:underline">vyos</a>
+                    / <a href="?dir=repositories/crux/vyos/pool" class="inline-block hover:underline">pool</a>
+                    / <a href="?dir=repositories/crux/vyos/pool/main" class="inline-block hover:underline">main</a>
+                    / <a href="?dir=repositories/crux/vyos/pool/main/v" class="inline-block hover:underline">v</a>
+                    / <a href="?dir=repositories/crux/vyos/pool/main/v/vyos-accel-ppp" class="inline-block hover:underline">vyos-accel-ppp</a>
+            </div>
+
+                            <a href="?zip=repositories/crux/vyos/pool/main/v/vyos-accel-ppp" title="Download this Directory" rel="nofollow"
+                    class="flex justify-center  items-center text-sm text-white w-6 hover:text-gray-300"
+                >
+                    <i class="fas fa-download fa-lg"></i>
+                </a>
+                    </div>
+    </div>
+</header>
+
+    <div class="flex flex-col flex-grow container mx-auto px-4 xl:max-w-screen-xl dark:text-white">
+        <div class="my-4">
+            <div class="flex justify-between font-bold p-4">
+                <div class="flex-grow font-mono mr-2">
+                    File Name
+                </div>
+
+                <div class="font-mono text-right w-1/6 mx-2 hidden sm:block">
+                    Size
+                </div>
+
+                <div class="font-mono text-right w-1/4 ml-2 hidden sm:block">
+                    Date
+                </div>
+            </div>
+
+            <ul>
+                <li>
+                                            <a
+    href="?dir=repositories/crux/vyos/pool/main/v"
+    class="flex flex-col items-center rounded-lg font-mono group hover:bg-gray-100 hover:shadow dark:hover:bg-purple-700"
+>
+    <div class="flex justify-between items-center p-4 w-full">
+        <div class="pr-2">
+                            <i class="fas fa-level-up-alt fa-fw fa-lg"></i>
+                    </div>
+
+        <div class="flex-1 truncate">
+            ..
+        </div>
+
+        
+        <div class="hidden whitespace-nowrap text-right mx-2 w-1/6 sm:block">
+                                —
+                    </div>
+
+        <div class="hidden whitespace-nowrap text-right truncate ml-2 w-1/4 sm:block">
+            —
+        </div>
+    </div>
+</a>
+
+                                    </li>
+
+                <li>
+                                            <a
+    href="repositories/crux/vyos/pool/main/v/vyos-accel-ppp/vyos-accel-ppp-doc_1.11.2-7_all.deb"
+    class="flex flex-col items-center rounded-lg font-mono group hover:bg-gray-100 hover:shadow dark:hover:bg-purple-700"
+>
+    <div class="flex justify-between items-center p-4 w-full">
+        <div class="pr-2">
+                            <i class="fas fa-archive fa-fw fa-lg"></i>
+                    </div>
+
+        <div class="flex-1 truncate">
+            vyos-accel-ppp-doc_1.11.2-7_all.deb
+        </div>
+
+                    <div class="ml-2">
+                <button title="File Info" @click.prevent="$dispatch('show-file-info', { file: 'repositories\/crux\/vyos\/pool\/main\/v\/vyos\u002Daccel\u002Dppp\/vyos\u002Daccel\u002Dppp\u002Ddoc_1.11.2\u002D7_all.deb' })"
+                    class="justify-center items-center rounded-full w-8 h-8 -m-1 md:invisible hover:bg-gray-300 hover:shadow dark:hover:bg-purple-900 group-hover:visible"
+                >
+                    <i class="fas fa-info-circle"></i>
+                </button>
+            </div>
+        
+        <div class="hidden whitespace-nowrap text-right mx-2 w-1/6 sm:block">
+                            15.27KB
+                    </div>
+
+        <div class="hidden whitespace-nowrap text-right truncate ml-2 w-1/4 sm:block">
+            2021-01-19 11:32:39
+        </div>
+    </div>
+</a>
+
+                                            <a
+    href="repositories/crux/vyos/pool/main/v/vyos-accel-ppp/vyos-accel-ppp-ipoe-kmod_1.11.2-7_amd64.deb"
+    class="flex flex-col items-center rounded-lg font-mono group hover:bg-gray-100 hover:shadow dark:hover:bg-purple-700"
+>
+    <div class="flex justify-between items-center p-4 w-full">
+        <div class="pr-2">
+                            <i class="fas fa-archive fa-fw fa-lg"></i>
+                    </div>
+
+        <div class="flex-1 truncate">
+            vyos-accel-ppp-ipoe-kmod_1.11.2-7_amd64.deb
+        </div>
+
+                    <div class="ml-2">
+                <button title="File Info" @click.prevent="$dispatch('show-file-info', { file: 'repositories\/crux\/vyos\/pool\/main\/v\/vyos\u002Daccel\u002Dppp\/vyos\u002Daccel\u002Dppp\u002Dipoe\u002Dkmod_1.11.2\u002D7_amd64.deb' })"
+                    class="justify-center items-center rounded-full w-8 h-8 -m-1 md:invisible hover:bg-gray-300 hover:shadow dark:hover:bg-purple-900 group-hover:visible"
+                >
+                    <i class="fas fa-info-circle"></i>
+                </button>
+            </div>
+        
+        <div class="hidden whitespace-nowrap text-right mx-2 w-1/6 sm:block">
+                            16.71KB
+                    </div>
+
+        <div class="hidden whitespace-nowrap text-right truncate ml-2 w-1/4 sm:block">
+            2021-01-19 11:32:39
+        </div>
+    </div>
+</a>
+
+                                            <a
+    href="repositories/crux/vyos/pool/main/v/vyos-accel-ppp/vyos-accel-ppp_1.11.2-7_amd64.deb"
+    class="flex flex-col items-center rounded-lg font-mono group hover:bg-gray-100 hover:shadow dark:hover:bg-purple-700"
+>
+    <div class="flex justify-between items-center p-4 w-full">
+        <div class="pr-2">
+                            <i class="fas fa-archive fa-fw fa-lg"></i>
+                    </div>
+
+        <div class="flex-1 truncate">
+            vyos-accel-ppp_1.11.2-7_amd64.deb
+        </div>
+
+                    <div class="ml-2">
+                <button title="File Info" @click.prevent="$dispatch('show-file-info', { file: 'repositories\/crux\/vyos\/pool\/main\/v\/vyos\u002Daccel\u002Dppp\/vyos\u002Daccel\u002Dppp_1.11.2\u002D7_amd64.deb' })"
+                    class="justify-center items-center rounded-full w-8 h-8 -m-1 md:invisible hover:bg-gray-300 hover:shadow dark:hover:bg-purple-900 group-hover:visible"
+                >
+                    <i class="fas fa-info-circle"></i>
+                </button>
+            </div>
+        
+        <div class="hidden whitespace-nowrap text-right mx-2 w-1/6 sm:block">
+                            297.84KB
+                    </div>
+
+        <div class="hidden whitespace-nowrap text-right truncate ml-2 w-1/4 sm:block">
+            2021-01-19 11:32:39
+        </div>
+    </div>
+</a>
+
+                                    </li>
+            </ul>
+        </div>
+
+            </div>
+
+    <footer class="container border-t-2 border-gray-800 text-center mx-auto px-4 py-8 xl:max-w-screen-xl dark:text-white dark:border-white">
+    <div class="flex flex-col justify-center items-center">
+        <p class="mb-4">
+            Powered by <a href="https://www.directorylister.com" class="underline hover:text-blue-700 dark:hover:text-purple-700">Directory Lister</a>
+        </p>
+
+        <div class="flex">
+            <a href="https://github.com/vyos" title="GitHub" class="text-gray-400 mx-2 hover:text-github">
+                <i class="fab fa-github fa-lg"></i>
+            </a>
+
+            <a href="https://twitter.com/vyos_dev" title="Twitter" class="text-gray-400 mx-2 hover:text-twitter">
+                <i class="fab fa-twitter fa-lg"></i>
+            </a>
+
+            <a href="https://slack.vyos.io" title="slack" class="text-gray-400 mx-2 hover:text-purple-600">
+                <i class="fas fa-comments fa-lg"></i>
+            </a>
+        </div>
+    </div>
+</footer>
+
+    <div class="fixed bottom-0 left-0 right-0 pointer-events-none" x-data="{ visible: false }"
+    x-init="visible = window.scrollY > 10" x-show="visible" x-transition.opacity
+>
+    <div class="container flex justify-end mx-auto px-4 py-10 xl:max-w-screen-xl">
+        <button title="Scroll to Top"
+            class="flex justify-center items-center w-12 h-12 right-0 rounded-full shadow-lg bg-blue-600 text-white cursor-pointer pointer-events-auto hover:bg-blue-700 dark:bg-purple-700 dark:hover:bg-purple-800"
+            @click="window.scrollTo({ top: 0, left: 0, behavior: 'smooth' });"
+            @scroll.window="visible = window.scrollY > 10"
+        >
+            <i class="fas fa-arrow-up fa-lg"></i>
+        </button>
+    </div>
+</div>
+
+    <div class="fixed inset-0 flex justify-center items-center bg-gray-800 bg-opacity-50 p-4 z-50 dark:bg-gray-600 dark:bg-opacity-50"
+    x-data="file-info-modal" x-show="visible" @click.self="hide()" @keyup.escape.window="hide()"
+    @show-file-info.window="show($event.detail.file)" x-transition:enter.opacity x-cloak
+>
+    <div x-show="!loading" x-transition:enter @click.away="hide()" class="bg-white rounded-lg shadow-lg overflow-hidden dark:bg-gray-800 dark:text-white">
+        <header class="flex justify-between items-center bg-blue-600 p-4 dark:bg-purple-700">
+            <i class="fas fa-info-circle fa-lg text-white"></i>
+
+            <div class="items-center text-xl text-white font-mono mx-4" x-text="title"></div>
+
+            <button @click="hide()" class="flex justify-center items-center rounded-full w-6 h-6 text-gray-900 text-opacity-50 text-sm hover:bg-red-700 hover:text-white hover:shadow">
+                <i class="fas fa-times"></i>
+            </button>
+        </header>
+
+        <content class="flex justify-center items-center p-4">
+            <div class="overflow-x-auto">
+                <p class="font-thin text-2xl text-gray-600 m-4" x-if="error" x-text="error"></p>
+
+                <table x-if="error === undefined" class="table-auto">
+                    <tbody>
+                        <template x-for="[name, value] in Object.entries(hashes)" :key="name">
+                            <tr>
+                                <td class="border font-bold px-4 py-2" x-text="name"></td>
+                                <td class="border font-mono px-4 py-2" x-text="value"></td>
+                            </tr>
+                        </template>
+                    </tbody>
+                </table>
+            </div>
+        </content>
+    </div>
+
+    <i class="fas fa-spinner fa-pulse fa-5x text-white" x-show="loading"></i>
+</div>
+    </div>
+</div>
