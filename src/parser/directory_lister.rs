@@ -94,7 +94,6 @@ mod tests {
                 &url::Url::parse("http://localhost:1921/vyos/").unwrap(),
             )
             .unwrap();
-        println!("{:?}", items);
         match items {
             ListResult::List(items) => {
                 assert_eq!(items.len(), 7);
@@ -125,6 +124,23 @@ mod tests {
                         .unwrap()
                 );
                 assert_eq!(items[4].url, Url::parse("http://localhost:1921/vyos/repositories/current/dists/current/Contents-amd64.gz").unwrap());
+            }
+            _ => unreachable!(),
+        }
+    }
+
+    #[test]
+    fn test_vyos_2() {
+        let client = reqwest::blocking::Client::new();
+        let items = DirectoryListerListingParser::default()
+            .get_list(
+                &client,
+                &url::Url::parse("http://localhost:1921/vyos/vyos-accel-ppp/").unwrap(),
+            )
+            .unwrap();
+        match items {
+            ListResult::List(items) => {
+                assert_eq!(items.len(), 3);
             }
             _ => unreachable!(),
         }
