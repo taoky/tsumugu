@@ -55,7 +55,7 @@ Options:
       --timezone-file <TIMEZONE_FILE>  Default: auto. You can set a valid URL for guessing, or an invalid one for disabling
       --retry <RETRY>                  Retry count for each request [default: 3]
       --head-before-get                Do an HEAD before actual GET. Add this if you are not sure if the results from parser is correct
-      --parser <PARSER>                Choose a parser [default: nginx] [possible values: nginx, apache-f2, docker]
+      --parser <PARSER>                Choose a parser [default: nginx] [possible values: nginx, apache-f2, docker, directory-lister]
       --exclude <EXCLUDE>              Excluded file regex. Supports multiple
       --include <INCLUDE>              Included file regex (even if excluded). Supports multiple
   -h, --help                           Print help
@@ -70,7 +70,7 @@ Arguments:
 
 Options:
       --user-agent <USER_AGENT>        Customize tsumugu's user agent [default: tsumugu]
-      --parser <PARSER>                Choose a parser [default: nginx] [possible values: nginx, apache-f2, docker]
+      --parser <PARSER>                Choose a parser [default: nginx] [possible values: nginx, apache-f2, docker, directory-lister]
       --exclude <EXCLUDE>              Excluded file regex. Supports multiple
       --include <INCLUDE>              Included file regex (even if excluded). Supports multiple
       --upstream-base <UPSTREAM_BASE>  The upstream base ending with "/" [default: /]
@@ -139,6 +139,27 @@ sys	0m0.294s
 ```
 
 ## Notes
+
+### Yuki integration
+
+See <https://github.com/ustclug/ustcmirror-images#tsumugu>.
+
+YAML example:
+
+```yaml
+envs:
+  UPSTREAM: http://download.proxmox.com/
+  # tsumugu is not in yuki supported upstream image yet, so this is a workaround to correctly display the upstream URL
+  $UPSTREAM: http://download.proxmox.com/
+  TSUMUGU_EXCLUDE: --exclude ^temp --exclude pmg/dists/.+changelog$ --exclude devel/dists/.+changelog$
+  TSUMUGU_TIMEZONEFILE: http://download.proxmox.com/images/aplinfo.dat
+  TSUMUGU_THREADS: 1
+image: ustcmirror/tsumugu:latest
+interval: 12 3 * * *
+logRotCycle: 10
+name: proxmox
+storageDir: /srv/repo/proxmox/
+```
 
 ### Regex variables
 
