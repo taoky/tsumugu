@@ -380,35 +380,48 @@ pub fn sync(args: SyncArgs, bind_address: Option<String>) -> ! {
         exit_code = 1;
     } else {
         // Don't even walkdir when dry_run, to prevent no dir error
-        if !args.dry_run {
-            for entry in walkdir::WalkDir::new(download_dir).contents_first(true) {
-                let entry = entry.unwrap();
-                let path = entry.path();
-                if !remote_list.contains(&path.to_path_buf()) {
-                    if !args.no_delete {
-                        // always make sure that we are deleting the right thing
-                        if del_cnt >= args.max_delete {
-                            info!("Exceeding max delete count, aborting");
-                            // exit with 25 to indicate that the deletion has been aborted
-                            // this is the same as rsync
-                            exit_code = 25;
-                            break;
-                        }
-                        del_cnt += 1;
-                        assert!(path.starts_with(download_dir));
+
+        for entry in walkdir::WalkDir::new(download_dir).contents_first(true) {
+            let entry = match entry {
+                Ok(entry) => entry,
+                Err(e) => {
+                    error!("Failed to walkdir: {:?}", e);
+                    if !args.dry_run {
+                        exit_code = 1;
+                    }
+                    break;
+                }
+            };
+            let path = entry.path();
+            if !remote_list.contains(&path.to_path_buf()) {
+                if !args.no_delete {
+                    // always make sure that we are deleting the right thing
+                    if del_cnt >= args.max_delete {
+                        info!("Exceeding max delete count, aborting");
+                        // exit with 25 to indicate that the deletion has been aborted
+                        // this is the same as rsync
+                        exit_code = 25;
+                        break;
+                    }
+                    del_cnt += 1;
+                    assert!(path.starts_with(download_dir));
+                    if args.dry_run {
+                        info!("Dry run, not deleting {:?}", path);
+                        continue;
+                    } else {
                         info!("Deleting {:?}", path);
-                        if entry.file_type().is_dir() {
-                            if let Err(e) = std::fs::remove_dir(path) {
-                                error!("Failed to remove {:?}: {:?}", path, e);
-                                exit_code = 4;
-                            }
-                        } else if let Err(e) = std::fs::remove_file(path) {
+                    }
+                    if entry.file_type().is_dir() {
+                        if let Err(e) = std::fs::remove_dir(path) {
                             error!("Failed to remove {:?}: {:?}", path, e);
                             exit_code = 4;
                         }
-                    } else {
-                        info!("{:?} not in remote", path);
+                    } else if let Err(e) = std::fs::remove_file(path) {
+                        error!("Failed to remove {:?}: {:?}", path, e);
+                        exit_code = 4;
                     }
+                } else {
+                    info!("{:?} not in remote", path);
                 }
             }
         }
