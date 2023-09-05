@@ -86,6 +86,10 @@ pub struct SyncArgs {
     /// Included file regex (even if excluded). Supports multiple.
     #[clap(long, value_parser)]
     include: Vec<ExpandedRegex>,
+
+    /// Allow mtime from parser if not available from HTTP headers.
+    #[clap(long)]
+    allow_mtime_from_parser: bool,
 }
 
 #[derive(Parser, Debug)]

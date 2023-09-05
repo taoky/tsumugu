@@ -22,7 +22,7 @@ use crate::{
     parser::ListResult,
     regex_process::{self, ExclusionManager},
     term::AlternativeTerm,
-    utils::{self, again, again_async, get_async, head, is_symlink},
+    utils::{self, again, again_async, get_async, head, is_symlink, naive_to_utc},
     SyncArgs,
 };
 
@@ -310,7 +310,17 @@ pub fn sync(args: SyncArgs, bind_address: Option<String>) -> ! {
                                             .progress_chars("#>-"));
                                         pb.set_message(format!("Downloading {}", item.url));
 
-                                        let mtime = utils::get_async_response_mtime(&resp).unwrap();
+                                        let mtime = match utils::get_async_response_mtime(&resp) {
+                                            Ok(mtime) => mtime,
+                                            Err(e) => {
+                                                if args.allow_mtime_from_parser {
+                                                    naive_to_utc(&item.mtime, timezone)
+                                                } else {
+                                                error!("Failed to get mtime of {}: {:?}", task.url, e);
+                                                failure_downloading.store(true, Ordering::SeqCst);
+                                                return;
+                                            }}
+                                        };
 
                                         let tmp_path = cwd.join(format!(".tmp.{}", item.name));
                                         {

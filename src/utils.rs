@@ -1,5 +1,7 @@
 use anyhow::anyhow;
 use anyhow::Result;
+use chrono::FixedOffset;
+use chrono::TimeZone;
 use chrono::{DateTime, Utc};
 use futures_util::Future;
 use tracing::warn;
@@ -95,4 +97,11 @@ pub fn is_symlink(path: &std::path::Path) -> bool {
     path.symlink_metadata()
         .map(|m| m.file_type().is_symlink())
         .unwrap_or(false)
+}
+
+pub fn naive_to_utc(naive: &chrono::NaiveDateTime, timezone: Option<FixedOffset>) -> DateTime<Utc> {
+    match timezone {
+        None => DateTime::<Utc>::from_utc(*naive, Utc),
+        Some(timezone) => timezone.from_local_datetime(naive).unwrap().into(),
+    }
 }

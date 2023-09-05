@@ -1,11 +1,11 @@
 use std::path::Path;
 
-use chrono::{DateTime, FixedOffset, TimeZone, Utc};
+use chrono::{DateTime, FixedOffset, Utc};
 use tracing::{debug, warn};
 
 use crate::{
     listing::{FileSize, FileType, ListItem},
-    utils,
+    utils::{self, naive_to_utc},
 };
 
 pub fn compare_filetype(fstype: std::fs::FileType, tsumugu_type: &FileType) -> bool {
@@ -65,21 +65,16 @@ pub fn should_download_by_list(
         }
     }
     .into();
+    let remote_mtime = naive_to_utc(&remote.mtime, remote_timezone);
+    let offset = remote_mtime - local_mtime;
+    debug!("DateTime offset: {:?} {:?}", path, offset);
     match remote_timezone {
         None => {
-            // treat remote as UTC
-            let remote_mtime = DateTime::<Utc>::from_utc(remote.mtime, Utc);
-            let offset = remote_mtime - local_mtime;
             // allow an offset to up to 24hrs
-            debug!("DateTime offset: {:?} {:?}", path, offset);
             offset.num_hours().abs() > 24
         }
-        Some(timezone) => {
-            let remote_mtime = timezone.from_local_datetime(&remote.mtime).unwrap();
-            let remote_mtime: DateTime<Utc> = remote_mtime.into();
-            let offset = remote_mtime - local_mtime;
+        Some(_) => {
             // allow an offset up to 1min
-            debug!("DateTime offset: {:?} {:?}", path, offset);
             offset.num_minutes().abs() > 1
         }
     }
