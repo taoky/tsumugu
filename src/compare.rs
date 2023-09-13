@@ -83,6 +83,7 @@ pub fn should_download_by_list(
 pub fn should_download_by_head(path: &Path, resp: &reqwest::blocking::Response) -> bool {
     // Construct a valid "ListItem" and pass to should_download_by_list
     debug!("Checking {:?} by HEAD: {:?}", path, resp);
+    debug!("{:?}", resp.content_length());
     let item = ListItem {
         url: resp.url().clone(),
         name: path.file_name().unwrap().to_str().unwrap().to_string(),
@@ -91,7 +92,15 @@ pub fn should_download_by_head(path: &Path, resp: &reqwest::blocking::Response) 
         } else {
             FileType::File
         },
-        size: Some(FileSize::Precise(resp.content_length().unwrap())),
+        size: Some(FileSize::Precise(
+            resp.headers()
+                .get("Content-Length")
+                .unwrap()
+                .to_str()
+                .unwrap()
+                .parse::<u64>()
+                .unwrap(),
+        )),
         mtime: utils::get_blocking_response_mtime(resp)
             .unwrap()
             .naive_utc(),
