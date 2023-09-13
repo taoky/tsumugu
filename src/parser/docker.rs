@@ -19,7 +19,7 @@ impl Default for DockerListingParser {
     fn default() -> Self {
         Self {
             metadata_regex: Regex::new(
-                r#"(\d{4}-\d{2}-\d{2} \d{2}:\d{2}(:\d{2})?)\s+([\d \w\.-]+)$"#,
+                r"(\d{4}-\d{2}-\d{2} \d{2}:\d{2}(:\d{2})?)\s+([\d \w\.-]+)$",
             )
             .unwrap(),
         }
