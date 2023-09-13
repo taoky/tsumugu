@@ -157,6 +157,7 @@ pub fn sync(args: SyncArgs, bind_address: Option<String>) -> ! {
 
             let failure_listing = &failure_listing;
             let failure_downloading = &failure_downloading;
+            let skip_if_exists_regex = &args.skip_if_exists;
             scope.spawn(move || {
                 loop {
                     active_cnt.fetch_add(1, Ordering::SeqCst);
@@ -271,7 +272,15 @@ pub fn sync(args: SyncArgs, bind_address: Option<String>) -> ! {
                                     continue;
                                 }
 
-                                if !should_download_by_list(&expected_path, &item, timezone) {
+                                let mut skip_if_exists = false;
+                                for i in skip_if_exists_regex.iter() {
+                                    if i.is_match(&expected_path.to_string_lossy()) {
+                                        skip_if_exists = true;
+                                        break;
+                                    }
+                                }
+
+                                if !should_download_by_list(&expected_path, &item, timezone, skip_if_exists) {
                                     info!("Skipping {}", task.url);
                                     continue;
                                 }

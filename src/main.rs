@@ -87,6 +87,10 @@ pub struct SyncArgs {
     #[clap(long, value_parser)]
     include: Vec<ExpandedRegex>,
 
+    /// Skip file regex if they exist. Supports multiple.
+    #[clap(long, value_parser)]
+    skip_if_exists: Vec<ExpandedRegex>,
+
     /// Allow mtime from parser if not available from HTTP headers.
     #[clap(long)]
     allow_mtime_from_parser: bool,

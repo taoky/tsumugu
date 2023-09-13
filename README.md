@@ -47,20 +47,36 @@ Arguments:
   <LOCAL>     The local directory
 
 Options:
-      --user-agent <USER_AGENT>        Customize tsumugu's user agent [default: tsumugu]
-      --dry-run                        Do not download files and cleanup
-      --threads <THREADS>              Threads at work [default: 2]
-      --no-delete                      Do not clean up after sync
-      --max-delete <MAX_DELETE>        Set max delete count [default: 100]
-      --timezone-file <TIMEZONE_FILE>  Default: auto. You can set a valid URL for guessing, or an invalid one for disabling
-      --retry <RETRY>                  Retry count for each request [default: 3]
-      --head-before-get                Do an HEAD before actual GET. Add this if you are not sure if the results from parser is correct
-      --parser <PARSER>                Choose a parser [default: nginx] [possible values: nginx, apache-f2, docker, directory-lister]
-      --exclude <EXCLUDE>              Excluded file regex. Supports multiple
-      --include <INCLUDE>              Included file regex (even if excluded). Supports multiple
-      --allow-mtime-from-parser        Allow mtime from parser if not available from HTTP headers
-  -h, --help                           Print help
-  -V, --version                        Print version
+      --user-agent <USER_AGENT>
+          Customize tsumugu's user agent [default: tsumugu]
+      --dry-run
+          Do not download files and cleanup
+      --threads <THREADS>
+          Threads at work [default: 2]
+      --no-delete
+          Do not clean up after sync
+      --max-delete <MAX_DELETE>
+          Set max delete count [default: 100]
+      --timezone-file <TIMEZONE_FILE>
+          Default: auto. You can set a valid URL for guessing, or an invalid one for disabling
+      --retry <RETRY>
+          Retry count for each request [default: 3]
+      --head-before-get
+          Do an HEAD before actual GET. Add this if you are not sure if the results from parser is correct
+      --parser <PARSER>
+          Choose a parser [default: nginx] [possible values: nginx, apache-f2, docker, directory-lister]
+      --exclude <EXCLUDE>
+          Excluded file regex. Supports multiple
+      --include <INCLUDE>
+          Included file regex (even if excluded). Supports multiple
+      --skip-if-exists <SKIP_IF_EXISTS>
+          Skip file regex if they exist. Supports multiple
+      --allow-mtime-from-parser
+          Allow mtime from parser if not available from HTTP headers
+  -h, --help
+          Print help
+  -V, --version
+          Print version
 > cargo run -- list --help
     Finished dev [unoptimized + debuginfo] target(s) in 0.06s
      Running `target/debug/tsumugu list --help`

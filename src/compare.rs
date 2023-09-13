@@ -19,9 +19,16 @@ pub fn should_download_by_list(
     path: &Path,
     remote: &ListItem,
     remote_timezone: Option<FixedOffset>,
+    skip_if_exists: bool,
 ) -> bool {
     let local_metadata = match path.metadata() {
-        Ok(m) => m,
+        Ok(m) => {
+            if skip_if_exists {
+                debug!("Skipping {:?} because it exists", path);
+                return false;
+            }
+            m
+        }
         Err(e) => {
             if e.kind() != std::io::ErrorKind::NotFound {
                 warn!("Failed to get metadata of {:?}: {:?}", path, e);
@@ -104,5 +111,5 @@ pub fn should_download_by_head(path: &Path, resp: &reqwest::blocking::Response) 
             .unwrap()
             .naive_utc(),
     };
-    should_download_by_list(path, &item, FixedOffset::east_opt(0))
+    should_download_by_list(path, &item, FixedOffset::east_opt(0), false)
 }
