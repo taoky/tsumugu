@@ -136,7 +136,17 @@ fn main() {
         .with_ansi(enable_color)
         .init();
 
-    let bind_address = std::env::var("BIND_ADDRESS").ok();
+    let bind_address = match std::env::var("BIND_ADDRESS").ok() {
+        Some(s) => {
+            let s = s.trim();
+            if s.is_empty() {
+                None
+            } else {
+                Some(s.to_owned())
+            }
+        }
+        None => None,
+    };
 
     // terminate whole process when a thread panics
     let orig_hook = std::panic::take_hook();
