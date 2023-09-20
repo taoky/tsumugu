@@ -20,6 +20,7 @@ pub fn should_download_by_list(
     remote: &ListItem,
     remote_timezone: Option<FixedOffset>,
     skip_if_exists: bool,
+    size_only: bool,
 ) -> bool {
     let local_metadata = match path.metadata() {
         Ok(m) => {
@@ -64,6 +65,9 @@ pub fn should_download_by_list(
         );
         return true;
     }
+    if size_only {
+        return false;
+    }
     let local_mtime: DateTime<Utc> = match local_metadata.modified() {
         Ok(m) => m,
         Err(_) => {
@@ -87,7 +91,11 @@ pub fn should_download_by_list(
     }
 }
 
-pub fn should_download_by_head(path: &Path, resp: &reqwest::blocking::Response) -> bool {
+pub fn should_download_by_head(
+    path: &Path,
+    resp: &reqwest::blocking::Response,
+    size_only: bool,
+) -> bool {
     // Construct a valid "ListItem" and pass to should_download_by_list
     debug!("Checking {:?} by HEAD: {:?}", path, resp);
     let item = ListItem {
@@ -111,5 +119,5 @@ pub fn should_download_by_head(path: &Path, resp: &reqwest::blocking::Response) 
             .unwrap()
             .naive_utc(),
     };
-    should_download_by_list(path, &item, FixedOffset::east_opt(0), false)
+    should_download_by_list(path, &item, FixedOffset::east_opt(0), false, size_only)
 }

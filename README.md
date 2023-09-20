@@ -59,6 +59,8 @@ Options:
           Set max delete count [default: 100]
       --timezone-file <TIMEZONE_FILE>
           Default: auto. You can set a valid URL for guessing, or an invalid one for disabling
+      --timezone <TIMEZONE>
+          Manually set timezone (+- hrs). This overrides timezone_file
       --retry <RETRY>
           Retry count for each request [default: 3]
       --head-before-get
@@ -71,6 +73,8 @@ Options:
           Included file regex (even if excluded). Supports multiple
       --skip-if-exists <SKIP_IF_EXISTS>
           Skip file regex if they exist. Supports multiple
+      --compare-size-only <COMPARE_SIZE_ONLY>
+          File regex for those compare size only in HEAD requests. This only works with head_before_get
       --allow-mtime-from-parser
           Allow mtime from parser if not available from HTTP headers
   -h, --help

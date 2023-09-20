@@ -67,6 +67,10 @@ pub struct SyncArgs {
     #[clap(long)]
     timezone_file: Option<String>,
 
+    /// Manually set timezone (+- hrs). This overrides timezone_file.
+    #[clap(long)]
+    timezone: Option<i32>,
+
     /// Retry count for each request.
     #[clap(long, default_value_t = 3)]
     retry: usize,
@@ -90,6 +94,10 @@ pub struct SyncArgs {
     /// Skip file regex if they exist. Supports multiple.
     #[clap(long, value_parser)]
     skip_if_exists: Vec<ExpandedRegex>,
+
+    /// File regex for those compare size only in HEAD requests. This only works with head_before_get.
+    #[clap(long, value_parser)]
+    compare_size_only: Vec<ExpandedRegex>,
 
     /// Allow mtime from parser if not available from HTTP headers.
     #[clap(long)]

@@ -9,6 +9,7 @@ use std::{
     },
 };
 
+use chrono::FixedOffset;
 use crossbeam_deque::{Injector, Worker};
 use futures_util::StreamExt;
 use indicatif::{MultiProgress, ProgressBar, ProgressDrawTarget, ProgressStyle};
@@ -61,49 +62,63 @@ pub fn sync(args: SyncArgs, bind_address: Option<String>) -> ! {
         1,
     ));
 
-    // Check if to guess timezone
-    let timezone_file = match args.timezone_file {
-        Some(f) => match Url::parse(&f) {
-            Ok(url) => Some(url),
-            Err(_) => {
-                warn!("Invalid timezone file URL, disabling timezone guessing");
-                None
-            }
-        },
-        None => {
-            // eek, try getting first file in root index
-            let list = again(|| parser.get_list(&client, &args.upstream), args.retry).unwrap();
-            match list {
-                ListResult::List(list) => {
-                    match list.iter().find(|x| x.type_ == listing::FileType::File) {
-                        None => {
-                            warn!("No files in root index, disabling timezone guessing");
+    let timezone = {
+        match args.timezone {
+            None => {
+                // Check if to guess timezone
+                let timezone_file = match args.timezone_file {
+                    Some(f) => match Url::parse(&f) {
+                        Ok(url) => Some(url),
+                        Err(_) => {
+                            warn!("Invalid timezone file URL, disabling timezone guessing");
                             None
                         }
-                        Some(x) => Some(x.url.clone()),
+                    },
+                    None => {
+                        // eek, try getting first file in root index
+                        let list =
+                            again(|| parser.get_list(&client, &args.upstream), args.retry).unwrap();
+                        match list {
+                            ListResult::List(list) => {
+                                match list.iter().find(|x| x.type_ == listing::FileType::File) {
+                                    None => {
+                                        warn!(
+                                            "No files in root index, disabling timezone guessing"
+                                        );
+                                        None
+                                    }
+                                    Some(x) => Some(x.url.clone()),
+                                }
+                            }
+                            ListResult::Redirect(_) => {
+                                warn!("Root index is a redirect, disabling timezone guessing");
+                                None
+                            }
+                        }
                     }
-                }
-                ListResult::Redirect(_) => {
-                    warn!("Root index is a redirect, disabling timezone guessing");
-                    None
+                };
+                match timezone_file {
+                    Some(timezone_url) => {
+                        let timezone =
+                            listing::guess_remote_timezone(&*parser, &client, timezone_url);
+                        let timezone = match timezone {
+                            Ok(tz) => Some(tz),
+                            Err(e) => {
+                                warn!("Failed to guess timezone: {:?}", e);
+                                None
+                            }
+                        };
+                        info!("Guessed timezone: {:?}", timezone);
+                        timezone
+                    }
+                    None => None,
                 }
             }
+            Some(tz) => {
+                info!("Using timezone from argument: {:?} hrs", tz);
+                Some(FixedOffset::east_opt(tz * 3600).unwrap())
+            }
         }
-    };
-    let timezone = match timezone_file {
-        Some(timezone_url) => {
-            let timezone = listing::guess_remote_timezone(&*parser, &client, timezone_url);
-            let timezone = match timezone {
-                Ok(tz) => Some(tz),
-                Err(e) => {
-                    warn!("Failed to guess timezone: {:?}", e);
-                    None
-                }
-            };
-            info!("Guessed timezone: {:?}", timezone);
-            timezone
-        }
-        None => None,
     };
 
     let download_dir = args.local.as_path();
@@ -158,6 +173,7 @@ pub fn sync(args: SyncArgs, bind_address: Option<String>) -> ! {
             let failure_listing = &failure_listing;
             let failure_downloading = &failure_downloading;
             let skip_if_exists_regex = &args.skip_if_exists;
+            let compare_size_only_regex = &args.compare_size_only;
             scope.spawn(move || {
                 loop {
                     active_cnt.fetch_add(1, Ordering::SeqCst);
@@ -280,9 +296,17 @@ pub fn sync(args: SyncArgs, bind_address: Option<String>) -> ! {
                                     }
                                 }
 
-                                if !should_download_by_list(&expected_path, &item, timezone, skip_if_exists) {
+                                if !should_download_by_list(&expected_path, &item, timezone, skip_if_exists, false) {
                                     info!("Skipping {}", task.url);
                                     continue;
+                                }
+
+                                let mut compare_size_only = false;
+                                for i in compare_size_only_regex.iter() {
+                                    if i.is_match(&expected_path.to_string_lossy()) {
+                                        compare_size_only = true;
+                                        break;
+                                    }
                                 }
 
                                 if args.head_before_get {
@@ -294,7 +318,7 @@ pub fn sync(args: SyncArgs, bind_address: Option<String>) -> ! {
                                             continue;
                                         }
                                     };
-                                    if !should_download_by_head(&expected_path, &resp) {
+                                    if !should_download_by_head(&expected_path, &resp, compare_size_only) {
                                         info!("Skipping (by HEAD) {}", task.url);
                                         continue;
                                     }
