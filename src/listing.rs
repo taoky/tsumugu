@@ -176,7 +176,7 @@ pub fn guess_remote_timezone(
 
             // compare how many hours are there between mtime (FixedOffset) and item.mtime (Naive)
             // assuming that Naive one is UTC
-            let unknown_mtime = DateTime::<Utc>::from_utc(item.mtime, Utc);
+            let unknown_mtime = DateTime::<Utc>::from_naive_utc_and_offset(item.mtime, Utc);
             let offset = unknown_mtime - mtime;
             let hrs = (offset.num_minutes() as f64 / 60.0).round() as i32;
 

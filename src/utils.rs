@@ -101,7 +101,24 @@ pub fn is_symlink(path: &std::path::Path) -> bool {
 
 pub fn naive_to_utc(naive: &chrono::NaiveDateTime, timezone: Option<FixedOffset>) -> DateTime<Utc> {
     match timezone {
-        None => DateTime::<Utc>::from_utc(*naive, Utc),
+        None => DateTime::<Utc>::from_naive_utc_and_offset(*naive, Utc),
         Some(timezone) => timezone.from_local_datetime(naive).unwrap().into(),
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    #[test]
+    fn test_naive_to_utc() {
+        let naive =
+            chrono::NaiveDateTime::parse_from_str("2021-01-01 00:00:00", "%Y-%m-%d %H:%M:%S")
+                .unwrap();
+        let timezone = FixedOffset::east_opt(3600 * 8);
+        let utc = naive_to_utc(&naive, timezone);
+        assert_eq!(utc.to_string(), "2020-12-31 16:00:00 UTC");
+        let utc = naive_to_utc(&naive, None);
+        assert_eq!(utc.to_string(), "2021-01-01 00:00:00 UTC");
     }
 }
