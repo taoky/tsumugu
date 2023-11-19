@@ -6,7 +6,7 @@ use std::{
     sync::{
         atomic::{AtomicBool, AtomicU64, AtomicUsize, Ordering},
         Arc, Mutex,
-    },
+    }, path::PathBuf,
 };
 
 use chrono::FixedOffset;
@@ -278,24 +278,27 @@ pub fn sync(args: SyncArgs, bind_address: Option<String>) -> ! {
                                     std::fs::create_dir_all(&cwd).unwrap();
                                 }
                                 let expected_path = cwd.join(&item.name);
-
+                                let relative_filepath = PathBuf::from(&relative).join(&item.name);
+                                debug!("expected_path: {:?}, relative: {:?}", expected_path, relative_filepath);
                                 {
                                     remote_list.lock().unwrap().insert(expected_path.clone());
                                 }
 
-                                if exclusion_manager.match_str(&expected_path.to_string_lossy()) == regex_process::Comparison::Stop {
-                                    info!("Skipping excluded {:?}", &expected_path);
+                                // We should put relative filepath into exclusion manager here
+                                if exclusion_manager.match_str(&relative_filepath.to_string_lossy()) == regex_process::Comparison::Stop {
+                                    info!("Skipping excluded {:?}", &relative_filepath);
                                     continue;
                                 }
 
                                 let mut skip_if_exists = false;
                                 for i in skip_if_exists_regex.iter() {
-                                    if i.is_match(&expected_path.to_string_lossy()) {
+                                    if i.is_match(&relative_filepath.to_string_lossy()) {
                                         skip_if_exists = true;
                                         break;
                                     }
                                 }
 
+                                // Following code requires real filesystem path (expected_path) to work
                                 if !should_download_by_list(&expected_path, &item, timezone, skip_if_exists, false) {
                                     info!("Skipping {}", task.url);
                                     continue;
