@@ -108,6 +108,10 @@ pub struct SyncArgs {
     /// (Experimental) APT Packages file parser to find out missing packages.
     #[clap(long)]
     apt_packages: bool,
+
+    /// (Experimental) YUM Packages file parser to find out missing packages.
+    #[clap(long)]
+    yum_packages: bool,
 }
 
 #[derive(Parser, Debug)]

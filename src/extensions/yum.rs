@@ -1,4 +1,4 @@
-use std::{path::Path, io::Read};
+use std::{io::Read, path::Path};
 
 use anyhow::Result;
 use flate2::read::GzDecoder;
@@ -41,6 +41,27 @@ pub fn parse_package(
     relative: Vec<String>,
     packages_url: &Url,
 ) -> Result<Vec<YumPackage>> {
+    let packages = read_primary_xml(packages_path)?;
+    let mut relative = relative.clone();
+    relative.pop(); // pop "repodata"
 
-    unimplemented!()
+    let mut base_url = packages_url.clone();
+    base_url.path_segments_mut().unwrap().pop().pop().push("");
+
+    let mut res = vec![];
+    for package in packages {
+        let url = base_url.join(&package)?;
+        let splited: Vec<String> = package.split('/').map(|s| s.to_string()).collect();
+        let mut relative = relative.clone();
+        relative.append(&mut splited.clone());
+
+        let basename = relative.pop().unwrap();
+        res.push(YumPackage {
+            url,
+            relative,
+            filename: basename,
+        })
+    }
+
+    Ok(res)
 }
