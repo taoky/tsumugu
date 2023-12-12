@@ -2,6 +2,7 @@ use std::{io::Read, path::Path};
 
 use anyhow::Result;
 use flate2::read::GzDecoder;
+use tracing::info;
 use url::Url;
 
 pub fn is_yum_primary_xml(p: &Path) -> bool {
@@ -13,7 +14,7 @@ pub fn is_yum_primary_xml(p: &Path) -> bool {
 
 // read and extract location
 pub fn read_primary_xml(p: &Path) -> Result<Vec<String>> {
-    let re = regex::Regex::new(r#"<location href="(.+?)" />"#).unwrap();
+    let re = regex::Regex::new(r#"<location href="(.+?)".*/>"#).unwrap();
     let bytes = std::fs::read(p)?;
     let mut gzd = GzDecoder::new(&bytes[..]);
     let mut s = String::new();
@@ -47,6 +48,8 @@ pub fn parse_package(
 
     let mut base_url = packages_url.clone();
     base_url.path_segments_mut().unwrap().pop().pop().push("");
+    info!("base_url = {:?}", base_url);
+    info!("relative = {:?}", relative);
 
     let mut res = vec![];
     for package in packages {
