@@ -64,11 +64,11 @@ impl Parser for ApacheF2ListingParser {
 
             let date = NaiveDateTime::parse_from_str(lastmod, "%Y-%m-%d %H:%M")?;
 
-            items.push(ListItem {
-                url: href,
-                name: name.to_string(),
+            items.push(ListItem::new(
+                href,
+                name.to_string(),
                 type_,
-                size: {
+                {
                     if size == "-" {
                         None
                     } else {
@@ -76,8 +76,8 @@ impl Parser for ApacheF2ListingParser {
                         Some(FileSize::HumanizedBinary(n_size, unit))
                     }
                 },
-                mtime: date,
-            })
+                date,
+            ))
         }
 
         Ok(ListResult::List(items))

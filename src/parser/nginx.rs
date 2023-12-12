@@ -71,13 +71,13 @@ impl Parser for NginxListingParser {
             let date = NaiveDateTime::parse_from_str(date, "%d-%b-%Y %H:%M")?;
             let size = metadata.get(2).unwrap().as_str().parse::<u64>().ok();
             // println!("{} {} {:?} {} {:?}", href, name, type_, date, size);
-            items.push(ListItem {
-                url: href,
-                name: name.to_string(),
+            items.push(ListItem::new(
+                href,
+                name.to_string(),
                 type_,
-                size: size.map(FileSize::Precise),
-                mtime: date,
-            })
+                size.map(FileSize::Precise),
+                date,
+            ))
         }
         Ok(ListResult::List(items))
     }
