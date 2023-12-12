@@ -394,8 +394,8 @@ pub fn sync(args: SyncArgs, bind_address: Option<String>) -> ! {
                                 }
 
                                 // APT/YUM extension check
-                                if args.apt_packages && crate::apt::is_apt_package(&expected_path) {
-                                    let packages = crate::apt::parse_package(&expected_path, task.relative.clone(), &item.url);
+                                if args.apt_packages && crate::extensions::apt::is_apt_package(&expected_path) {
+                                    let packages = crate::extensions::apt::parse_package(&expected_path, task.relative.clone(), &item.url);
                                     match packages {
                                         Err(e) => {
                                             warn!("Failed to parse APT package {:?}: {:?}", expected_path, e);
