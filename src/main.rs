@@ -14,7 +14,7 @@ mod regex_process;
 mod term;
 mod utils;
 
-mod apt;
+mod extensions;
 
 use crate::regex_process::ExpandedRegex;
 
