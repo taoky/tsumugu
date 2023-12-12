@@ -10,7 +10,7 @@ use std::{
     },
 };
 
-use chrono::FixedOffset;
+use chrono::{FixedOffset, NaiveDateTime};
 use crossbeam_deque::{Injector, Worker};
 use futures_util::StreamExt;
 use indicatif::{MultiProgress, ProgressBar, ProgressDrawTarget, ProgressStyle};
@@ -393,6 +393,29 @@ pub fn sync(args: SyncArgs, bind_address: Option<String>) -> ! {
                                     runtime.block_on(future);
                                 }
 
+                                fn extension_push_task(
+                                    worker: &Worker<Task>,
+                                    wake: &AtomicUsize,
+                                    filename: &str,
+                                    relative: Vec<String>,
+                                    url: Url,
+                                    size: usize,
+                                ) {
+                                    worker.push(Task {
+                                        task: TaskType::Download(ListItem {
+                                            url: url.clone(),
+                                            name: filename.to_owned(),
+                                            type_: listing::FileType::File,
+                                            size: Some(listing::FileSize::Precise(size as u64)),
+                                            mtime: NaiveDateTime::default(),
+                                            skip_check: true,
+                                        }),
+                                        relative,
+                                        url,
+                                    });
+                                    wake.fetch_add(1, Ordering::SeqCst);
+                                }
+
                                 // APT/YUM extension check
                                 if args.apt_packages && crate::extensions::apt::is_apt_package(&expected_path) {
                                     let packages = crate::extensions::apt::parse_package(&expected_path, task.relative.clone(), &item.url);
@@ -403,22 +426,7 @@ pub fn sync(args: SyncArgs, bind_address: Option<String>) -> ! {
                                         Ok(packages) => {
                                             for package in packages {
                                                 info!("APT package: {:?}", package);
-                                                worker.push(Task {
-                                                    task: TaskType::Download(ListItem {
-                                                        url: package.url.clone(),
-                                                        name: package.filename,
-                                                        type_: listing::FileType::File,
-                                                        size: Some(listing::FileSize::Precise(package.size as u64)),
-                                                        mtime: item.mtime,  // We don't know the mtime of package, so just put anything here
-                                                        skip_check: true,   // Ignore mtime and size -- we only care about packages' existence
-                                                    }),
-                                                    relative: package.relative,
-                                                    url: package.url,
-                                                });
-                                                wake.fetch_add(1, Ordering::SeqCst);
-                                                // Don't update stats here: tolerate some inaccuracy
-                                                // stat_size.fetch_add(package.size, Ordering::SeqCst);
-                                                // stat_objects.fetch_add(1, Ordering::SeqCst);
+                                                extension_push_task(&worker, wake, &package.filename, package.relative, package.url, package.size);
                                             }
                                         }
                                     }
@@ -432,19 +440,7 @@ pub fn sync(args: SyncArgs, bind_address: Option<String>) -> ! {
                                         Ok(packages) => {
                                             for package in packages {
                                                 info!("YUM package: {:?}", package);
-                                                worker.push(Task {
-                                                    task: TaskType::Download(ListItem {
-                                                        url: package.url.clone(),
-                                                        name: package.filename,
-                                                        type_: listing::FileType::File,
-                                                        size: None,         // Not parsed
-                                                        mtime: item.mtime,  // We don't know the mtime of package, so just put anything here
-                                                        skip_check: true,   // Ignore mtime and size -- we only care about packages' existence
-                                                    }),
-                                                    relative: package.relative,
-                                                    url: package.url,
-                                                });
-                                                wake.fetch_add(1, Ordering::SeqCst);
+                                                extension_push_task(&worker, wake, &package.filename, package.relative, package.url, 0);
                                             }
                                         }
                                     }
