@@ -4,6 +4,7 @@ use crate::{
 };
 use chrono::NaiveDateTime;
 use scraper::{Html, Selector};
+use tracing::debug;
 
 use super::{ListResult, Parser};
 use anyhow::Result;
@@ -17,7 +18,7 @@ pub struct NginxListingParser {
 impl Default for NginxListingParser {
     fn default() -> Self {
         Self {
-            metadata_regex: Regex::new(r"(\d{2}-\w{3}-\d{4} \d{2}:\d{2})\s+([\d-]+)$").unwrap(),
+            metadata_regex: Regex::new(r"(\d{2}-\w{3}-\d{4} \d{2}:\d{2})\s+([\d\.\-kMG]+)$").unwrap(),
         }
     }
 }
@@ -65,17 +66,27 @@ impl Parser for NginxListingParser {
                 .unwrap()
                 .to_string();
             let metadata_raw = metadata_raw.trim();
-            // println!("{:?}", metadata_raw);
+            debug!("{:?}", metadata_raw);
             let metadata = self.metadata_regex.captures(metadata_raw).unwrap();
             let date = metadata.get(1).unwrap().as_str();
             let date = NaiveDateTime::parse_from_str(date, "%d-%b-%Y %H:%M")?;
-            let size = metadata.get(2).unwrap().as_str().parse::<u64>().ok();
-            // println!("{} {} {:?} {} {:?}", href, name, type_, date, size);
+            let size = metadata.get(2).unwrap().as_str();
+            debug!("{} {} {:?} {} {:?}", href, name, type_, date, size);
             items.push(ListItem::new(
                 href,
                 name.to_string(),
                 type_,
-                size.map(FileSize::Precise),
+                {
+                    if size == "-" {
+                        None
+                    } else if size.contains("k") || size.contains("M") || size.contains("G") {
+                        let (n_size, unit) = FileSize::get_humanized(size);
+                        Some(FileSize::HumanizedBinary(n_size, unit))
+                    } else {
+                        let n_size = size.parse::<u64>().unwrap();
+                        Some(FileSize::Precise(n_size))
+                    }
+                },
                 date,
             ))
         }
