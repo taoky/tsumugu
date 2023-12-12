@@ -24,7 +24,7 @@ pub fn should_download_by_list(
 ) -> bool {
     let local_metadata = match path.metadata() {
         Ok(m) => {
-            if skip_if_exists {
+            if skip_if_exists || remote.skip_check {
                 debug!("Skipping {:?} because it exists", path);
                 return false;
             }
@@ -118,6 +118,7 @@ pub fn should_download_by_head(
         mtime: utils::get_blocking_response_mtime(resp)
             .unwrap()
             .naive_utc(),
+        skip_check: false,
     };
     should_download_by_list(path, &item, FixedOffset::east_opt(0), false, size_only)
 }

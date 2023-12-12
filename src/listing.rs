@@ -127,8 +127,30 @@ pub struct ListItem {
     pub name: String,
     pub type_: FileType,
     pub size: Option<FileSize>,
-    // mtime is parsed from HTML, which is the local datetime of the "server" (not necessarily localtime or UTC)
+    /// mtime is parsed from HTML, which is the local datetime of the "server" (not necessarily localtime or UTC)
     pub mtime: NaiveDateTime,
+    /// Don't check size and mtime: download only if the file doesn't exist.
+    /// This is expected to be set by apt/yum parser extension (parser will not use this).
+    pub skip_check: bool,
+}
+
+impl ListItem {
+    pub fn new(
+        url: Url,
+        name: String,
+        type_: FileType,
+        size: Option<FileSize>,
+        mtime: NaiveDateTime,
+    ) -> Self {
+        Self {
+            url,
+            name,
+            type_,
+            size,
+            mtime,
+            skip_check: false,
+        }
+    }
 }
 
 impl Display for ListItem {

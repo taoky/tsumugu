@@ -14,6 +14,8 @@ mod regex_process;
 mod term;
 mod utils;
 
+mod apt;
+
 use crate::regex_process::ExpandedRegex;
 
 #[derive(Parser, Debug)]
@@ -102,6 +104,10 @@ pub struct SyncArgs {
     /// Allow mtime from parser if not available from HTTP headers.
     #[clap(long)]
     allow_mtime_from_parser: bool,
+
+    /// (Experimental) APT Packages file parser to find out missing packages.
+    #[clap(long)]
+    apt_packages: bool,
 }
 
 #[derive(Parser, Debug)]

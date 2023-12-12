@@ -57,11 +57,11 @@ impl Parser for DirectoryListerListingParser {
                 FileType::File
             };
             let date = NaiveDateTime::parse_from_str(mtime, "%Y-%m-%d %H:%M:%S")?;
-            items.push(ListItem {
-                url: href,
-                name: displayed_filename.to_string(),
+            items.push(ListItem::new(
+                href,
+                displayed_filename.to_string(),
                 type_,
-                size: {
+                {
                     if size == "—" {
                         None
                     } else {
@@ -69,8 +69,8 @@ impl Parser for DirectoryListerListingParser {
                         Some(FileSize::HumanizedBinary(n_size, unit))
                     }
                 },
-                mtime: date,
-            })
+                date,
+            ))
         }
 
         Ok(ListResult::List(items))
