@@ -18,7 +18,8 @@ pub struct NginxListingParser {
 impl Default for NginxListingParser {
     fn default() -> Self {
         Self {
-            metadata_regex: Regex::new(r"(\d{2}-\w{3}-\d{4} \d{2}:\d{2})\s+([\d\.\-kMG]+)$").unwrap(),
+            metadata_regex: Regex::new(r"(\d{2}-\w{3}-\d{4} \d{2}:\d{2})\s+([\d\.\-kMG]+)$")
+                .unwrap(),
         }
     }
 }
@@ -79,7 +80,7 @@ impl Parser for NginxListingParser {
                 {
                     if size == "-" {
                         None
-                    } else if size.contains("k") || size.contains("M") || size.contains("G") {
+                    } else if size.contains('k') || size.contains('M') || size.contains('G') {
                         let (n_size, unit) = FileSize::get_humanized(size);
                         Some(FileSize::HumanizedBinary(n_size, unit))
                     } else {

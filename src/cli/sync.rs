@@ -423,6 +423,32 @@ pub fn sync(args: SyncArgs, bind_address: Option<String>) -> ! {
                                         }
                                     }
                                 }
+                                if args.yum_packages && crate::extensions::yum::is_yum_primary_xml(&expected_path) {
+                                    let packages = crate::extensions::yum::parse_package(&expected_path, task.relative.clone(), &item.url);
+                                    match packages {
+                                        Err(e) => {
+                                            warn!("Failed to parse YUM primary.xml {:?}: {:?}", expected_path, e);
+                                        }
+                                        Ok(packages) => {
+                                            for package in packages {
+                                                info!("YUM package: {:?}", package);
+                                                worker.push(Task {
+                                                    task: TaskType::Download(ListItem {
+                                                        url: package.url.clone(),
+                                                        name: package.filename,
+                                                        type_: listing::FileType::File,
+                                                        size: None,         // Not parsed
+                                                        mtime: item.mtime,  // We don't know the mtime of package, so just put anything here
+                                                        skip_check: true,   // Ignore mtime and size -- we only care about packages' existence
+                                                    }),
+                                                    relative: package.relative,
+                                                    url: package.url,
+                                                });
+                                                wake.fetch_add(1, Ordering::SeqCst);
+                                            }
+                                        }
+                                    }
+                                }
                             }
                         }
                     }
