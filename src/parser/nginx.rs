@@ -1,3 +1,4 @@
+/// A parser both suitable for default nginx autoindex and apache f1 format.
 use crate::{
     listing::{FileSize, FileType, ListItem},
     utils::get,
@@ -45,9 +46,14 @@ impl Parser for NginxListingParser {
             // As when it is too long, this could happen:
             // ceph-immutable-object-cache_17.2.6-pve1+3_amd64..> 03-May-2023 23:52              150048
             // So we should get filename from href
-            let name: String = url::form_urlencoded::parse(href.as_bytes())
-                .map(|(k, v)| [k, v].concat())
-                .collect();
+            let name: String = if href.contains("%") {
+                url::form_urlencoded::parse(href.as_bytes())
+                    .map(|(k, v)| [k, v].concat())
+                    .collect()
+            } else {
+                // A compromise for apache server (they will NOT url-encode the filename)
+                href.to_string()
+            };
             let href = url.join(href)?;
 
             let name = name.trim_end_matches('/');
@@ -97,6 +103,8 @@ impl Parser for NginxListingParser {
 
 #[cfg(test)]
 mod tests {
+    use url::Url;
+
     use super::*;
 
     #[test]
@@ -125,6 +133,50 @@ mod tests {
                     items[4].mtime,
                     NaiveDateTime::parse_from_str("11-Jul-2014 23:17", "%d-%b-%Y %H:%M").unwrap()
                 );
+            }
+            _ => unreachable!(),
+        }
+    }
+
+    #[test]
+    fn test_proxmox() {
+        let client = reqwest::blocking::Client::new();
+        let items = NginxListingParser::default()
+            .get_list(
+                &client,
+                &url::Url::parse("http://localhost:1921/proxmox").unwrap(),
+            )
+            .unwrap();
+        match items {
+            ListResult::List(items) => {
+                let target = "ceph-immutable-object-cache_17.2.6-pve1+3_amd64.deb";
+                let find_res = items.iter().find(|item| item.name == target).unwrap();
+                assert_eq!(find_res.name, target);
+                assert_eq!(find_res.type_, FileType::File);
+                // keep as-is
+                assert_eq!(find_res.url, Url::parse("http://localhost:1921/proxmox/ceph-immutable-object-cache_17.2.6-pve1%2B3_amd64.deb").unwrap());
+            }
+            _ => unreachable!(),
+        }
+    }
+
+    #[test]
+    fn test_mysql() {
+        let client = reqwest::blocking::Client::new();
+        let items = NginxListingParser::default()
+            .get_list(
+                &client,
+                &url::Url::parse("http://localhost:1921/mysql").unwrap(),
+            )
+            .unwrap();
+        match items {
+            ListResult::List(items) => {
+                let target = "mysql-connector-c++";
+                let find_res = items.iter().find(|item| item.name == target).unwrap();
+                assert_eq!(find_res.name, target);
+                assert_eq!(find_res.type_, FileType::Directory);
+                // keep as-is
+                assert_eq!(find_res.url, Url::parse("http://localhost:1921/mysql/mysql-connector-c++/").unwrap());
             }
             _ => unreachable!(),
         }
