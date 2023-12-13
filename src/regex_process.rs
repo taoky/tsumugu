@@ -133,6 +133,9 @@ impl ExclusionManager {
 
 #[cfg(test)]
 mod tests {
+    use test_log::test;
+    use tracing::debug;
+
     use super::*;
 
     #[test]
@@ -151,5 +154,20 @@ mod tests {
         let inclusions = vec![];
         let exclusion_manager = ExclusionManager::new(exclusions, inclusions);
         assert_eq!(exclusion_manager.match_str(target), Comparison::Stop);
+    }
+
+    #[test]
+    fn test_partial() {
+        let target1 = "yum/mysql-tools-community/fc/24/x86_64";
+        let target2 = "yum/mysql-tools-community/fc/40/x86_64";
+        let target3 = "yum/mysql-tools-community/fc/";
+        let exclusions = vec![ExpandedRegex::from_str("/fc/").unwrap()];
+        let inclusions = vec![ExpandedRegex::from_str("/fc/${FEDORA_CURRENT}").unwrap()];
+        debug!("exclusions: {:?}", exclusions);
+        debug!("inclusions: {:?}", inclusions);
+        let exclusion_manager = ExclusionManager::new(exclusions, inclusions);
+        assert_eq!(exclusion_manager.match_str(target1), Comparison::Stop);
+        assert_eq!(exclusion_manager.match_str(target2), Comparison::Ok);
+        assert_eq!(exclusion_manager.match_str(target3), Comparison::ListOnly);
     }
 }
