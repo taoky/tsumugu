@@ -305,6 +305,7 @@ pub fn sync(args: SyncArgs, bind_address: Option<String>) -> ! {
                                 let expected_path = cwd.join(&item.name);
                                 // Here relative filepath is only used to check exclusion
                                 let relative_filepath = PathBuf::from(&relative).join(&item.name);
+                                let relative_filepath = relative_filepath.to_string_lossy();
                                 debug!("expected_path: {:?}, relative: {:?}", expected_path, relative_filepath);
                                 {
                                     if !remote_list.lock().unwrap().insert(expected_path.clone()) {
@@ -317,7 +318,7 @@ pub fn sync(args: SyncArgs, bind_address: Option<String>) -> ! {
                                 }
 
                                 // We should put relative filepath into exclusion manager here
-                                if exclusion_manager.match_str(&relative_filepath.to_string_lossy()) == regex_process::Comparison::Stop {
+                                if exclusion_manager.match_str(&relative_filepath) == regex_process::Comparison::Stop {
                                     info!("Skipping excluded {:?}", &relative_filepath);
                                     continue;
                                 }
@@ -325,7 +326,7 @@ pub fn sync(args: SyncArgs, bind_address: Option<String>) -> ! {
                                 let mut should_download = true;
                                 let mut skip_if_exists = false;
                                 for i in skip_if_exists_regex.iter() {
-                                    if i.is_match(&relative_filepath.to_string_lossy()) {
+                                    if i.is_match(&relative_filepath) {
                                         skip_if_exists = true;
                                         break;
                                     }
