@@ -41,6 +41,29 @@ struct Task {
     url: Url,
 }
 
+fn extension_push_task(
+    worker: &Worker<Task>,
+    wake: &AtomicUsize,
+    filename: &str,
+    relative: Vec<String>,
+    url: Url,
+    size: usize,
+) {
+    worker.push(Task {
+        task: TaskType::Download(ListItem {
+            url: url.clone(),
+            name: filename.to_owned(),
+            type_: listing::FileType::File,
+            size: Some(listing::FileSize::Precise(size as u64)),
+            mtime: NaiveDateTime::default(),
+            skip_check: true,
+        }),
+        relative,
+        url,
+    });
+    wake.fetch_add(1, Ordering::SeqCst);
+}
+
 pub fn sync(args: SyncArgs, bind_address: Option<String>) -> ! {
     debug!("{:?}", args);
 
@@ -391,29 +414,6 @@ pub fn sync(args: SyncArgs, bind_address: Option<String>) -> ! {
                                         std::fs::rename(&tmp_path, &expected_path).unwrap();
                                     };
                                     runtime.block_on(future);
-                                }
-
-                                fn extension_push_task(
-                                    worker: &Worker<Task>,
-                                    wake: &AtomicUsize,
-                                    filename: &str,
-                                    relative: Vec<String>,
-                                    url: Url,
-                                    size: usize,
-                                ) {
-                                    worker.push(Task {
-                                        task: TaskType::Download(ListItem {
-                                            url: url.clone(),
-                                            name: filename.to_owned(),
-                                            type_: listing::FileType::File,
-                                            size: Some(listing::FileSize::Precise(size as u64)),
-                                            mtime: NaiveDateTime::default(),
-                                            skip_check: true,
-                                        }),
-                                        relative,
-                                        url,
-                                    });
-                                    wake.fetch_add(1, Ordering::SeqCst);
                                 }
 
                                 // APT/YUM extension check

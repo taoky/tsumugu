@@ -1,0 +1,10 @@
+envs:
+  UPSTREAM: https://dev.packages.vyos.net/
+  TSUMUGU_EXCLUDE: --exclude [=/]tmp --exclude /legacy
+  TSUMUGU_PARSER: directory-lister
+  TSUMUGU_EXTRA: --allow-mtime-from-parser
+image: ustcmirror/tsumugu:latest
+interval: 25 5 * * *
+logRotCycle: 10
+name: vyos
+storageDir: /srv/repo/vyos
