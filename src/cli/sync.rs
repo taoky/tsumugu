@@ -415,6 +415,8 @@ pub fn sync(args: SyncArgs, bind_address: Option<String>) -> ! {
                                         std::fs::rename(&tmp_path, &expected_path).unwrap();
                                     };
                                     runtime.block_on(future);
+                                } else if should_download {
+                                    info!("Dry run, not downloading {}", task.url);
                                 }
 
                                 // APT/YUM extension check
