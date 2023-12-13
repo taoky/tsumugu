@@ -17,7 +17,8 @@ To successfully sync from these domains, where lftp/rclone fails or finds diffic
 - [x] Add "--include": Sync even if the file is excluded by `--exclude` regex.
 - [x] Add supported Debian, Ubuntu, Fedora and RHEL versions support to `--include` regex.
   - Something like `--include debian/${DEBIAN_VERSIONS}`?
-- [ ] Check for APT/YUM repo integrity (avoid keeping old invalid metadata files)
+- [x] Check for APT/YUM repo integrity (avoid keeping old invalid metadata files)
+  - (This is experimental and may not work well)
 
 ## Usage
 
@@ -77,6 +78,10 @@ Options:
           File regex for those compare size only in HEAD requests. This only works with head_before_get
       --allow-mtime-from-parser
           Allow mtime from parser if not available from HTTP headers
+      --apt-packages
+          (Experimental) APT Packages file parser to find out missing packages
+      --yum-packages
+          (Experimental) YUM Packages file parser to find out missing packages
   -h, --help
           Print help
   -V, --version
@@ -181,6 +186,8 @@ logRotCycle: 10
 name: proxmox
 storageDir: /srv/repo/proxmox/
 ```
+
+More examples in [examples/](./examples/).
 
 ### Regex variables
 
