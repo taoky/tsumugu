@@ -1,3 +1,4 @@
+#![warn(clippy::cognitive_complexity)]
 use std::path::PathBuf;
 
 use clap::{Parser, Subcommand};
