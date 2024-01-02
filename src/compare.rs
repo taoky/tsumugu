@@ -8,7 +8,7 @@ use crate::{
     utils::{self, naive_to_utc},
 };
 
-pub fn compare_filetype(fstype: std::fs::FileType, tsumugu_type: &FileType) -> bool {
+pub fn compare_filetype(fstype: std::fs::FileType, tsumugu_type: FileType) -> bool {
     match tsumugu_type {
         FileType::File => fstype.is_file(),
         FileType::Directory => fstype.is_dir(),
@@ -37,7 +37,7 @@ pub fn should_download_by_list(
             return true;
         }
     };
-    if !compare_filetype(local_metadata.file_type(), &remote.type_) {
+    if !compare_filetype(local_metadata.file_type(), remote.type_) {
         // TODO: delete old file which type is not correct
         warn!("Type mismatch: {:?} remote {:?}", path, remote.type_);
         return true;

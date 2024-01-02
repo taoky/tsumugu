@@ -18,15 +18,15 @@ pub fn list(args: &ListArgs, bind_address: Option<String>) -> ! {
         .to_owned();
     let list = parser.get_list(&client, upstream).unwrap();
 
-    println!("Relative: {}", relative);
+    println!("Relative: {relative}");
     println!("Exclusion: {:?}", exclusion_manager.match_str(&relative));
     match list {
         ListResult::Redirect(url) => {
-            println!("Redirect to {}", url);
+            println!("Redirect to {url}");
         }
         ListResult::List(list) => {
             for item in list {
-                print!("{}", item);
+                print!("{item}");
                 let new_relative = format!("{}/{}", relative, item.name);
                 println!(
                     "{}",

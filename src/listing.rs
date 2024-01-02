@@ -37,12 +37,12 @@ impl Display for SizeUnit {
             SizeUnit::T => "T",
             SizeUnit::P => "P",
         };
-        write!(f, "{}", unit)
+        write!(f, "{unit}")
     }
 }
 
 impl SizeUnit {
-    pub fn get_exp(&self) -> u32 {
+    pub fn get_exp(self) -> u32 {
         match self {
             SizeUnit::B => 0,
             SizeUnit::K => 1,
@@ -68,8 +68,8 @@ impl Display for FileSize {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
         match self {
             FileSize::Precise(size) => write!(f, "{}", size),
-            FileSize::HumanizedBinary(size, unit) => write!(f, "{} {}", size, unit),
-            FileSize::HumanizedDecimal(size, unit) => write!(f, "{} {}", size, unit),
+            FileSize::HumanizedBinary(size, unit) => write!(f, "{size} {unit}"),
+            FileSize::HumanizedDecimal(size, unit) => write!(f, "{size} {unit}"),
         }
     }
 }
@@ -99,7 +99,7 @@ impl FileSize {
                 'g' => SizeUnit::G,
                 't' => SizeUnit::T,
                 'p' => SizeUnit::P,
-                _ => panic!("Unknown unit: {}", unit),
+                _ => panic!("Unknown unit: {unit}"),
             },
         };
 
@@ -177,7 +177,7 @@ pub fn guess_remote_timezone(
     // trim after the latest '/'
     // TODO: improve this
     let file_url_str = file_url.as_str();
-    let base_url = Url::parse(&file_url_str[..file_url_str.rfind('/').unwrap() + 1]).unwrap();
+    let base_url = Url::parse(&file_url_str[..=file_url_str.rfind('/').unwrap()]).unwrap();
 
     info!("base: {:?}", base_url);
     info!("file: {:?}", file_url);

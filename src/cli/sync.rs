@@ -46,7 +46,7 @@ fn extension_push_task(worker: &Worker<Task>, wake: &AtomicUsize, package: &Exte
     worker.push(Task {
         task: TaskType::Download(ListItem {
             url: package.url.clone(),
-            name: package.filename.to_owned(),
+            name: package.filename.clone(),
             type_: listing::FileType::File,
             // size and mtime would be ignored as skip_check is set
             size: None,
@@ -172,29 +172,8 @@ pub fn sync(args: &SyncArgs, bind_address: Option<String>) -> ! {
     let failure_downloading = AtomicBool::new(false);
 
     std::thread::scope(|scope| {
-        for worker in workers.into_iter() {
-            let stealers = &stealers;
-            let parser = &parser;
-            let client = client.clone();
-            let global = &global;
-
-            let active_cnt = &active_cnt;
-            let wake = &wake;
-
-            let remote_list = remote_list.clone();
-
-            let async_client = async_client.clone();
-            let runtime = &runtime;
-
-            let mprogress = mprogress.clone();
-            let exclusion_manager = exclusion_manager.clone();
-
-            let stat_objects = &stat_objects;
-            let stat_size = &stat_size;
-
-            let failure_listing = &failure_listing;
-            let failure_downloading = &failure_downloading;
-            scope.spawn(move || {
+        for worker in workers {
+            scope.spawn(|| {
                 loop {
                     active_cnt.fetch_add(1, Ordering::SeqCst);
                     while let Some(task) = worker.pop().or_else(|| {
@@ -321,7 +300,7 @@ pub fn sync(args: &SyncArgs, bind_address: Option<String>) -> ! {
 
                                 let mut should_download = true;
                                 let mut skip_if_exists = false;
-                                for i in args.skip_if_exists.iter() {
+                                for i in &args.skip_if_exists {
                                     if i.is_match(&relative_filepath) {
                                         skip_if_exists = true;
                                         break;
@@ -335,7 +314,7 @@ pub fn sync(args: &SyncArgs, bind_address: Option<String>) -> ! {
                                 }
 
                                 let mut compare_size_only = false;
-                                for i in args.compare_size_only.iter() {
+                                for i in &args.compare_size_only {
                                     if i.is_match(&expected_path.to_string_lossy()) {
                                         compare_size_only = true;
                                         break;
@@ -416,7 +395,7 @@ pub fn sync(args: &SyncArgs, bind_address: Option<String>) -> ! {
                                 }
 
                                 extension_handler(args, &expected_path, &task.relative, &item.url, |package| {
-                                    extension_push_task(&worker, wake, package);
+                                    extension_push_task(&worker, &wake, package);
                                 });
                             }
                         }
@@ -449,6 +428,8 @@ pub fn sync(args: &SyncArgs, bind_address: Option<String>) -> ! {
                     }
                 }
                 info!("This thread finished");
+                // drop worker to let rustc know it moves inside the closure
+                std::mem::drop(worker);
             });
         }
     });
@@ -477,7 +458,9 @@ pub fn sync(args: &SyncArgs, bind_address: Option<String>) -> ! {
             };
             let path = entry.path();
             if !remote_list.contains(&path.to_path_buf()) {
-                if !args.no_delete {
+                if args.no_delete {
+                    info!("{:?} not in remote", path);
+                } else {
                     // always make sure that we are deleting the right thing
                     if del_cnt >= args.max_delete {
                         info!("Exceeding max delete count, aborting");
@@ -491,9 +474,9 @@ pub fn sync(args: &SyncArgs, bind_address: Option<String>) -> ! {
                     if args.dry_run {
                         info!("Dry run, not deleting {:?}", path);
                         continue;
-                    } else {
-                        info!("Deleting {:?}", path);
                     }
+
+                    info!("Deleting {:?}", path);
                     if entry.file_type().is_dir() {
                         if let Err(e) = std::fs::remove_dir(path) {
                             error!("Failed to remove {:?}: {:?}", path, e);
@@ -503,8 +486,6 @@ pub fn sync(args: &SyncArgs, bind_address: Option<String>) -> ! {
                         error!("Failed to remove {:?}: {:?}", path, e);
                         exit_code = 4;
                     }
-                } else {
-                    info!("{:?} not in remote", path);
                 }
             }
         }

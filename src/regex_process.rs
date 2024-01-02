@@ -98,7 +98,7 @@ impl ExclusionManager {
         Self {
             instant_stop_regexes,
             list_only_regexes,
-            include_regexes: inclusions.to_vec(),
+            include_regexes: inclusions.clone(),
         }
     }
 
