@@ -177,14 +177,14 @@ fn main() {
     let args = Cli::parse();
     match args.command {
         Commands::Sync(args) => {
-            cli::sync(args, bind_address);
+            cli::sync(&args, bind_address);
         }
         Commands::List(args) => {
             // extra arg check
             if !args.upstream_folder.path().ends_with('/') {
                 panic!("upstream_folder should end with /");
             }
-            cli::list(args, bind_address);
+            cli::list(&args, bind_address);
         }
     };
 }

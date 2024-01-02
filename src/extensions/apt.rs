@@ -85,15 +85,25 @@ pub struct AptPackage {
     pub filename: String,
 }
 
+impl From<AptPackage> for super::ExtensionPackage {
+    fn from(val: AptPackage) -> Self {
+        super::ExtensionPackage {
+            url: val.url,
+            relative: val.relative,
+            filename: val.filename,
+        }
+    }
+}
+
 pub fn parse_package(
     packages_path: &Path,
-    relative: Vec<String>,
+    relative: &[String],
     packages_url: &Url,
 ) -> Result<Vec<AptPackage>> {
     let data = std::fs::read_to_string(packages_path)?;
     let packages = apt_parser::Packages::from(&data);
     let (_, root_relative, debian_root_url) =
-        get_debian_root(packages_path, &relative, packages_url)?;
+        get_debian_root(packages_path, relative, packages_url)?;
     // ignore errors
     let mut res = vec![];
     for package in packages {

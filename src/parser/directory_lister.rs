@@ -88,7 +88,7 @@ mod tests {
     #[test]
     fn test_vyos() {
         let client = reqwest::blocking::Client::new();
-        let items = DirectoryListerListingParser::default()
+        let items = DirectoryListerListingParser
             .get_list(
                 &client,
                 &url::Url::parse("http://localhost:1921/vyos/").unwrap(),
@@ -132,7 +132,7 @@ mod tests {
     #[test]
     fn test_vyos_2() {
         let client = reqwest::blocking::Client::new();
-        let items = DirectoryListerListingParser::default()
+        let items = DirectoryListerListingParser
             .get_list(
                 &client,
                 &url::Url::parse("http://localhost:1921/vyos/vyos-accel-ppp/").unwrap(),

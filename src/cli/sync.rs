@@ -20,6 +20,7 @@ use url::Url;
 use crate::{
     build_client,
     compare::{should_download_by_head, should_download_by_list},
+    extensions::{extension_handler, ExtensionPackage},
     listing::{self, ListItem},
     parser::ListResult,
     regex_process::{self, ExclusionManager},
@@ -41,25 +42,19 @@ struct Task {
     url: Url,
 }
 
-fn extension_push_task(
-    worker: &Worker<Task>,
-    wake: &AtomicUsize,
-    filename: &str,
-    relative: Vec<String>,
-    url: Url,
-    size: usize,
-) {
+fn extension_push_task(worker: &Worker<Task>, wake: &AtomicUsize, package: &ExtensionPackage) {
     worker.push(Task {
         task: TaskType::Download(ListItem {
-            url: url.clone(),
-            name: filename.to_owned(),
+            url: package.url.clone(),
+            name: package.filename.to_owned(),
             type_: listing::FileType::File,
-            size: Some(listing::FileSize::Precise(size as u64)),
+            // size and mtime would be ignored as skip_check is set
+            size: None,
             mtime: NaiveDateTime::default(),
             skip_check: true,
         }),
-        relative,
-        url,
+        relative: package.relative.clone(),
+        url: package.url.clone(),
     });
     wake.fetch_add(1, Ordering::SeqCst);
 }
@@ -124,7 +119,7 @@ fn determinate_timezone(
     }
 }
 
-pub fn sync(args: SyncArgs, bind_address: Option<String>) -> ! {
+pub fn sync(args: &SyncArgs, bind_address: Option<String>) -> ! {
     debug!("{:?}", args);
 
     let exclusion_manager = ExclusionManager::new(&args.exclude, &args.include);
@@ -146,7 +141,7 @@ pub fn sync(args: SyncArgs, bind_address: Option<String>) -> ! {
         1,
     ));
 
-    let timezone = determinate_timezone(&args, &*parser, &client);
+    let timezone = determinate_timezone(args, &*parser, &client);
 
     let download_dir = args.local.as_path();
     if !args.dry_run {
@@ -164,7 +159,7 @@ pub fn sync(args: SyncArgs, bind_address: Option<String>) -> ! {
     global.push(Task {
         task: TaskType::Listing,
         relative: vec![],
-        url: args.upstream,
+        url: args.upstream.clone(),
     });
 
     let active_cnt = AtomicUsize::new(0);
@@ -199,8 +194,6 @@ pub fn sync(args: SyncArgs, bind_address: Option<String>) -> ! {
 
             let failure_listing = &failure_listing;
             let failure_downloading = &failure_downloading;
-            let skip_if_exists_regex = &args.skip_if_exists;
-            let compare_size_only_regex = &args.compare_size_only;
             scope.spawn(move || {
                 loop {
                     active_cnt.fetch_add(1, Ordering::SeqCst);
@@ -328,7 +321,7 @@ pub fn sync(args: SyncArgs, bind_address: Option<String>) -> ! {
 
                                 let mut should_download = true;
                                 let mut skip_if_exists = false;
-                                for i in skip_if_exists_regex.iter() {
+                                for i in args.skip_if_exists.iter() {
                                     if i.is_match(&relative_filepath) {
                                         skip_if_exists = true;
                                         break;
@@ -342,7 +335,7 @@ pub fn sync(args: SyncArgs, bind_address: Option<String>) -> ! {
                                 }
 
                                 let mut compare_size_only = false;
-                                for i in compare_size_only_regex.iter() {
+                                for i in args.compare_size_only.iter() {
                                     if i.is_match(&expected_path.to_string_lossy()) {
                                         compare_size_only = true;
                                         break;
@@ -422,35 +415,9 @@ pub fn sync(args: SyncArgs, bind_address: Option<String>) -> ! {
                                     info!("Dry run, not downloading {}", task.url);
                                 }
 
-                                // APT/YUM extension check
-                                if args.apt_packages && crate::extensions::apt::is_apt_package(&expected_path) {
-                                    let packages = crate::extensions::apt::parse_package(&expected_path, task.relative.clone(), &item.url);
-                                    match packages {
-                                        Err(e) => {
-                                            warn!("Failed to parse APT package {:?}: {:?}", expected_path, e);
-                                        }
-                                        Ok(packages) => {
-                                            for package in packages {
-                                                info!("APT package: {:?}", package);
-                                                extension_push_task(&worker, wake, &package.filename, package.relative, package.url, package.size);
-                                            }
-                                        }
-                                    }
-                                }
-                                if args.yum_packages && crate::extensions::yum::is_yum_primary_xml(&expected_path) {
-                                    let packages = crate::extensions::yum::parse_package(&expected_path, task.relative.clone(), &item.url);
-                                    match packages {
-                                        Err(e) => {
-                                            warn!("Failed to parse YUM primary.xml {:?}: {:?}", expected_path, e);
-                                        }
-                                        Ok(packages) => {
-                                            for package in packages {
-                                                info!("YUM package: {:?}", package);
-                                                extension_push_task(&worker, wake, &package.filename, package.relative, package.url, 0);
-                                            }
-                                        }
-                                    }
-                                }
+                                extension_handler(args, &expected_path, &task.relative, &item.url, |package| {
+                                    extension_push_task(&worker, wake, package);
+                                });
                             }
                         }
                     }

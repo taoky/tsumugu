@@ -93,7 +93,7 @@ mod tests {
     #[test]
     fn test_winehq_root() {
         let client = reqwest::blocking::Client::new();
-        let items = ApacheF2ListingParser::default()
+        let items = ApacheF2ListingParser
             .get_list(
                 &client,
                 &url::Url::parse("http://localhost:1921/wine-builds").unwrap(),

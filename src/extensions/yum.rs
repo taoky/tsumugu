@@ -37,13 +37,23 @@ pub struct YumPackage {
     pub filename: String,
 }
 
+impl From<YumPackage> for super::ExtensionPackage {
+    fn from(val: YumPackage) -> Self {
+        super::ExtensionPackage {
+            url: val.url,
+            relative: val.relative,
+            filename: val.filename,
+        }
+    }
+}
+
 pub fn parse_package(
     packages_path: &Path,
-    relative: Vec<String>,
+    relative: &[String],
     packages_url: &Url,
 ) -> Result<Vec<YumPackage>> {
     let packages = read_primary_xml(packages_path)?;
-    let mut relative = relative.clone();
+    let mut relative = relative.to_owned();
     relative.pop(); // pop "repodata"
 
     let mut base_url = packages_url.clone();

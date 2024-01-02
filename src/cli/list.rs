@@ -3,12 +3,12 @@ use std::path::PathBuf;
 use crate::{build_client, parser::ListResult, regex_process::ExclusionManager, ListArgs};
 
 // TODO: clean code
-pub fn list(args: ListArgs, bind_address: Option<String>) -> ! {
+pub fn list(args: &ListArgs, bind_address: Option<String>) -> ! {
     let parser = args.parser.build();
     let client = build_client!(reqwest::blocking::Client, args, parser, bind_address);
     let exclusion_manager = ExclusionManager::new(&args.exclude, &args.include);
     // get relative
-    let upstream = args.upstream_folder;
+    let upstream = &args.upstream_folder;
     let upstream_path = PathBuf::from(upstream.path());
     let relative = upstream_path
         .strip_prefix(&args.upstream_base)
@@ -16,7 +16,7 @@ pub fn list(args: ListArgs, bind_address: Option<String>) -> ! {
         .to_str()
         .unwrap()
         .to_owned();
-    let list = parser.get_list(&client, &upstream).unwrap();
+    let list = parser.get_list(&client, upstream).unwrap();
 
     println!("Relative: {}", relative);
     println!("Exclusion: {:?}", exclusion_manager.match_str(&relative));
