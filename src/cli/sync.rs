@@ -3,7 +3,7 @@ use std::{
     fs::File,
     io::Write,
     os::unix::fs::symlink,
-    path::PathBuf,
+    path::{Path, PathBuf},
     sync::{
         atomic::{AtomicBool, AtomicU64, AtomicUsize, Ordering},
         Arc, Mutex,
@@ -119,36 +119,39 @@ fn determinate_timezone(
     }
 }
 
-pub fn sync(args: &SyncArgs, bind_address: Option<String>) -> ! {
-    debug!("{:?}", args);
+struct ThreadsOptions<'a> {
+    bind_address: Option<String>,
+    download_dir: &'a Path,
+    remote_list: &'a Arc<Mutex<HashSet<PathBuf>>>,
+    stat_objects: &'a AtomicUsize,
+    stat_size: &'a AtomicU64,
+    failure_listing: &'a AtomicBool,
+    failure_downloading: &'a AtomicBool,
+}
 
+fn sync_threads(args: &SyncArgs, parser: &dyn crate::parser::Parser, options: &ThreadsOptions) {
     let exclusion_manager = ExclusionManager::new(&args.exclude, &args.include);
 
-    let parser = args.parser.build();
     let client = build_client!(
         reqwest::blocking::Client,
         args,
         parser,
-        bind_address.as_ref()
+        options.bind_address.as_ref()
     );
-
     // async support
     let runtime = tokio::runtime::Runtime::new().unwrap();
-    let async_client = build_client!(reqwest::Client, args, parser, bind_address.as_ref());
+    let async_client = build_client!(reqwest::Client, args, parser, options.bind_address.as_ref());
 
     let mprogress = MultiProgress::with_draw_target(ProgressDrawTarget::term_like_with_hz(
         Box::new(AlternativeTerm::buffered_stdout()),
         1,
     ));
 
-    let timezone = determinate_timezone(args, &*parser, &client);
+    let timezone = determinate_timezone(args, parser, &client);
 
-    let download_dir = args.local.as_path();
     if !args.dry_run {
-        std::fs::create_dir_all(download_dir).unwrap();
+        std::fs::create_dir_all(options.download_dir).unwrap();
     }
-
-    let remote_list = Arc::new(Mutex::new(HashSet::new()));
 
     let workers: Vec<_> = (0..args.threads)
         .map(|_| Worker::<Task>::new_fifo())
@@ -165,12 +168,6 @@ pub fn sync(args: &SyncArgs, bind_address: Option<String>) -> ! {
     let active_cnt = AtomicUsize::new(0);
     let wake = AtomicUsize::new(0);
 
-    let stat_objects = AtomicUsize::new(0);
-    let stat_size = AtomicU64::new(0);
-
-    let failure_listing = AtomicBool::new(false);
-    let failure_downloading = AtomicBool::new(false);
-
     std::thread::scope(|scope| {
         for worker in workers {
             scope.spawn(|| {
@@ -186,7 +183,7 @@ pub fn sync(args: &SyncArgs, bind_address: Option<String>) -> ! {
                         .and_then(|s| s.success())
                     }) {
                         let relative = task.relative.join("/");
-                        let cwd = download_dir.join(&relative);
+                        let cwd = options.download_dir.join(&relative);
                         debug!("cwd: {:?}, relative: {:?}", cwd, relative);
                         // exclude this?
                         // note that it only checks the relative folder!
@@ -202,7 +199,7 @@ pub fn sync(args: &SyncArgs, bind_address: Option<String>) -> ! {
                             TaskType::Listing => {
                                 info!("Listing {}", task.url);
                                 {
-                                    remote_list.lock().unwrap().insert(cwd.clone());
+                                    options.remote_list.lock().unwrap().insert(cwd.clone());
                                 }
 
                                 if is_symlink(&cwd) && !relative.is_empty() {
@@ -214,7 +211,7 @@ pub fn sync(args: &SyncArgs, bind_address: Option<String>) -> ! {
                                     Ok(items) => items,
                                     Err(e) => {
                                         error!("Failed to list {}: {:?}", task.url, e);
-                                        failure_listing.store(true, Ordering::SeqCst);
+                                        options.failure_listing.store(true, Ordering::SeqCst);
                                         continue;
                                     }
                                 };
@@ -241,12 +238,12 @@ pub fn sync(args: &SyncArgs, bind_address: Option<String>) -> ! {
                                                     url: item.url,
                                                 });
                                                 wake.fetch_add(1, Ordering::SeqCst);
-                                                stat_size.fetch_add(match item.size {
+                                                options.stat_size.fetch_add(match item.size {
                                                     Some(size) => size.get_estimated(),
                                                     None => 0,
                                                 }, Ordering::SeqCst);
                                             }
-                                            stat_objects.fetch_add(1, Ordering::SeqCst);
+                                            options.stat_objects.fetch_add(1, Ordering::SeqCst);
                                         }
                                     }
                                     ListResult::Redirect(target_url) => {
@@ -283,7 +280,7 @@ pub fn sync(args: &SyncArgs, bind_address: Option<String>) -> ! {
                                 let relative_filepath = relative_filepath.to_string_lossy();
                                 debug!("expected_path: {:?}, relative: {:?}", expected_path, relative_filepath);
                                 {
-                                    if !remote_list.lock().unwrap().insert(expected_path.clone()) {
+                                    if !options.remote_list.lock().unwrap().insert(expected_path.clone()) {
                                         // It is possible that multiple tasks might download the same file
                                         // (generated by apt/yum parser, etc.)
                                         // skip when we find that some thread has already downloaded it
@@ -331,7 +328,7 @@ pub fn sync(args: &SyncArgs, bind_address: Option<String>) -> ! {
                                         },
                                         Err(e) => {
                                             error!("Failed to HEAD {}: {:?}", task.url, e);
-                                            failure_downloading.store(true, Ordering::SeqCst);
+                                            options.failure_downloading.store(true, Ordering::SeqCst);
                                             should_download = false;
                                         }
                                     };
@@ -345,7 +342,7 @@ pub fn sync(args: &SyncArgs, bind_address: Option<String>) -> ! {
                                             Ok(resp) => resp,
                                             Err(e) => {
                                                 error!("Failed to GET {}: {:?}", task.url, e);
-                                                failure_downloading.store(true, Ordering::SeqCst);
+                                                options.failure_downloading.store(true, Ordering::SeqCst);
                                                 return;
                                             }
                                         };
@@ -363,7 +360,7 @@ pub fn sync(args: &SyncArgs, bind_address: Option<String>) -> ! {
                                                     naive_to_utc(&item.mtime, timezone)
                                                 } else {
                                                 error!("Failed to get mtime of {}: {:?}", task.url, e);
-                                                failure_downloading.store(true, Ordering::SeqCst);
+                                                options.failure_downloading.store(true, Ordering::SeqCst);
                                                 return;
                                             }}
                                         };
@@ -433,6 +430,35 @@ pub fn sync(args: &SyncArgs, bind_address: Option<String>) -> ! {
             });
         }
     });
+}
+
+pub fn sync(args: &SyncArgs, bind_address: Option<String>) -> ! {
+    debug!("{:?}", args);
+    let parser = args.parser.build();
+
+    let download_dir = args.local.as_path();
+
+    let remote_list = Arc::new(Mutex::new(HashSet::new()));
+
+    let stat_objects = AtomicUsize::new(0);
+    let stat_size = AtomicU64::new(0);
+
+    let failure_listing = AtomicBool::new(false);
+    let failure_downloading = AtomicBool::new(false);
+
+    sync_threads(
+        args,
+        &*parser,
+        &ThreadsOptions {
+            bind_address,
+            download_dir,
+            remote_list: &remote_list,
+            stat_objects: &stat_objects,
+            stat_size: &stat_size,
+            failure_listing: &failure_listing,
+            failure_downloading: &failure_downloading,
+        },
+    );
 
     let mut exit_code = 0;
 
@@ -444,7 +470,6 @@ pub fn sync(args: &SyncArgs, bind_address: Option<String>) -> ! {
         exit_code = 1;
     } else {
         // Don't even walkdir when dry_run, to prevent no dir error
-
         for entry in walkdir::WalkDir::new(download_dir).contents_first(true) {
             let entry = match entry {
                 Ok(entry) => entry,

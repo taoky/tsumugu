@@ -1,4 +1,5 @@
 #![warn(clippy::cognitive_complexity)]
+#![warn(clippy::too_many_lines)]
 use std::path::PathBuf;
 
 use clap::{Parser, Subcommand};
