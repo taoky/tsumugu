@@ -76,14 +76,14 @@ pub struct ExclusionManager {
 }
 
 impl ExclusionManager {
-    pub fn new(exclusions: Vec<ExpandedRegex>, inclusions: Vec<ExpandedRegex>) -> Self {
+    pub fn new(exclusions: &Vec<ExpandedRegex>, inclusions: &Vec<ExpandedRegex>) -> Self {
         let mut instant_stop_regexes = Vec::new();
         let mut list_only_regexes = Vec::new();
 
         for exclusion in exclusions {
             let regex_str = exclusion.inner.as_str();
             let mut flag = false;
-            for inclusion in &inclusions {
+            for inclusion in inclusions {
                 if inclusion.inner.as_str().starts_with(regex_str) {
                     list_only_regexes.push(exclusion.clone());
                     flag = true;
@@ -98,7 +98,7 @@ impl ExclusionManager {
         Self {
             instant_stop_regexes,
             list_only_regexes,
-            include_regexes: inclusions,
+            include_regexes: inclusions.to_vec(),
         }
     }
 
@@ -152,7 +152,7 @@ mod tests {
         let exclusions =
             vec![ExpandedRegex::from_str("pmg/dists/.+/pmgtest/.+changelog$").unwrap()];
         let inclusions = vec![];
-        let exclusion_manager = ExclusionManager::new(exclusions, inclusions);
+        let exclusion_manager = ExclusionManager::new(&exclusions, &inclusions);
         assert_eq!(exclusion_manager.match_str(target), Comparison::Stop);
     }
 
@@ -165,7 +165,7 @@ mod tests {
         let inclusions = vec![ExpandedRegex::from_str("/fc/${FEDORA_CURRENT}").unwrap()];
         debug!("exclusions: {:?}", exclusions);
         debug!("inclusions: {:?}", inclusions);
-        let exclusion_manager = ExclusionManager::new(exclusions, inclusions);
+        let exclusion_manager = ExclusionManager::new(&exclusions, &inclusions);
         assert_eq!(exclusion_manager.match_str(target1), Comparison::Stop);
         assert_eq!(exclusion_manager.match_str(target2), Comparison::Ok);
         assert_eq!(exclusion_manager.match_str(target3), Comparison::ListOnly);

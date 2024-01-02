@@ -176,7 +176,10 @@ mod tests {
                 assert_eq!(find_res.name, target);
                 assert_eq!(find_res.type_, FileType::Directory);
                 // keep as-is
-                assert_eq!(find_res.url, Url::parse("http://localhost:1921/mysql/mysql-connector-c++/").unwrap());
+                assert_eq!(
+                    find_res.url,
+                    Url::parse("http://localhost:1921/mysql/mysql-connector-c++/").unwrap()
+                );
             }
             _ => unreachable!(),
         }

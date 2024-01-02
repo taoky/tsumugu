@@ -64,10 +64,70 @@ fn extension_push_task(
     wake.fetch_add(1, Ordering::SeqCst);
 }
 
+fn determinate_timezone(
+    args: &SyncArgs,
+    parser: &dyn crate::parser::Parser,
+    client: &reqwest::blocking::Client,
+) -> Option<FixedOffset> {
+    match args.timezone {
+        None => {
+            // Check if to guess timezone
+            let timezone_file = match &args.timezone_file {
+                Some(f) => match Url::parse(f) {
+                    Ok(url) => Some(url),
+                    Err(_) => {
+                        warn!("Invalid timezone file URL, disabling timezone guessing");
+                        None
+                    }
+                },
+                None => {
+                    // eek, try getting first file in root index
+                    let list =
+                        again(|| parser.get_list(client, &args.upstream), args.retry).unwrap();
+                    match list {
+                        ListResult::List(list) => {
+                            match list.iter().find(|x| x.type_ == listing::FileType::File) {
+                                None => {
+                                    warn!("No files in root index, disabling timezone guessing");
+                                    None
+                                }
+                                Some(x) => Some(x.url.clone()),
+                            }
+                        }
+                        ListResult::Redirect(_) => {
+                            warn!("Root index is a redirect, disabling timezone guessing");
+                            None
+                        }
+                    }
+                }
+            };
+            match timezone_file {
+                Some(timezone_url) => {
+                    let timezone = listing::guess_remote_timezone(parser, client, timezone_url);
+                    let timezone = match timezone {
+                        Ok(tz) => Some(tz),
+                        Err(e) => {
+                            warn!("Failed to guess timezone: {:?}", e);
+                            None
+                        }
+                    };
+                    info!("Guessed timezone: {:?}", timezone);
+                    timezone
+                }
+                None => None,
+            }
+        }
+        Some(tz) => {
+            info!("Using timezone from argument: {:?} hrs", tz);
+            Some(FixedOffset::east_opt(tz * 3600).unwrap())
+        }
+    }
+}
+
 pub fn sync(args: SyncArgs, bind_address: Option<String>) -> ! {
     debug!("{:?}", args);
 
-    let exclusion_manager = ExclusionManager::new(args.exclude, args.include);
+    let exclusion_manager = ExclusionManager::new(&args.exclude, &args.include);
 
     let parser = args.parser.build();
     let client = build_client!(
@@ -86,64 +146,7 @@ pub fn sync(args: SyncArgs, bind_address: Option<String>) -> ! {
         1,
     ));
 
-    let timezone = {
-        match args.timezone {
-            None => {
-                // Check if to guess timezone
-                let timezone_file = match args.timezone_file {
-                    Some(f) => match Url::parse(&f) {
-                        Ok(url) => Some(url),
-                        Err(_) => {
-                            warn!("Invalid timezone file URL, disabling timezone guessing");
-                            None
-                        }
-                    },
-                    None => {
-                        // eek, try getting first file in root index
-                        let list =
-                            again(|| parser.get_list(&client, &args.upstream), args.retry).unwrap();
-                        match list {
-                            ListResult::List(list) => {
-                                match list.iter().find(|x| x.type_ == listing::FileType::File) {
-                                    None => {
-                                        warn!(
-                                            "No files in root index, disabling timezone guessing"
-                                        );
-                                        None
-                                    }
-                                    Some(x) => Some(x.url.clone()),
-                                }
-                            }
-                            ListResult::Redirect(_) => {
-                                warn!("Root index is a redirect, disabling timezone guessing");
-                                None
-                            }
-                        }
-                    }
-                };
-                match timezone_file {
-                    Some(timezone_url) => {
-                        let timezone =
-                            listing::guess_remote_timezone(&*parser, &client, timezone_url);
-                        let timezone = match timezone {
-                            Ok(tz) => Some(tz),
-                            Err(e) => {
-                                warn!("Failed to guess timezone: {:?}", e);
-                                None
-                            }
-                        };
-                        info!("Guessed timezone: {:?}", timezone);
-                        timezone
-                    }
-                    None => None,
-                }
-            }
-            Some(tz) => {
-                info!("Using timezone from argument: {:?} hrs", tz);
-                Some(FixedOffset::east_opt(tz * 3600).unwrap())
-            }
-        }
-    };
+    let timezone = determinate_timezone(&args, &*parser, &client);
 
     let download_dir = args.local.as_path();
     if !args.dry_run {
