@@ -14,12 +14,14 @@ const REGEX_REPLACEMENTS: &[(&str, &str)] = &[
     ("${UBUNTU_LTS}", "(?<distro_ver>bionic|focal|jammy)"),
     ("${UBUNTU_NONLTS}", "(?<distro_ver>lunar|mantic)"),
     // https://en.wikipedia.org/wiki/Fedora_Linux#Releases
-    ("${FEDORA_CURRENT}", "(?<distro_ver>37|38|39|40)"),
+    ("${FEDORA_CURRENT}", "(?<distro_ver>38|39|40)"),
     ("${CENTOS_CURRENT}", "(?<distro_ver>7)"),
     // https://en.wikipedia.org/wiki/Red_Hat_Enterprise_Linux#Version_history_and_timeline
     ("${RHEL_CURRENT}", "(?<distro_ver>7|8|9)"),
     // https://en.wikipedia.org/wiki/OpenSUSE#Version_history
-    ("${OPENSUSE_CURRENT}", "(?<distro_ver>15.4|15.5)"),
+    ("${OPENSUSE_CURRENT}", "(?<distro_ver>15.5|15.6)"),
+    // https://en.wikipedia.org/wiki/SUSE_Linux_Enterprise#End-of-support_schedule
+    ("${SLES_CURRENT}", "(?<distro_ver>12|15)"),
 ];
 
 #[derive(Debug, Clone)]
