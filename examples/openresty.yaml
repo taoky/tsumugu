@@ -2,7 +2,7 @@ envs:
   UPSTREAM: http://openresty.org/package/
   TSUMUGU_EXCLUDE: --exclude ^centos/7/2 --exclude ^oracle/7/2 --exclude ^rhel/7/2 --exclude ^rhel/7Client/2 --exclude ^rhel/7Server/2 --exclude ^centos/7Client/2 --exclude ^centos/7Server/2 --exclude ^centos/8/8 --exclude ^rocky/8/8 --exclude ^alinux --exclude ^tlinux --exclude ^oracle --exclude ^amazon
 image: ustcmirror/tsumugu:latest
-interval: 13 5 * * *
+cron: 13 5 * * *
 logRotCycle: 10
 name: openresty
 storageDir: /srv/repo/openresty/

@@ -4,7 +4,7 @@ envs:
   TSUMUGU_TIMEZONEFILE: http://download.proxmox.com/images/aplinfo.dat
   TSUMUGU_THREADS: 1
 image: ustcmirror/tsumugu:latest
-interval: 17 5 * * *
+cron: 17 5 * * *
 logRotCycle: 10
 name: proxmox
 storageDir: /srv/repo/proxmox/
