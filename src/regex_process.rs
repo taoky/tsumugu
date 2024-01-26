@@ -105,14 +105,14 @@ impl ExclusionManager {
     }
 
     pub fn match_str(&self, text: &str) -> Comparison {
-        for regex in &self.include_regexes {
-            if regex.is_match(text) {
-                return Comparison::Ok;
-            }
-        }
         for regex in &self.instant_stop_regexes {
             if regex.is_match(text) {
                 return Comparison::Stop;
+            }
+        }
+        for regex in &self.include_regexes {
+            if regex.is_match(text) {
+                return Comparison::Ok;
             }
         }
         // Performance: it is possible that a regex for inclusion shown like this:
@@ -163,6 +163,8 @@ mod tests {
         let target1 = "yum/mysql-tools-community/fc/24/x86_64";
         let target2 = "yum/mysql-tools-community/fc/40/x86_64";
         let target3 = "yum/mysql-tools-community/fc/";
+        let target4 = "yum/mysql-tools-community/fc/24/";
+        let target5 = "yum/mysql-tools-community/fc/40/";
         let exclusions = vec![ExpandedRegex::from_str("/fc/").unwrap()];
         let inclusions = vec![ExpandedRegex::from_str("/fc/${FEDORA_CURRENT}").unwrap()];
         debug!("exclusions: {:?}", exclusions);
@@ -171,5 +173,21 @@ mod tests {
         assert_eq!(exclusion_manager.match_str(target1), Comparison::Stop);
         assert_eq!(exclusion_manager.match_str(target2), Comparison::Ok);
         assert_eq!(exclusion_manager.match_str(target3), Comparison::ListOnly);
+        assert_eq!(exclusion_manager.match_str(target4), Comparison::Stop);
+        assert_eq!(exclusion_manager.match_str(target5), Comparison::Ok);
+    }
+
+    #[test]
+    fn test_exclude_dbg() {
+        let target1 = "yum/mysql-8.0-community/docker/el/8/aarch64/mysql-community-server-minimal-8.0.33-1.el8.aarch64.rpm";
+        let target2 = "yum/mysql-8.0-community/docker/el/8/debuginfo/x86_64/mysql-community-server-minimal-debuginfo-8.0.24-1.el8.x86_64.rpm";
+        let exclusions = vec![
+            ExpandedRegex::from_str("/el/").unwrap(),
+            ExpandedRegex::from_str("debuginfo").unwrap(),
+        ];
+        let inclusions = vec![ExpandedRegex::from_str("/el/${RHEL_CURRENT}").unwrap()];
+        let exclusion_manager = ExclusionManager::new(&exclusions, &inclusions);
+        assert_eq!(exclusion_manager.match_str(target1), Comparison::Ok);
+        assert_eq!(exclusion_manager.match_str(target2), Comparison::Stop);
     }
 }

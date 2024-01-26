@@ -312,7 +312,7 @@ fn list_handler(
                 }
             };
             info!("Try symlink {:?} -> {}", cwd, target_name);
-            if let Err(e) = symlink(target_name, cwd.clone()) {
+            if let Err(e) = symlink(target_name, cwd) {
                 error!(
                     "Failed to create symlink {:?} -> {}: {:?}",
                     cwd, target_name, e
