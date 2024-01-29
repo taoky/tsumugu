@@ -71,7 +71,7 @@ Options:
       --exclude <EXCLUDE>
           Excluded file regex. Supports multiple
       --include <INCLUDE>
-          Included file regex (even if excluded). Supports multiple
+          Included file regex (when it startswith any exclude regexes). Supports multiple
       --skip-if-exists <SKIP_IF_EXISTS>
           Skip file regex if they exist. Supports multiple
       --compare-size-only <COMPARE_SIZE_ONLY>

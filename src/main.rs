@@ -90,7 +90,7 @@ pub struct SyncArgs {
     #[clap(long, value_parser)]
     exclude: Vec<ExpandedRegex>,
 
-    /// Included file regex (even if excluded). Supports multiple.
+    /// Included file regex (when it startswith any exclude regexes). Supports multiple.
     #[clap(long, value_parser)]
     include: Vec<ExpandedRegex>,
 
