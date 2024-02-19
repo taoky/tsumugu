@@ -7,6 +7,9 @@ use parser::ParserType;
 use tracing_subscriber::EnvFilter;
 use url::Url;
 
+use shadow_rs::shadow;
+shadow!(build);
+
 mod cli;
 mod compare;
 mod listing;
@@ -20,8 +23,9 @@ mod extensions;
 use crate::regex_process::ExpandedRegex;
 
 #[derive(Parser, Debug)]
-#[command(about, version)]
+#[command(about)]
 #[command(propagate_version = true)]
+#[command(version = build::SHORT_COMMIT)]
 struct Cli {
     #[command(subcommand)]
     command: Commands,
@@ -154,6 +158,9 @@ fn main() {
         .with_env_filter(EnvFilter::from_default_env())
         .with_ansi(enable_color)
         .init();
+
+    // Print version info in debug mode
+    tracing::debug!("{}", build::CLAP_LONG_VERSION);
 
     let bind_address = match std::env::var("BIND_ADDRESS").ok() {
         Some(s) => {
