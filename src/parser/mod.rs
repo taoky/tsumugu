@@ -9,6 +9,7 @@ use crate::listing::ListItem;
 pub mod apache_f2;
 pub mod directory_lister;
 pub mod docker;
+pub mod lighttpd;
 pub mod nginx;
 
 #[derive(Debug)]
@@ -30,6 +31,7 @@ pub enum ParserType {
     ApacheF2,
     Docker,
     DirectoryLister,
+    Lighttpd,
 }
 
 impl ParserType {
@@ -41,7 +43,8 @@ impl ParserType {
             Self::DirectoryLister => {
                 warn!("html5ever parser does not support foster parenting. The result may be incorrect.");
                 Box::<directory_lister::DirectoryListerListingParser>::default()
-            }
+            },
+            Self::Lighttpd => Box::<lighttpd::LighttpdListingParser>::default(),
         }
     }
 }
@@ -51,4 +54,11 @@ fn assert_if_url_has_no_trailing_slash(url: &Url) {
         url.path().ends_with('/'),
         "URL for listing should have a trailing slash"
     );
+}
+
+fn get_real_name_from_href(href: &str) -> String {
+    let name: String = url::form_urlencoded::parse(href.as_bytes())
+        .map(|(k, v)| [k, v].concat())
+        .collect();
+    name.trim_end_matches('/').to_string()
 }

@@ -44,9 +44,7 @@ impl Parser for NginxListingParser {
             // ceph-immutable-object-cache_17.2.6-pve1+3_amd64..> 03-May-2023 23:52              150048
             // So we should get filename from href
             let name: String = if href.contains('%') {
-                url::form_urlencoded::parse(href.as_bytes())
-                    .map(|(k, v)| [k, v].concat())
-                    .collect()
+                get_real_name_from_href(href)
             } else {
                 // A compromise for apache server (they will NOT url-encode the filename)
                 href.to_string()

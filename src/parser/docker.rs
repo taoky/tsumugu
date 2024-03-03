@@ -53,12 +53,9 @@ impl Parser for DockerListingParser {
                 Some(href) => href,
                 None => continue,
             };
-            let name: String = url::form_urlencoded::parse(href.as_bytes())
-                .map(|(k, v)| [k, v].concat())
-                .collect();
+            let name = get_real_name_from_href(href);
             let mut href = url.join(href)?;
 
-            let name = name.trim_end_matches('/');
             if name == ".." {
                 continue;
             }

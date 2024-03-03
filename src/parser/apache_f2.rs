@@ -38,10 +38,7 @@ impl Parser for ApacheF2ListingParser {
             }
 
             let href = a.value().attr("href").unwrap();
-            let name: String = url::form_urlencoded::parse(href.as_bytes())
-                .map(|(k, v)| [k, v].concat())
-                .collect();
-            let name = name.trim_end_matches('/');
+            let name = get_real_name_from_href(href);
             let href = url.join(href)?;
             let type_ = if href.as_str().ends_with('/') {
                 FileType::Directory
