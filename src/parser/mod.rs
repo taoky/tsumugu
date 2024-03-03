@@ -43,7 +43,7 @@ impl ParserType {
             Self::DirectoryLister => {
                 warn!("html5ever parser does not support foster parenting. The result may be incorrect.");
                 Box::<directory_lister::DirectoryListerListingParser>::default()
-            },
+            }
             Self::Lighttpd => Box::<lighttpd::LighttpdListingParser>::default(),
         }
     }
