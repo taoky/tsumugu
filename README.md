@@ -104,6 +104,8 @@ Options:
   -V, --version                        Print version
 ```
 
+For a very brief introduction of parser, see [./src/parser/README.md](./src/parser/README.md).
+
 ## Exit code
 
 - 0: Success
