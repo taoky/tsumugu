@@ -3,7 +3,7 @@ use crate::{
     utils::get,
 };
 
-use super::{ListResult, Parser};
+use super::*;
 use anyhow::Result;
 use chrono::NaiveDateTime;
 use scraper::{Html, Selector};
@@ -16,10 +16,7 @@ impl Parser for DirectoryListerListingParser {
         let resp = get(client, url.clone())?;
         let url = resp.url().clone();
         let body = resp.text()?;
-        assert!(
-            url.path().ends_with('/'),
-            "URL for listing should have a trailing slash"
-        );
+        assert_if_url_has_no_trailing_slash(&url);
         let document = Html::parse_document(&body);
         // https://github.com/DirectoryLister/DirectoryLister/blob/0283f14aa1fbd97796f753e8d6105c752546050f/app/views/components/file.twig
 

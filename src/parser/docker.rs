@@ -6,7 +6,7 @@ use chrono::NaiveDateTime;
 use scraper::{Html, Selector};
 // use tracing::debug;
 
-use super::{ListResult, Parser};
+use super::*;
 use anyhow::Result;
 use regex::Regex;
 
@@ -32,10 +32,7 @@ impl Parser for DockerListingParser {
     }
 
     fn get_list(&self, client: &reqwest::blocking::Client, url: &url::Url) -> Result<ListResult> {
-        assert!(
-            url.path().ends_with('/'),
-            "URL for listing should have a trailing slash"
-        );
+        assert_if_url_has_no_trailing_slash(url);
         let resp = get(client, url.clone())?;
         // if is a redirect?
         if let Some(url) = resp.headers().get("location") {

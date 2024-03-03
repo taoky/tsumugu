@@ -7,7 +7,7 @@ use chrono::NaiveDateTime;
 use scraper::{Html, Selector};
 use tracing::debug;
 
-use super::{ListResult, Parser};
+use super::*;
 use anyhow::Result;
 use regex::Regex;
 
@@ -30,10 +30,7 @@ impl Parser for NginxListingParser {
         let resp = get(client, url.clone())?;
         let url = resp.url().clone();
         let body = resp.text()?;
-        assert!(
-            url.path().ends_with('/'),
-            "URL for listing should have a trailing slash"
-        );
+        assert_if_url_has_no_trailing_slash(&url);
         let document = Html::parse_document(&body);
         let selector = Selector::parse("a").unwrap();
         let mut items = Vec::new();

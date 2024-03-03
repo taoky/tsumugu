@@ -45,3 +45,10 @@ impl ParserType {
         }
     }
 }
+
+fn assert_if_url_has_no_trailing_slash(url: &Url) {
+    assert!(
+        url.path().ends_with('/'),
+        "URL for listing should have a trailing slash"
+    );
+}

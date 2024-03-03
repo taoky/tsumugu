@@ -6,7 +6,7 @@ use crate::{
     utils::get,
 };
 
-use super::{ListResult, Parser};
+use super::*;
 use anyhow::Result;
 use chrono::NaiveDateTime;
 use scraper::{Html, Selector};
@@ -20,10 +20,7 @@ impl Parser for ApacheF2ListingParser {
         let resp = get(client, url.clone())?;
         let url = resp.url().clone();
         let body = resp.text()?;
-        assert!(
-            url.path().ends_with('/'),
-            "URL for listing should have a trailing slash"
-        );
+        assert_if_url_has_no_trailing_slash(&url);
         let document = Html::parse_document(&body);
         // find #indexlist which contains file index
         let selector = Selector::parse("#indexlist").unwrap();
