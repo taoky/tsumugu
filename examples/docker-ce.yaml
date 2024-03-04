@@ -2,7 +2,7 @@ envs:
   UPSTREAM: https://download.docker.com/
   TSUMUGU_PARSER: docker
   TSUMUGU_EXTRA: --timezone 0 --head-before-get --skip-if-exists static/ --skip-if-exists 0.0.0 --skip-if-exists 2019 --skip-if-exists 2018 --skip-if-exists (nightly|edge|s390x|ppc64le|ppc64el|test|debug-.+)/.+\.(rpm|deb) --compare-size-only \.(rpm|deb)$
-  TSUMUGU_EXCLUDE: --exclude debian/ --include debian/dists/${DEBIAN_CURRENT} --exclude fedora/ --include fedora/${FEDORA_CURRENT} --exclude ubuntu/ --include ubuntu/dists/${UBUNTU_LTS} --include ubuntu/dists/${UBUNTU_NONLTS}
+  TSUMUGU_EXCLUDE: --exclude debian/ --include debian/dists/${DEBIAN_CURRENT} --exclude fedora/ --include fedora/docker-ce.+ --include fedora/${FEDORA_CURRENT} --exclude ubuntu/ --include ubuntu/dists/${UBUNTU_LTS} --include ubuntu/dists/${UBUNTU_NONLTS}
 image: ustcmirror/tsumugu:latest
 cron: 10 4 * * *
 logRotCycle: 10
