@@ -205,6 +205,20 @@ Currently tsumugu follows a simple algorithm to determine whether a path should 
 
 In this process some paths, which would be unnecessary, will still be listed. Consider it as a trade-off for simplicity and performance.
 
+Also note that logic like this is used when generating relative path for comparison:
+
+```rust
+// Before working on one task:
+let relative = task.relative.join("/");
+// Before downloading a file:
+let relative_filepath = PathBuf::from(&task_context.relative).join(&item.name);
+let relative_filepath = relative_filepath.to_string_lossy();
+```
+
+`item.name`, or strings inside `task.relative`, do not have trailing slash, so if you want to exclude a directory completely, you should not put a trailing slash in your regex.
+
+You might see arguments like `--exclude debian/ --include debian/dists/${DEBIAN_CURRENT}`, with trailing slash exclusion in examples. This is just because we don't need to exclude directory listing of `debian` folder out.
+
 ## Naming
 
 The name "tsumugu", and current branch name "pudding", are derived from the manga *A Drift Girl and a Noble Moon*.

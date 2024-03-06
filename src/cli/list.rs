@@ -28,6 +28,7 @@ pub fn list(args: &ListArgs, bind_address: Option<String>) -> ! {
             for item in list {
                 print!("{item}");
                 let new_relative = format!("{}/{}", relative, item.name);
+                tracing::debug!("new_relative: {new_relative}");
                 println!(
                     "{}",
                     match exclusion_manager.match_str(new_relative.as_str()) {
