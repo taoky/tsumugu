@@ -7,6 +7,7 @@ use url::Url;
 use crate::listing::ListItem;
 
 pub mod apache_f2;
+pub mod caddy;
 pub mod directory_lister;
 pub mod docker;
 pub mod lighttpd;
@@ -32,6 +33,7 @@ pub enum ParserType {
     Docker,
     DirectoryLister,
     Lighttpd,
+    Caddy,
 }
 
 impl ParserType {
@@ -45,6 +47,7 @@ impl ParserType {
                 Box::<directory_lister::DirectoryListerListingParser>::default()
             }
             Self::Lighttpd => Box::<lighttpd::LighttpdListingParser>::default(),
+            Self::Caddy => Box::<caddy::CaddyListingParser>::default(),
         }
     }
 }
