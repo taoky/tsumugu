@@ -11,7 +11,7 @@ const REGEX_REPLACEMENTS: &[(&str, &str)] = &[
         "(?<distro_ver>buster|bullseye|bookworm)",
     ),
     // https://en.wikipedia.org/wiki/Ubuntu_version_history#Table_of_versions
-    ("${UBUNTU_LTS}", "(?<distro_ver>bionic|focal|jammy)"),
+    ("${UBUNTU_LTS}", "(?<distro_ver>focal|jammy|noble)"),
     ("${UBUNTU_NONLTS}", "(?<distro_ver>lunar|mantic)"),
     // https://en.wikipedia.org/wiki/Fedora_Linux#Releases
     ("${FEDORA_CURRENT}", "(?<distro_ver>38|39|40)"),
