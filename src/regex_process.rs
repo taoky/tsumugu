@@ -5,22 +5,23 @@ use regex::Regex;
 // Submit an issue if you find this out-of-date!
 // And assuming that all vars are distro_ver
 const REGEX_REPLACEMENTS: &[(&str, &str)] = &[
-    // https://en.wikipedia.org/wiki/Debian_version_history#Release_table
+    // https://endoflife.date/debian
     (
         "${DEBIAN_CURRENT}",
-        "(?<distro_ver>buster|bullseye|bookworm)",
+        "(?<distro_ver>bullseye|bookworm)",
     ),
-    // https://en.wikipedia.org/wiki/Ubuntu_version_history#Table_of_versions
+    // https://endoflife.date/ubuntu (excluding ESM)
     ("${UBUNTU_LTS}", "(?<distro_ver>focal|jammy|noble)"),
-    ("${UBUNTU_NONLTS}", "(?<distro_ver>lunar|mantic)"),
-    // https://en.wikipedia.org/wiki/Fedora_Linux#Releases
-    ("${FEDORA_CURRENT}", "(?<distro_ver>38|39|40)"),
-    ("${CENTOS_CURRENT}", "(?<distro_ver>7)"),
-    // https://en.wikipedia.org/wiki/Red_Hat_Enterprise_Linux#Version_history_and_timeline
-    ("${RHEL_CURRENT}", "(?<distro_ver>7|8|9)"),
-    // https://en.wikipedia.org/wiki/OpenSUSE#Version_history
+    ("${UBUNTU_NONLTS}", "(?<distro_ver>mantic)"),
+    // https://endoflife.date/fedora
+    ("${FEDORA_CURRENT}", "(?<distro_ver>39|40)"),
+    // CentOS is no longer supported -- this regex is replaced to something that could match nothing
+    ("${CENTOS_CURRENT}", "(?<distro_ver>NONEXISTFILENAMESOITCOULDNEVERMATCHANYTHING)"),
+    // https://endoflife.date/rhel (excluding ELCS)
+    ("${RHEL_CURRENT}", "(?<distro_ver>8|9)"),
+    // https://endoflife.date/opensuse
     ("${OPENSUSE_CURRENT}", "(?<distro_ver>15.5|15.6)"),
-    // https://en.wikipedia.org/wiki/SUSE_Linux_Enterprise#End-of-support_schedule
+    // https://endoflife.date/sles
     ("${SLES_CURRENT}", "(?<distro_ver>12|15)"),
 ];
 
