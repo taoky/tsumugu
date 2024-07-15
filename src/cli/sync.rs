@@ -575,6 +575,12 @@ fn sync_threads(args: &SyncArgs, parser: &dyn crate::parser::Parser, thr_context
                                     break;
                                 }
                             }
+                            // If nobody is active and no wake signal is active, exit
+                            let active = active_cnt.load(Ordering::SeqCst);
+                            if old_wake == 0 && active == 0 {
+                                info!("No longer wait, as nobody is alive and nothing to do");
+                                break;
+                            }
                         }
                     }
                 }
