@@ -1,0 +1,9 @@
+envs:
+  UPSTREAM: https://dl.winehq.org/wine-builds/
+  TSUMUGU_EXCLUDE: --exclude ^mageia --exclude ^macosx --exclude ^debian --exclude ^ubuntu --exclude ^fedora --exclude ^android --include ^debian/dists/${DEBIAN_CURRENT} --include ^ubuntu/dists/${UBUNTU_LTS} --include ^fedora/${FEDORA_CURRENT}
+  TSUMUGU_PARSER: apache-f2
+image: ustcmirror/tsumugu:latest
+cron: 40 6 * * *
+logRotCycle: 10
+name: wine-builds
+storageDir: /srv/repo/wine-builds
