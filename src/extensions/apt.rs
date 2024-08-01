@@ -81,6 +81,7 @@ fn get_debian_root(
 pub struct AptPackage {
     pub url: Url,
     pub relative: Vec<String>,
+    #[allow(dead_code)]
     pub size: usize,
     pub filename: String,
 }
