@@ -139,10 +139,11 @@ async fn download_file(
 ) -> Result<()> {
     // Here we use async to allow streaming and progress bar
     // Ref: https://gist.github.com/giuliano-oliveira/4d11d6b3bb003dba3a1b53f43d81b30d
-    let resp = match again_async(|| get_async(client, item.url.clone()), args.retry).await {
+    let url = item.url.clone();
+    let resp = match again_async(|| get_async(client, url.clone()), args.retry).await {
         Ok(resp) => resp,
         Err(e) => {
-            error!("Failed to GET {}: {:?}", item.url, e);
+            error!("Failed to GET {}: {:?}", url, e);
             return Err(e);
         }
     };
@@ -154,7 +155,7 @@ async fn download_file(
             .unwrap()
             .progress_chars("#>-"),
     );
-    pb.set_message(format!("Downloading {}", item.url));
+    pb.set_message(format!("Downloading {}", url));
 
     let mtime = match utils::get_async_response_mtime(&resp) {
         Ok(mtime) => mtime,
@@ -162,7 +163,7 @@ async fn download_file(
             if args.allow_mtime_from_parser {
                 naive_to_utc(&item.mtime, timezone)
             } else {
-                error!("Failed to get mtime of {}: {:?}", item.url, e);
+                error!("Failed to get mtime of {}: {:?}", url, e);
                 return Err(e);
             }
         }
@@ -174,7 +175,13 @@ async fn download_file(
         let mut stream = resp.bytes_stream();
 
         while let Some(item) = stream.next().await {
-            let chunk = item.unwrap();
+            let chunk = match item {
+                Ok(i) => i,
+                Err(e) => {
+                    error!("Failed when downloading {}: {:?}", url, e);
+                    return Err(e.into());
+                }
+            };
             dest_file.write_all(&chunk).unwrap();
             let new = std::cmp::min(pb.position() + (chunk.len() as u64), total_size);
             pb.set_position(new);
