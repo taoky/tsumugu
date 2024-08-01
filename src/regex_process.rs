@@ -6,17 +6,17 @@ use regex::Regex;
 // And assuming that all vars are distro_ver
 const REGEX_REPLACEMENTS: &[(&str, &str)] = &[
     // https://endoflife.date/debian
-    (
-        "${DEBIAN_CURRENT}",
-        "(?<distro_ver>bullseye|bookworm)",
-    ),
+    ("${DEBIAN_CURRENT}", "(?<distro_ver>bullseye|bookworm)"),
     // https://endoflife.date/ubuntu (excluding ESM)
     ("${UBUNTU_LTS}", "(?<distro_ver>focal|jammy|noble)"),
     ("${UBUNTU_NONLTS}", "(?<distro_ver>mantic)"),
     // https://endoflife.date/fedora
     ("${FEDORA_CURRENT}", "(?<distro_ver>39|40)"),
     // CentOS is no longer supported -- this regex is replaced to something that could match nothing
-    ("${CENTOS_CURRENT}", "(?<distro_ver>NONEXISTFILENAMESOITCOULDNEVERMATCHANYTHING)"),
+    (
+        "${CENTOS_CURRENT}",
+        "(?<distro_ver>NONEXISTFILENAMESOITCOULDNEVERMATCHANYTHING)",
+    ),
     // https://endoflife.date/rhel (excluding ELCS)
     ("${RHEL_CURRENT}", "(?<distro_ver>8|9)"),
     // https://endoflife.date/opensuse
