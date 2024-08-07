@@ -147,7 +147,14 @@ async fn download_file(
             return Err(e);
         }
     };
-    let total_size = resp.content_length().unwrap();
+    let total_size = match resp.content_length() {
+        Some(s) => s,
+        None => {
+            warn!("URL {} does not give a content length", url);
+            // This value would be used only for showing progress bar.
+            0
+        }
+    };
     let pb = mprogress.add(ProgressBar::new(total_size));
     pb.set_style(
         ProgressStyle::default_bar()
