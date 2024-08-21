@@ -39,6 +39,13 @@ jobs:
             --mount type=bind,source=$HOME/.cargo/git,target=/root/.cargo/git \
             --network=host \
             clux/muslrust:stable \
+            git status
+        docker run --rm -t \
+            --mount type=bind,source=${{ github.workspace }},target=/volume \
+            --mount type=bind,source=$HOME/.cargo/registry,target=/root/.cargo/registry \
+            --mount type=bind,source=$HOME/.cargo/git,target=/root/.cargo/git \
+            --network=host \
+            clux/muslrust:stable \
             cargo test
         docker run --rm -t \
             --mount type=bind,source=${{ github.workspace }},target=/volume \
