@@ -33,6 +33,7 @@ jobs:
     - name: Test & Compile
       run: |
         mkdir -p ~/.cargo/{git,registry}
+        sudo chown -R root .
         docker run --rm -t \
             --mount type=bind,source=${{ github.workspace }},target=/volume \
             --mount type=bind,source=$HOME/.cargo/registry,target=/root/.cargo/registry \
