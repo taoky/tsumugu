@@ -8,7 +8,7 @@ use scraper::{Html, Selector};
 use tracing::debug;
 
 use super::*;
-use anyhow::Result;
+use anyhow::{anyhow, Result};
 use regex::Regex;
 
 #[derive(Debug, Clone)]
@@ -69,7 +69,10 @@ impl Parser for NginxListingParser {
                 .to_string();
             let metadata_raw = metadata_raw.trim();
             debug!("{:?}", metadata_raw);
-            let metadata = self.metadata_regex.captures(metadata_raw).unwrap();
+            let metadata = self.metadata_regex.captures(metadata_raw).ok_or(anyhow!(
+                "Get '{}' for metadata, is this a nginx page?",
+                metadata_raw
+            ))?;
             let date = metadata.get(1).unwrap().as_str();
             let date = NaiveDateTime::parse_from_str(date, "%d-%b-%Y %H:%M")?;
             let size = metadata.get(2).unwrap().as_str();
