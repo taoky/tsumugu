@@ -22,10 +22,22 @@ mod extensions;
 
 use crate::regex_process::ExpandedRegex;
 
+fn get_version() -> &'static str {
+    let tag = build::TAG;
+    let clean = build::GIT_CLEAN;
+    if !clean {
+        return Box::leak(format!("{} (dirty)", build::SHORT_COMMIT).into_boxed_str());
+    } else if tag.is_empty() {
+        return build::SHORT_COMMIT;
+    } else { 
+        return tag;
+    }
+}
+
 #[derive(Parser, Debug)]
 #[command(about)]
 #[command(propagate_version = true)]
-#[command(version = build::SHORT_COMMIT)]
+#[command(version = get_version())]
 struct Cli {
     #[command(subcommand)]
     command: Commands,

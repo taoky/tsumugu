@@ -11,7 +11,7 @@ jobs:
   build:
     runs-on: ubuntu-latest
     steps:
-    - uses: actions/checkout@v3
+    - uses: actions/checkout@v4
       with:
         submodules: 'recursive'
     - uses: actions/cache@v3
@@ -26,9 +26,15 @@ jobs:
       run: |
         fixtures/start_fileserver.sh &
 
+    - name: Remove files for a build with correct version info
+      run: |
+        find target/ -name 'shadow*' -exec rm -r {} + || true
+        find target/ -name 'tsumugu' -delete || true
     - name: Test & Compile
       run: |
         mkdir -p ~/.cargo/{git,registry}
+        # Fix git permission issue with Docker and shadow-rs
+        sudo chown -R root .
         docker run --rm -t \
             --mount type=bind,source=${{ github.workspace }},target=/volume \
             --mount type=bind,source=$HOME/.cargo/registry,target=/root/.cargo/registry \
@@ -44,7 +50,9 @@ jobs:
             clux/muslrust:stable \
             cargo build --release
         sudo chown -R runner ~/.cargo/
-        sudo chown -R runner target/
+        sudo chown -R runner .
+        # show version info
+        RUST_LOG=debug target/x86_64-unknown-linux-musl/release/tsumugu --version
 
     - name: Deploy - Create and Upload Release
       if: startsWith(github.ref, 'refs/tags/')
