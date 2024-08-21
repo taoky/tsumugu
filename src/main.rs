@@ -22,10 +22,18 @@ mod extensions;
 
 use crate::regex_process::ExpandedRegex;
 
+fn get_version() -> &'static str {
+    let short_commit = build::SHORT_COMMIT;
+    if short_commit.len() == 0 {
+        return build::TAG;
+    }
+    return short_commit;
+}
+
 #[derive(Parser, Debug)]
 #[command(about)]
 #[command(propagate_version = true)]
-#[command(version = build::SHORT_COMMIT)]
+#[command(version = get_version())]
 struct Cli {
     #[command(subcommand)]
     command: Commands,
