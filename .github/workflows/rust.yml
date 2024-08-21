@@ -26,6 +26,9 @@ jobs:
       run: |
         fixtures/start_fileserver.sh &
 
+    - name: Remove target/**/shadow.rs anyway
+      run: |
+        find target/ -name 'shadow.rs' -delete || true
     - name: Test & Compile
       run: |
         mkdir -p ~/.cargo/{git,registry}
