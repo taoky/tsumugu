@@ -29,7 +29,7 @@ fn get_version() -> &'static str {
         return Box::leak(format!("{} (dirty)", build::SHORT_COMMIT).into_boxed_str());
     } else if tag.is_empty() {
         return build::SHORT_COMMIT;
-    } else { 
+    } else {
         return tag;
     }
 }

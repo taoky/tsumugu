@@ -22,10 +22,13 @@ macro_rules! get_resp_mtime {
 
 #[macro_export]
 macro_rules! build_client {
-    ($client: ty, $args: expr, $parser: expr, $bind_address: expr) => {{
+    ($client: ty, $args: expr, $parser: expr, $bind_address: expr, $auto_compress: expr) => {{
         let mut builder = <$client>::builder()
             .user_agent($args.user_agent.clone())
-            .local_address($bind_address.map(|x| x.parse::<std::net::IpAddr>().unwrap()));
+            .local_address($bind_address.map(|x| x.parse::<std::net::IpAddr>().unwrap()))
+            .gzip($auto_compress)
+            .brotli($auto_compress)
+            .deflate($auto_compress);
         if !$parser.is_auto_redirect() {
             builder = builder.redirect(reqwest::redirect::Policy::none());
         }

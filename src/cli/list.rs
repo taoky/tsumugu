@@ -5,7 +5,7 @@ use crate::{build_client, parser::ListResult, regex_process::ExclusionManager, L
 // TODO: clean code
 pub fn list(args: &ListArgs, bind_address: Option<String>) -> ! {
     let parser = args.parser.build();
-    let client = build_client!(reqwest::blocking::Client, args, parser, bind_address);
+    let client = build_client!(reqwest::blocking::Client, args, parser, bind_address, true);
     let exclusion_manager = ExclusionManager::new(&args.exclude, &args.include);
     // get relative
     let upstream = &args.upstream_folder;

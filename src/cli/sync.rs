@@ -474,19 +474,26 @@ fn download_handler(
 fn sync_threads(args: &SyncArgs, parser: &dyn crate::parser::Parser, thr_context: &ThreadsContext) {
     let exclusion_manager = ExclusionManager::new(&args.exclude, &args.include);
 
+    // Handling listing
     let client = build_client!(
         reqwest::blocking::Client,
         args,
         parser,
-        thr_context.bind_address.as_ref()
+        thr_context.bind_address.as_ref(),
+        // some servers (such as download.zerotier.com) would give you gziped list even if you don't ask for that,
+        // so just enable auto compression when requesting listing
+        true
     );
-    // async support
+    // async support, handling download
     let runtime = tokio::runtime::Runtime::new().unwrap();
     let async_client = build_client!(
         reqwest::Client,
         args,
         parser,
-        thr_context.bind_address.as_ref()
+        thr_context.bind_address.as_ref(),
+        // auto compression is set to off here, as is known that some servers would wrongly report Content-Encoding for compressed files
+        // like cloud.centos.org
+        false
     );
 
     let mprogress = MultiProgress::with_draw_target(ProgressDrawTarget::term_like_with_hz(
