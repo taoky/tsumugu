@@ -71,8 +71,7 @@ fn get_real_name_from_href(href: &str) -> String {
 
 fn contains_abbreviated_month(s: &str) -> bool {
     let months = [
-        "Jan", "Feb", "Mar", "Apr", "May", "Jun", 
-        "Jul", "Aug", "Sep", "Oct", "Nov", "Dec"
+        "Jan", "Feb", "Mar", "Apr", "May", "Jun", "Jul", "Aug", "Sep", "Oct", "Nov", "Dec",
     ];
 
     months.iter().any(|&month| s.contains(month))
