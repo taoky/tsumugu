@@ -13,6 +13,14 @@ use scraper::{Html, Selector};
 #[derive(Debug, Clone, Default)]
 pub struct FancyIndexListingParser;
 
+fn guess_date_fmt(date: &str) -> String {
+    let two_colons = contains_two_colons(date);
+    let abbr_month = contains_abbreviated_month(date);
+    let dfmt = if abbr_month { "%Y-%b-%d" } else { "%Y-%m-%d" };
+    let tfmt = if two_colons { "%H:%M:%S" } else { "%H:%M" };
+    format!("{} {}", dfmt, tfmt)
+}
+
 impl Parser for FancyIndexListingParser {
     fn get_list(&self, client: &Client, url: &Url) -> Result<ListResult> {
         let resp = get(client, url.clone())?;
@@ -47,15 +55,9 @@ impl Parser for FancyIndexListingParser {
             let date = element.select(&date_selector).next().unwrap().inner_html();
             let date = date.trim();
 
-            // decide which time format to use
-            let date_fmt = if date.len() == 16 {
-                "%Y-%m-%d %H:%M"
-            } else if date.len() == 19 {
-                "%Y-%m-%d %H:%M:%S"
-            } else {
-                unreachable!()
-            };
-            let date = NaiveDateTime::parse_from_str(date, date_fmt)?;
+            // decide (guess) which time format to use
+            let date_fmt = guess_date_fmt(date);
+            let date = NaiveDateTime::parse_from_str(date, &date_fmt)?;
 
             items.push(ListItem::new(
                 href,
@@ -148,5 +150,10 @@ mod tests {
             }
             _ => unreachable!(),
         }
+    }
+
+    #[test]
+    fn test_guess_date_fmt() {
+        assert_eq!(guess_date_fmt("2024-Jul-15 09:46"), "%Y-%b-%d %H:%M");
     }
 }
