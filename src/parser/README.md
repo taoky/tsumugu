@@ -6,7 +6,7 @@ This is a list of parsers that tsumugu supports:
 - directory_lister: [Directory Lister](https://www.directorylister.com/).
 - docker: A specialized parser for <https://download.docker.com/>.
 - lighttpd: [lighttpd's mod_dirlisting](https://redmine.lighttpd.net/projects/lighttpd/wiki/Docs_ModDirlisting).
-- nginx: [Nginx's autoindex](https://nginx.org/en/docs/http/ngx_http_autoindex_module.html).
+- nginx: [Nginx's autoindex](https://nginx.org/en/docs/http/ngx_http_autoindex_module.html). It should also work with Apache2's autoindex `F=1` mode.
 - caddy: [Caddy's file_server](https://caddyserver.com/docs/caddyfile/directives/file_server).
 - fancyindex: [Nginx fancyindex](https://github.com/aperezdc/ngx-fancyindex).
 

@@ -80,3 +80,45 @@ fn contains_abbreviated_month(s: &str) -> bool {
 fn contains_two_colons(s: &str) -> bool {
     s.matches(':').count() >= 2
 }
+
+fn has_numeric_prefix(s: &str) -> bool {
+    s.chars().take(4).all(|c| c.is_ascii_digit()) && s.len() >= 4
+}
+
+// Returns format and regex string
+fn guess_date_fmt(date: &str) -> (String, String) {
+    let two_colons = contains_two_colons(date);
+    let abbr_month = contains_abbreviated_month(date);
+    let year_first = has_numeric_prefix(date);
+    let (dfmt, dfmt_regex) = match (abbr_month, year_first) {
+        (true, true) => ("%Y-%b-%d", r"\d{4}-\w{3}-\d{2}"),
+        (true, false) => ("%d-%b-%Y", r"\d{2}-\w{3}-\d{4}"),
+        (false, true) => ("%Y-%m-%d", r"\d{4}-\d{2}-\d{2}"),
+        (false, false) => ("%d-%m-%Y", r"\d{2}-\d{2}-\d{4}"),
+    };
+    let (tfmt, tfmt_regex) = if two_colons {
+        ("%H:%M:%S", r"\d{2}:\d{2}:\d{2}")
+    } else {
+        ("%H:%M", r"\d{2}:\d{2}")
+    };
+    (
+        format!("{} {}", dfmt, tfmt),
+        format!("{} {}", dfmt_regex, tfmt_regex),
+    )
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    #[test]
+    fn test_guess_date_fmt() {
+        assert_eq!(
+            guess_date_fmt("2024-Jul-15 09:46"),
+            (
+                "%Y-%b-%d %H:%M".to_owned(),
+                r"\d{4}-\w{3}-\d{2} \d{2}:\d{2}".to_owned()
+            )
+        );
+    }
+}

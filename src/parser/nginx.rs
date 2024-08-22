@@ -11,19 +11,8 @@ use super::*;
 use anyhow::{anyhow, Result};
 use regex::Regex;
 
-#[derive(Debug, Clone)]
-pub struct NginxListingParser {
-    metadata_regex: Regex,
-}
-
-impl Default for NginxListingParser {
-    fn default() -> Self {
-        Self {
-            metadata_regex: Regex::new(r"(\d{2}-\w{3}-\d{4} \d{2}:\d{2})\s+([\d\.\-kMG]+)$")
-                .unwrap(),
-        }
-    }
-}
+#[derive(Debug, Clone, Default)]
+pub struct NginxListingParser {}
 
 impl Parser for NginxListingParser {
     fn get_list(&self, client: &reqwest::blocking::Client, url: &url::Url) -> Result<ListResult> {
@@ -34,11 +23,17 @@ impl Parser for NginxListingParser {
         let document = Html::parse_document(&body);
         let selector = Selector::parse("a").unwrap();
         let mut items = Vec::new();
+        let mut date_fmt = None;
+        let mut date_regex = None;
         for element in document.select(&selector) {
             let href = match element.value().attr("href") {
                 Some(href) => href,
                 None => continue,
             };
+            if href.starts_with('?') {
+                // Apache autoindex commands, skip.
+                continue;
+            }
             // It's not proper to get filename by <a> text
             // As when it is too long, this could happen:
             // ceph-immutable-object-cache_17.2.6-pve1+3_amd64..> 03-May-2023 23:52              150048
@@ -55,6 +50,11 @@ impl Parser for NginxListingParser {
             if name == ".." {
                 continue;
             }
+            // extra check for Apache server
+            let inner = element.inner_html();
+            if inner == "Parent Directory" {
+                continue;
+            }
             let type_ = if href.as_str().ends_with('/') {
                 FileType::Directory
             } else {
@@ -69,12 +69,25 @@ impl Parser for NginxListingParser {
                 .to_string();
             let metadata_raw = metadata_raw.trim();
             debug!("{:?}", metadata_raw);
-            let metadata = self.metadata_regex.captures(metadata_raw).ok_or(anyhow!(
-                "Get '{}' for metadata, is this a nginx page?",
-                metadata_raw
-            ))?;
+            // guess date format...
+            if date_fmt.is_none() {
+                let (f, r) = guess_date_fmt(metadata_raw);
+                date_fmt = Some(f);
+                date_regex = Some(Regex::new(&format!(r"({})\s+([\d\.\-kKMG]+)$", r))?);
+                debug!("date_fmt: {:?} date_regex: {:?}", date_fmt, date_regex)
+            }
+            let metadata = date_regex
+                .clone()
+                .unwrap()
+                .captures(metadata_raw)
+                .ok_or(anyhow!(
+                    "Get '{}' for {} ({}) metadata, is this a nginx page?",
+                    metadata_raw,
+                    name,
+                    href
+                ))?;
             let date = metadata.get(1).unwrap().as_str();
-            let date = NaiveDateTime::parse_from_str(date, "%d-%b-%Y %H:%M")?;
+            let date = NaiveDateTime::parse_from_str(date, &date_fmt.clone().unwrap())?;
             let size = metadata.get(2).unwrap().as_str();
             debug!("{} {} {:?} {} {:?}", href, name, type_, date, size);
             items.push(ListItem::new(
@@ -84,7 +97,11 @@ impl Parser for NginxListingParser {
                 {
                     if size == "-" {
                         None
-                    } else if size.contains('k') || size.contains('M') || size.contains('G') {
+                    } else if size.contains('k')
+                        || size.contains('K')
+                        || size.contains('M')
+                        || size.contains('G')
+                    {
                         let (n_size, unit) = FileSize::get_humanized(size);
                         Some(FileSize::HumanizedBinary(n_size, unit))
                     } else {
@@ -101,7 +118,10 @@ impl Parser for NginxListingParser {
 
 #[cfg(test)]
 mod tests {
+    use test_log::test;
     use url::Url;
+
+    use crate::listing::SizeUnit;
 
     use super::*;
 
@@ -177,6 +197,40 @@ mod tests {
                 assert_eq!(
                     find_res.url,
                     Url::parse("http://localhost:1921/mysql/mysql-connector-c++/").unwrap()
+                );
+            }
+            _ => unreachable!(),
+        }
+    }
+
+    #[test]
+    fn test_ghettoforge() {
+        let client = reqwest::blocking::Client::new();
+        let items = NginxListingParser::default()
+            .get_list(
+                &client,
+                &url::Url::parse("http://localhost:1921/ghettoforge").unwrap(),
+            )
+            .unwrap();
+        match items {
+            ListResult::List(items) => {
+                assert_eq!(items.len(), 8);
+                assert_eq!(items[0].name, "RPM-GPG-KEY-gf.el7");
+                assert_eq!(items[0].type_, FileType::File);
+                assert_eq!(
+                    items[0].size,
+                    Some(FileSize::HumanizedBinary(3.0, SizeUnit::K))
+                );
+                assert_eq!(
+                    items[0].mtime,
+                    NaiveDateTime::parse_from_str("2014-12-30 02:53", "%Y-%m-%d %H:%M").unwrap()
+                );
+                assert_eq!(items[3].name, "archive");
+                assert_eq!(items[3].type_, FileType::Directory);
+                assert_eq!(items[3].size, None);
+                assert_eq!(
+                    items[3].mtime,
+                    NaiveDateTime::parse_from_str("2020-12-21 02:34", "%Y-%m-%d %H:%M").unwrap()
                 );
             }
             _ => unreachable!(),
