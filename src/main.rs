@@ -22,6 +22,7 @@ mod extensions;
 
 use crate::regex_process::ExpandedRegex;
 
+#[allow(clippy::const_is_empty)]
 fn get_version() -> &'static str {
     let tag = build::TAG;
     let clean = build::GIT_CLEAN;
