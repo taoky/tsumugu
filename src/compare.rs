@@ -93,7 +93,7 @@ pub fn should_download_by_list(
 
 pub fn should_download_by_head(
     path: &Path,
-    resp: &reqwest::blocking::Response,
+    resp: &reqwest::Response,
     size_only: bool,
 ) -> bool {
     // Construct a valid "ListItem" and pass to should_download_by_list
@@ -107,15 +107,9 @@ pub fn should_download_by_head(
             FileType::File
         },
         size: Some(FileSize::Precise(
-            resp.headers()
-                .get("Content-Length")
-                .unwrap()
-                .to_str()
-                .unwrap()
-                .parse::<u64>()
-                .unwrap(),
+            resp.content_length().expect("No content-length from upstream")
         )),
-        mtime: utils::get_blocking_response_mtime(resp)
+        mtime: utils::get_async_response_mtime(resp)
             .unwrap()
             .naive_utc(),
         skip_check: false,

@@ -92,8 +92,15 @@ pub fn get(client: &reqwest::blocking::Client, url: Url) -> Result<reqwest::bloc
     Ok(client.get(url).send()?.error_for_status()?)
 }
 
-pub fn head(client: &reqwest::blocking::Client, url: Url) -> Result<reqwest::blocking::Response> {
-    Ok(client.head(url).send()?.error_for_status()?)
+// pub fn head(client: &reqwest::blocking::Client, url: Url) -> Result<reqwest::blocking::Response> {
+//     Ok(client.head(url).send()?.error_for_status()?)
+// }
+
+pub fn head_async_blocking(runtime: &tokio::runtime::Runtime, client: &reqwest::Client, url: Url) -> Result<reqwest::Response> {
+    let future = async {
+        head_async(client, url).await
+    };
+    runtime.block_on(future)
 }
 
 pub fn is_symlink(path: &std::path::Path) -> bool {

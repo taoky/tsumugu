@@ -26,7 +26,7 @@ use crate::{
     parser::ListResult,
     regex_process::{self, ExclusionManager},
     term::AlternativeTerm,
-    utils::{self, again, again_async, get_async, head, is_symlink, naive_to_utc},
+    utils::{self, again, again_async, get_async, head_async_blocking, is_symlink, naive_to_utc},
     SyncArgs,
 };
 
@@ -229,15 +229,14 @@ struct TaskContext<'a> {
     relative: &'a str,
     worker: &'a Worker<Task>,
     wake: &'a AtomicUsize,
-    blocking_client: &'a reqwest::blocking::Client,
-    // async_client: &'a reqwest::Client,
+    listing_client: &'a reqwest::blocking::Client,
     exclusion_result: regex_process::Comparison,
     exclusion_manager: &'a ExclusionManager,
     timezone: Option<FixedOffset>,
 }
 
 struct AsyncDownloadContext<'a> {
-    async_client: &'a reqwest::Client,
+    download_client: &'a reqwest::Client,
     mprogress: &'a MultiProgress,
     runtime: &'a tokio::runtime::Runtime,
 }
@@ -265,7 +264,7 @@ fn list_handler(
     }
 
     let items = match again(
-        || parser.get_list(task_context.blocking_client, &task.url),
+        || parser.get_list(task_context.listing_client, &task.url),
         args.retry,
     ) {
         Ok(items) => items,
@@ -423,7 +422,7 @@ fn download_handler(
 
     if should_download && args.head_before_get {
         match again(
-            || head(task_context.blocking_client, item.url.clone()),
+            || head_async_blocking(async_context.runtime, async_context.download_client, item.url.clone()),
             args.retry,
         ) {
             Ok(resp) => {
@@ -445,7 +444,7 @@ fn download_handler(
     if should_download && !args.dry_run {
         let future = async {
             if (download_file(
-                async_context.async_client,
+                async_context.download_client,
                 item,
                 &expected_path,
                 args,
@@ -555,7 +554,7 @@ fn sync_threads(args: &SyncArgs, parser: &dyn crate::parser::Parser, thr_context
                             relative: &relative,
                             worker: &worker,
                             wake: &wake,
-                            blocking_client: &client,
+                            listing_client: &client,
                             exclusion_result,
                             exclusion_manager: &exclusion_manager,
                             timezone,
@@ -566,7 +565,7 @@ fn sync_threads(args: &SyncArgs, parser: &dyn crate::parser::Parser, thr_context
                             }
                             TaskType::Download(item) => {
                                 let async_context = AsyncDownloadContext {
-                                    async_client: &async_client,
+                                    download_client: &async_client,
                                     mprogress: &mprogress,
                                     runtime: &runtime,
                                 };
