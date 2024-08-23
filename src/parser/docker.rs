@@ -31,9 +31,13 @@ impl Parser for DockerListingParser {
         false
     }
 
-    fn get_list(&self, client: &reqwest::blocking::Client, url: &url::Url) -> Result<ListResult> {
+    fn get_list(&self, async_context: &AsyncContext, url: &url::Url) -> Result<ListResult> {
         assert_if_url_has_no_trailing_slash(url);
-        let resp = get(client, url.clone())?;
+        let resp = get(
+            &async_context.runtime,
+            &async_context.listing_client,
+            url.clone(),
+        )?;
         // if is a redirect?
         if let Some(url) = resp.headers().get("location") {
             let mut url = url.to_str()?.to_string();
@@ -44,7 +48,7 @@ impl Parser for DockerListingParser {
             }
             return Ok(ListResult::Redirect(url));
         }
-        let body = resp.text()?;
+        let body = get_text(&async_context.runtime, resp)?;
         let document = Html::parse_document(&body);
         let selector = Selector::parse("a").unwrap();
         let mut items = Vec::new();
@@ -108,13 +112,14 @@ mod tests {
     use crate::listing::SizeUnit;
 
     use super::*;
+    use crate::parser::tests::*;
 
     #[test]
     fn test_docker() {
-        let client = reqwest::blocking::Client::new();
+        let context = init_async_context();
         let items = DockerListingParser::default()
             .get_list(
-                &client,
+                &context,
                 &url::Url::parse("http://localhost:1921/docker/").unwrap(),
             )
             .unwrap();
@@ -143,10 +148,10 @@ mod tests {
 
     #[test]
     fn test_docker_2() {
-        let client = reqwest::blocking::Client::new();
+        let context = init_async_context();
         let items = DockerListingParser::default()
             .get_list(
-                &client,
+                &context,
                 &url::Url::parse("http://localhost:1921/docker/armv7l/").unwrap(),
             )
             .unwrap();

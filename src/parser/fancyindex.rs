@@ -14,10 +14,14 @@ use scraper::{Html, Selector};
 pub struct FancyIndexListingParser;
 
 impl Parser for FancyIndexListingParser {
-    fn get_list(&self, client: &Client, url: &Url) -> Result<ListResult> {
-        let resp = get(client, url.clone())?;
+    fn get_list(&self, async_context: &AsyncContext, url: &url::Url) -> Result<ListResult> {
+        let resp = get(
+            &async_context.runtime,
+            &async_context.listing_client,
+            url.clone(),
+        )?;
         let url = resp.url().clone();
-        let body = resp.text()?;
+        let body = get_text(&async_context.runtime, resp)?;
         assert_if_url_has_no_trailing_slash(&url);
         let document = Html::parse_document(&body);
         let selector = Selector::parse("tbody tr").unwrap();
@@ -75,13 +79,14 @@ impl Parser for FancyIndexListingParser {
 mod tests {
     use super::*;
     use crate::listing::SizeUnit;
+    use crate::parser::tests::*;
 
     #[test]
     fn test_njumirrors() {
-        let client = reqwest::blocking::Client::new();
+        let context = init_async_context();
         let items = FancyIndexListingParser
             .get_list(
-                &client,
+                &context,
                 &Url::parse("http://localhost:1921/bmclapi/").unwrap(),
             )
             .unwrap();
@@ -113,10 +118,10 @@ mod tests {
 
     #[test]
     fn test_loongnix() {
-        let client = reqwest::blocking::Client::new();
+        let context = init_async_context();
         let items = FancyIndexListingParser
             .get_list(
-                &client,
+                &context,
                 &Url::parse("http://localhost:1921/loongnix/").unwrap(),
             )
             .unwrap();

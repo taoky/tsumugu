@@ -12,10 +12,14 @@ use scraper::{Html, Selector};
 pub struct DirectoryListerListingParser;
 
 impl Parser for DirectoryListerListingParser {
-    fn get_list(&self, client: &reqwest::blocking::Client, url: &url::Url) -> Result<ListResult> {
-        let resp = get(client, url.clone())?;
+    fn get_list(&self, async_context: &AsyncContext, url: &url::Url) -> Result<ListResult> {
+        let resp = get(
+            &async_context.runtime,
+            &async_context.listing_client,
+            url.clone(),
+        )?;
         let url = resp.url().clone();
-        let body = resp.text()?;
+        let body = get_text(&async_context.runtime, resp)?;
         assert_if_url_has_no_trailing_slash(&url);
         let document = Html::parse_document(&body);
         // https://github.com/DirectoryLister/DirectoryLister/blob/0283f14aa1fbd97796f753e8d6105c752546050f/app/views/components/file.twig
@@ -81,13 +85,14 @@ mod tests {
     use crate::listing::SizeUnit;
 
     use super::*;
+    use crate::parser::tests::*;
 
     #[test]
     fn test_vyos() {
-        let client = reqwest::blocking::Client::new();
+        let context = init_async_context();
         let items = DirectoryListerListingParser
             .get_list(
-                &client,
+                &context,
                 &url::Url::parse("http://localhost:1921/vyos/").unwrap(),
             )
             .unwrap();
@@ -128,10 +133,10 @@ mod tests {
 
     #[test]
     fn test_vyos_2() {
-        let client = reqwest::blocking::Client::new();
+        let context = init_async_context();
         let items = DirectoryListerListingParser
             .get_list(
-                &client,
+                &context,
                 &url::Url::parse("http://localhost:1921/vyos/vyos-accel-ppp/").unwrap(),
             )
             .unwrap();

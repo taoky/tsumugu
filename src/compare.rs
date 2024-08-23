@@ -91,11 +91,7 @@ pub fn should_download_by_list(
     }
 }
 
-pub fn should_download_by_head(
-    path: &Path,
-    resp: &reqwest::Response,
-    size_only: bool,
-) -> bool {
+pub fn should_download_by_head(path: &Path, resp: &reqwest::Response, size_only: bool) -> bool {
     // Construct a valid "ListItem" and pass to should_download_by_list
     debug!("Checking {:?} by HEAD: {:?}", path, resp);
     let item = ListItem {
@@ -107,11 +103,10 @@ pub fn should_download_by_head(
             FileType::File
         },
         size: Some(FileSize::Precise(
-            resp.content_length().expect("No content-length from upstream")
+            resp.content_length()
+                .expect("No content-length from upstream"),
         )),
-        mtime: utils::get_async_response_mtime(resp)
-            .unwrap()
-            .naive_utc(),
+        mtime: utils::get_response_mtime(resp).unwrap().naive_utc(),
         skip_check: false,
     };
     should_download_by_list(path, &item, FixedOffset::east_opt(0), false, size_only)

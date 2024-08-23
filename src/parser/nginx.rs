@@ -1,8 +1,5 @@
 /// A parser both suitable for default nginx autoindex and apache f1 format.
-use crate::{
-    listing::{FileSize, FileType, ListItem},
-    utils::get,
-};
+use crate::listing::{FileSize, FileType, ListItem};
 use chrono::NaiveDateTime;
 use scraper::{Html, Selector};
 use tracing::debug;
@@ -15,10 +12,14 @@ use regex::Regex;
 pub struct NginxListingParser {}
 
 impl Parser for NginxListingParser {
-    fn get_list(&self, client: &reqwest::blocking::Client, url: &url::Url) -> Result<ListResult> {
-        let resp = get(client, url.clone())?;
+    fn get_list(&self, async_context: &AsyncContext, url: &url::Url) -> Result<ListResult> {
+        let resp = get(
+            &async_context.runtime,
+            &async_context.listing_client,
+            url.clone(),
+        )?;
         let url = resp.url().clone();
-        let body = resp.text()?;
+        let body = get_text(&async_context.runtime, resp)?;
         assert_if_url_has_no_trailing_slash(&url);
         let document = Html::parse_document(&body);
         let selector = Selector::parse("a").unwrap();
@@ -124,13 +125,14 @@ mod tests {
     use crate::listing::SizeUnit;
 
     use super::*;
+    use crate::parser::tests::*;
 
     #[test]
     fn test_monitoring_plugins() {
-        let client = reqwest::blocking::Client::new();
+        let context = init_async_context();
         let items = NginxListingParser::default()
             .get_list(
-                &client,
+                &context,
                 &url::Url::parse("http://localhost:1921/monitoring-plugins").unwrap(),
             )
             .unwrap();
@@ -158,10 +160,10 @@ mod tests {
 
     #[test]
     fn test_proxmox() {
-        let client = reqwest::blocking::Client::new();
+        let context = init_async_context();
         let items = NginxListingParser::default()
             .get_list(
-                &client,
+                &context,
                 &url::Url::parse("http://localhost:1921/proxmox").unwrap(),
             )
             .unwrap();
@@ -180,10 +182,10 @@ mod tests {
 
     #[test]
     fn test_mysql() {
-        let client = reqwest::blocking::Client::new();
+        let context = init_async_context();
         let items = NginxListingParser::default()
             .get_list(
-                &client,
+                &context,
                 &url::Url::parse("http://localhost:1921/mysql").unwrap(),
             )
             .unwrap();
@@ -205,10 +207,10 @@ mod tests {
 
     #[test]
     fn test_ghettoforge() {
-        let client = reqwest::blocking::Client::new();
+        let context = init_async_context();
         let items = NginxListingParser::default()
             .get_list(
-                &client,
+                &context,
                 &url::Url::parse("http://localhost:1921/ghettoforge").unwrap(),
             )
             .unwrap();

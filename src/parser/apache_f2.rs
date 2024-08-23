@@ -16,10 +16,14 @@ use scraper::{Html, Selector};
 pub struct ApacheF2ListingParser;
 
 impl Parser for ApacheF2ListingParser {
-    fn get_list(&self, client: &reqwest::blocking::Client, url: &url::Url) -> Result<ListResult> {
-        let resp = get(client, url.clone())?;
+    fn get_list(&self, async_context: &AsyncContext, url: &url::Url) -> Result<ListResult> {
+        let resp = get(
+            &async_context.runtime,
+            &async_context.listing_client,
+            url.clone(),
+        )?;
         let url = resp.url().clone();
-        let body = resp.text()?;
+        let body = get_text(&async_context.runtime, resp)?;
         assert_if_url_has_no_trailing_slash(&url);
         let document = Html::parse_document(&body);
         // find #indexlist which contains file index
@@ -121,13 +125,14 @@ mod tests {
     use crate::listing::SizeUnit;
 
     use super::*;
+    use crate::parser::tests::*;
 
     #[test]
     fn test_winehq_root() {
-        let client = reqwest::blocking::Client::new();
+        let context = init_async_context();
         let items = ApacheF2ListingParser
             .get_list(
-                &client,
+                &context,
                 &url::Url::parse("http://localhost:1921/wine-builds").unwrap(),
             )
             .unwrap();
@@ -158,10 +163,10 @@ mod tests {
 
     #[test]
     fn test_raspberrypi_root() {
-        let client = reqwest::blocking::Client::new();
+        let context = init_async_context();
         let items = ApacheF2ListingParser
             .get_list(
-                &client,
+                &context,
                 &url::Url::parse("http://localhost:1921/raspberrypi/").unwrap(),
             )
             .unwrap();

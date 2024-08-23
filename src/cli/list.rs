@@ -1,11 +1,19 @@
 use std::path::PathBuf;
 
-use crate::{build_client, parser::ListResult, regex_process::ExclusionManager, ListArgs};
+use crate::{
+    parser::ListResult, regex_process::ExclusionManager, utils::build_client, AsyncContext,
+    ListArgs,
+};
 
 // TODO: clean code
 pub fn list(args: &ListArgs, bind_address: Option<String>) -> ! {
     let parser = args.parser.build();
-    let client = build_client!(reqwest::blocking::Client, args, parser, bind_address, true);
+    let client = build_client(args, parser.as_ref(), bind_address.as_ref(), true);
+    let async_context = AsyncContext {
+        runtime: tokio::runtime::Runtime::new().unwrap(),
+        listing_client: client.clone(),
+        download_client: client,
+    };
     let exclusion_manager = ExclusionManager::new(&args.exclude, &args.include);
     // get relative
     let upstream = &args.upstream_folder;
@@ -16,7 +24,7 @@ pub fn list(args: &ListArgs, bind_address: Option<String>) -> ! {
         .to_str()
         .unwrap()
         .to_owned();
-    let list = parser.get_list(&client, upstream).unwrap();
+    let list = parser.get_list(&async_context, upstream).unwrap();
 
     println!("Relative: {relative}");
     println!("Exclusion: {:?}", exclusion_manager.match_str(&relative));

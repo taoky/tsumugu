@@ -1,10 +1,11 @@
 use anyhow::Result;
 use clap::ValueEnum;
-use reqwest::blocking::Client;
 use tracing::warn;
 use url::Url;
 
-use crate::listing::ListItem;
+use crate::utils::{get, get_text};
+
+use crate::{listing::ListItem, AsyncContext};
 
 pub mod apache_f2;
 pub mod caddy;
@@ -21,7 +22,7 @@ pub enum ListResult {
 }
 
 pub trait Parser: Sync {
-    fn get_list(&self, client: &Client, url: &Url) -> Result<ListResult>;
+    fn get_list(&self, async_context: &AsyncContext, url: &Url) -> Result<ListResult>;
     fn is_auto_redirect(&self) -> bool {
         true
     }
@@ -110,6 +111,15 @@ fn guess_date_fmt(date: &str) -> (String, String) {
 #[cfg(test)]
 mod tests {
     use super::*;
+
+    pub fn init_async_context() -> AsyncContext {
+        let client = reqwest::Client::new();
+        AsyncContext {
+            runtime: tokio::runtime::Runtime::new().unwrap(),
+            listing_client: client.clone(),
+            download_client: client,
+        }
+    }
 
     #[test]
     fn test_guess_date_fmt() {

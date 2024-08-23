@@ -4,12 +4,13 @@ use std::fmt::Display;
 
 use anyhow::Result;
 use chrono::{DateTime, FixedOffset, NaiveDateTime, Utc};
-use reqwest::blocking::Client;
 use tracing::{debug, info};
 use url::Url;
 
 use crate::parser;
 use crate::utils;
+use crate::utils::head;
+use crate::AsyncContext;
 
 #[derive(Debug, PartialEq, Clone, Copy)]
 pub enum FileType {
@@ -170,7 +171,7 @@ impl Display for ListItem {
 
 pub fn guess_remote_timezone(
     parser: &dyn parser::Parser,
-    client: &Client,
+    async_context: &AsyncContext,
     file_url: Url,
 ) -> Result<FixedOffset> {
     assert!(!file_url.as_str().ends_with('/'));
@@ -182,7 +183,7 @@ pub fn guess_remote_timezone(
     info!("base: {:?}", base_url);
     info!("file: {:?}", file_url);
 
-    let list = parser.get_list(client, &base_url)?;
+    let list = parser.get_list(async_context, &base_url)?;
     let list = match list {
         parser::ListResult::Redirect(_) => {
             return Err(anyhow::anyhow!("Redirection not supported"));
@@ -193,8 +194,12 @@ pub fn guess_remote_timezone(
     for item in list {
         if item.url == file_url {
             // access file_url with HEAD
-            let resp = client.head(file_url).send()?;
-            let mtime = utils::get_blocking_response_mtime(&resp)?;
+            let resp = head(
+                &async_context.runtime,
+                &async_context.download_client,
+                file_url,
+            )?;
+            let mtime = utils::get_response_mtime(&resp)?;
 
             // compare how many hours are there between mtime (FixedOffset) and item.mtime (Naive)
             // assuming that Naive one is UTC

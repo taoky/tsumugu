@@ -52,6 +52,10 @@ enum Commands {
     List(ListArgs),
 }
 
+trait SharedArgs {
+    fn user_agent(&self) -> &str;
+}
+
 #[derive(Parser, Debug)]
 pub struct SyncArgs {
     /// Customize tsumugu's user agent.
@@ -131,6 +135,12 @@ pub struct SyncArgs {
     yum_packages: bool,
 }
 
+impl SharedArgs for &SyncArgs {
+    fn user_agent(&self) -> &str {
+        &self.user_agent
+    }
+}
+
 #[derive(Parser, Debug)]
 pub struct ListArgs {
     /// Customize tsumugu's user agent.
@@ -156,6 +166,18 @@ pub struct ListArgs {
     /// The upstream base ending with "/".
     #[clap(long, default_value = "/")]
     upstream_base: String,
+}
+
+impl SharedArgs for &ListArgs {
+    fn user_agent(&self) -> &str {
+        &self.user_agent
+    }
+}
+
+pub struct AsyncContext {
+    pub listing_client: reqwest::Client,
+    pub download_client: reqwest::Client,
+    pub runtime: tokio::runtime::Runtime,
 }
 
 fn main() {

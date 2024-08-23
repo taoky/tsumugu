@@ -7,41 +7,39 @@ use futures_util::Future;
 use tracing::warn;
 use url::Url;
 
-macro_rules! get_resp_mtime {
-    ($resp: expr) => {
-        Ok(DateTime::parse_from_rfc2822(
-            $resp
-                .headers()
-                .get("Last-Modified")
-                .ok_or(anyhow!("Last-Modified header not found"))?
-                .to_str()?,
-        )?
-        .with_timezone(&Utc))
-    };
+use crate::parser::Parser;
+use crate::SharedArgs;
+
+pub fn build_client(
+    args: impl SharedArgs,
+    parser: &dyn Parser,
+    bind_address: Option<&String>,
+    auto_compress: bool,
+) -> reqwest::Client {
+    let minute = std::time::Duration::new(60, 0);
+    let mut builder = reqwest::Client::builder()
+        .user_agent(args.user_agent())
+        .local_address(bind_address.map(|x| x.parse::<std::net::IpAddr>().unwrap()))
+        // hard code 1min connect/read timeout currently
+        .connect_timeout(minute)
+        .read_timeout(minute)
+        .gzip(auto_compress)
+        .brotli(auto_compress)
+        .deflate(auto_compress);
+    if !parser.is_auto_redirect() {
+        builder = builder.redirect(reqwest::redirect::Policy::none());
+    }
+    builder.build().unwrap()
 }
 
-#[macro_export]
-macro_rules! build_client {
-    ($client: ty, $args: expr, $parser: expr, $bind_address: expr, $auto_compress: expr) => {{
-        let mut builder = <$client>::builder()
-            .user_agent($args.user_agent.clone())
-            .local_address($bind_address.map(|x| x.parse::<std::net::IpAddr>().unwrap()))
-            .gzip($auto_compress)
-            .brotli($auto_compress)
-            .deflate($auto_compress);
-        if !$parser.is_auto_redirect() {
-            builder = builder.redirect(reqwest::redirect::Policy::none());
-        }
-        builder.build().unwrap()
-    }};
-}
-
-pub fn get_async_response_mtime(resp: &reqwest::Response) -> Result<DateTime<Utc>> {
-    get_resp_mtime!(resp)
-}
-
-pub fn get_blocking_response_mtime(resp: &reqwest::blocking::Response) -> Result<DateTime<Utc>> {
-    get_resp_mtime!(resp)
+pub fn get_response_mtime(resp: &reqwest::Response) -> Result<DateTime<Utc>> {
+    Ok(DateTime::parse_from_rfc2822(
+        resp.headers()
+            .get("Last-Modified")
+            .ok_or(anyhow!("Last-Modified header not found"))?
+            .to_str()?,
+    )?
+    .with_timezone(&Utc))
 }
 
 pub fn again<T>(closure: impl Fn() -> Result<T>, retry: usize) -> Result<T> {
@@ -83,23 +81,30 @@ pub async fn get_async(client: &reqwest::Client, url: Url) -> Result<reqwest::Re
     Ok(client.get(url).send().await?.error_for_status()?)
 }
 
-#[allow(dead_code)]
 pub async fn head_async(client: &reqwest::Client, url: Url) -> Result<reqwest::Response> {
     Ok(client.head(url).send().await?.error_for_status()?)
 }
 
-pub fn get(client: &reqwest::blocking::Client, url: Url) -> Result<reqwest::blocking::Response> {
-    Ok(client.get(url).send()?.error_for_status()?)
+pub fn get(
+    runtime: &tokio::runtime::Runtime,
+    client: &reqwest::Client,
+    url: Url,
+) -> Result<reqwest::Response> {
+    let future = async { get_async(client, url).await };
+    runtime.block_on(future)
 }
 
-// pub fn head(client: &reqwest::blocking::Client, url: Url) -> Result<reqwest::blocking::Response> {
-//     Ok(client.head(url).send()?.error_for_status()?)
-// }
+pub fn get_text(runtime: &tokio::runtime::Runtime, response: reqwest::Response) -> Result<String> {
+    let future = async { response.text().await };
+    Ok(runtime.block_on(future)?)
+}
 
-pub fn head_async_blocking(runtime: &tokio::runtime::Runtime, client: &reqwest::Client, url: Url) -> Result<reqwest::Response> {
-    let future = async {
-        head_async(client, url).await
-    };
+pub fn head(
+    runtime: &tokio::runtime::Runtime,
+    client: &reqwest::Client,
+    url: Url,
+) -> Result<reqwest::Response> {
+    let future = async { head_async(client, url).await };
     runtime.block_on(future)
 }
 

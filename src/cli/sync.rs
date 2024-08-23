@@ -19,15 +19,14 @@ use tracing::{debug, error, info, warn};
 use url::Url;
 
 use crate::{
-    build_client,
     compare::{should_download_by_head, should_download_by_list},
     extensions::{extension_handler, ExtensionPackage},
     listing::{self, ListItem},
     parser::ListResult,
     regex_process::{self, ExclusionManager},
     term::AlternativeTerm,
-    utils::{self, again, again_async, get_async, head_async_blocking, is_symlink, naive_to_utc},
-    SyncArgs,
+    utils::{self, again, again_async, build_client, get_async, head, is_symlink, naive_to_utc},
+    AsyncContext, SyncArgs,
 };
 
 #[derive(Debug, Clone)]
@@ -71,7 +70,7 @@ fn extension_push_task(worker: &Worker<Task>, wake: &AtomicUsize, package: &Exte
 fn determinate_timezone(
     args: &SyncArgs,
     parser: &dyn crate::parser::Parser,
-    client: &reqwest::blocking::Client,
+    async_context: &AsyncContext,
 ) -> Option<FixedOffset> {
     match args.timezone {
         None => {
@@ -86,8 +85,11 @@ fn determinate_timezone(
                 },
                 None => {
                     // eek, try getting first file in root index
-                    let list =
-                        again(|| parser.get_list(client, &args.upstream), args.retry).unwrap();
+                    let list = again(
+                        || parser.get_list(async_context, &args.upstream),
+                        args.retry,
+                    )
+                    .unwrap();
                     match list {
                         ListResult::List(list) => {
                             match list.iter().find(|x| x.type_ == listing::FileType::File) {
@@ -107,7 +109,8 @@ fn determinate_timezone(
             };
             match timezone_file {
                 Some(timezone_url) => {
-                    let timezone = listing::guess_remote_timezone(parser, client, timezone_url);
+                    let timezone =
+                        listing::guess_remote_timezone(parser, async_context, timezone_url);
                     let timezone = match timezone {
                         Ok(tz) => Some(tz),
                         Err(e) => {
@@ -128,8 +131,8 @@ fn determinate_timezone(
     }
 }
 
-async fn download_file(
-    client: &reqwest::Client,
+fn download_file(
+    async_context: &AsyncContext,
     item: &ListItem,
     path: &Path,
     args: &SyncArgs,
@@ -137,9 +140,11 @@ async fn download_file(
     timezone: Option<FixedOffset>,
     cwd: &Path,
 ) -> Result<()> {
+    let client = &async_context.download_client;
+    let runtime = &async_context.runtime;
     // Here we use async to allow streaming and progress bar
     // Ref: https://gist.github.com/giuliano-oliveira/4d11d6b3bb003dba3a1b53f43d81b30d
-    again_async(
+    let future = again_async(
         || async {
             let url = item.url.clone();
             let resp = match get_async(client, url.clone()).await {
@@ -168,7 +173,7 @@ async fn download_file(
             );
             pb.set_message(format!("Downloading {}", url));
 
-            let mtime = match utils::get_async_response_mtime(&resp) {
+            let mtime = match utils::get_response_mtime(&resp) {
                 Ok(mtime) => mtime,
                 Err(e) => {
                     if args.allow_mtime_from_parser {
@@ -209,8 +214,8 @@ async fn download_file(
             Ok(())
         },
         args.retry,
-    )
-    .await
+    );
+    runtime.block_on(future)
 }
 
 struct ThreadsContext<'a> {
@@ -229,16 +234,10 @@ struct TaskContext<'a> {
     relative: &'a str,
     worker: &'a Worker<Task>,
     wake: &'a AtomicUsize,
-    listing_client: &'a reqwest::blocking::Client,
     exclusion_result: regex_process::Comparison,
     exclusion_manager: &'a ExclusionManager,
     timezone: Option<FixedOffset>,
-}
-
-struct AsyncDownloadContext<'a> {
-    download_client: &'a reqwest::Client,
-    mprogress: &'a MultiProgress,
-    runtime: &'a tokio::runtime::Runtime,
+    async_context: &'a AsyncContext,
 }
 
 fn list_handler(
@@ -264,7 +263,7 @@ fn list_handler(
     }
 
     let items = match again(
-        || parser.get_list(task_context.listing_client, &task.url),
+        || parser.get_list(task_context.async_context, &task.url),
         args.retry,
     ) {
         Ok(items) => items,
@@ -348,7 +347,7 @@ fn download_handler(
     args: &SyncArgs,
     thr_context: &ThreadsContext,
     task_context: &TaskContext,
-    async_context: &AsyncDownloadContext,
+    mprogress: &MultiProgress,
 ) {
     let task = task_context.task;
     let cwd = task_context.cwd;
@@ -422,7 +421,13 @@ fn download_handler(
 
     if should_download && args.head_before_get {
         match again(
-            || head_async_blocking(async_context.runtime, async_context.download_client, item.url.clone()),
+            || {
+                head(
+                    &task_context.async_context.runtime,
+                    &task_context.async_context.download_client,
+                    item.url.clone(),
+                )
+            },
             args.retry,
         ) {
             Ok(resp) => {
@@ -442,25 +447,21 @@ fn download_handler(
     }
 
     if should_download && !args.dry_run {
-        let future = async {
-            if (download_file(
-                async_context.download_client,
-                item,
-                &expected_path,
-                args,
-                async_context.mprogress,
-                task_context.timezone,
-                cwd,
-            )
-            .await)
-                .is_err()
-            {
-                thr_context
-                    .failure_downloading
-                    .store(true, Ordering::SeqCst);
-            }
-        };
-        async_context.runtime.block_on(future);
+        if (download_file(
+            task_context.async_context,
+            item,
+            &expected_path,
+            args,
+            mprogress,
+            task_context.timezone,
+            cwd,
+        ))
+        .is_err()
+        {
+            thr_context
+                .failure_downloading
+                .store(true, Ordering::SeqCst);
+        }
     } else if should_download {
         info!("Dry run, not downloading {}", task.url);
     }
@@ -474,33 +475,38 @@ fn sync_threads(args: &SyncArgs, parser: &dyn crate::parser::Parser, thr_context
     let exclusion_manager = ExclusionManager::new(&args.exclude, &args.include);
 
     // Handling listing
-    let client = build_client!(
-        reqwest::blocking::Client,
+    let listing_client = build_client(
         args,
         parser,
         thr_context.bind_address.as_ref(),
         // some servers (such as download.zerotier.com) would give you gziped list even if you don't ask for that,
         // so just enable auto compression when requesting listing
-        true
+        true,
     );
-    // async support, handling download
-    let runtime = tokio::runtime::Runtime::new().unwrap();
-    let async_client = build_client!(
-        reqwest::Client,
+    // Handling download
+    let download_client = build_client(
         args,
         parser,
         thr_context.bind_address.as_ref(),
         // auto compression is set to off here, as is known that some servers would wrongly report Content-Encoding for compressed files
         // like cloud.centos.org
-        false
+        false,
     );
+    // async runtime support
+    let runtime = tokio::runtime::Runtime::new().unwrap();
+
+    let async_context = AsyncContext {
+        download_client,
+        listing_client,
+        runtime,
+    };
 
     let mprogress = MultiProgress::with_draw_target(ProgressDrawTarget::term_like_with_hz(
         Box::new(AlternativeTerm::buffered_stdout()),
         1,
     ));
 
-    let timezone = determinate_timezone(args, parser, &client);
+    let timezone = determinate_timezone(args, parser, &async_context);
 
     if !args.dry_run {
         std::fs::create_dir_all(thr_context.download_dir).unwrap();
@@ -554,27 +560,22 @@ fn sync_threads(args: &SyncArgs, parser: &dyn crate::parser::Parser, thr_context
                             relative: &relative,
                             worker: &worker,
                             wake: &wake,
-                            listing_client: &client,
                             exclusion_result,
                             exclusion_manager: &exclusion_manager,
                             timezone,
+                            async_context: &async_context,
                         };
                         match &task.task {
                             TaskType::Listing => {
                                 list_handler(args, parser, thr_context, &task_context);
                             }
                             TaskType::Download(item) => {
-                                let async_context = AsyncDownloadContext {
-                                    download_client: &async_client,
-                                    mprogress: &mprogress,
-                                    runtime: &runtime,
-                                };
                                 download_handler(
                                     item,
                                     args,
                                     thr_context,
                                     &task_context,
-                                    &async_context,
+                                    &mprogress,
                                 );
                             }
                         }

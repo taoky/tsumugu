@@ -13,10 +13,14 @@ use anyhow::{anyhow, Result};
 pub struct LighttpdListingParser;
 
 impl Parser for LighttpdListingParser {
-    fn get_list(&self, client: &Client, url: &Url) -> Result<ListResult> {
-        let resp = get(client, url.clone())?;
+    fn get_list(&self, async_context: &AsyncContext, url: &url::Url) -> Result<ListResult> {
+        let resp = get(
+            &async_context.runtime,
+            &async_context.listing_client,
+            url.clone(),
+        )?;
         let url = resp.url().clone();
-        let body = resp.text()?;
+        let body = get_text(&async_context.runtime, resp)?;
         assert_if_url_has_no_trailing_slash(&url);
         let document = Html::parse_document(&body);
         let selector = Selector::parse("tbody").unwrap();
@@ -89,13 +93,14 @@ mod tests {
     use crate::listing::SizeUnit;
 
     use super::*;
+    use crate::parser::tests::*;
 
     #[test]
     fn test_buildroot_root() {
-        let client = reqwest::blocking::Client::new();
+        let context = init_async_context();
         let items = LighttpdListingParser::default()
             .get_list(
-                &client,
+                &context,
                 &Url::parse("http://localhost:1921/buildroot/").unwrap(),
             )
             .unwrap();
@@ -128,10 +133,10 @@ mod tests {
 
     #[test]
     fn test_buildroot_subfolder() {
-        let client = reqwest::blocking::Client::new();
+        let context = init_async_context();
         let items = LighttpdListingParser::default()
             .get_list(
-                &client,
+                &context,
                 &Url::parse("http://localhost:1921/buildroot/acl/").unwrap(),
             )
             .unwrap();
