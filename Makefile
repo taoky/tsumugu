@@ -17,4 +17,4 @@ endif
 	cargo set-version $$full_version; \
 	git commit -a -m "Bump version to $$full_version" ; \
 	git tag $(version) -m "$(msg)"
-	echo "Updated, run `git push --tag` now!"
+	echo "Run 'git push' and 'git push --tag' afterwards."
