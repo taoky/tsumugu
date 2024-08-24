@@ -59,6 +59,7 @@ fn extension_push_task(worker: &Worker<Task>, wake: &AtomicUsize, package: &Exte
                 // size and mtime would be ignored as skip_check is set
                 size: None,
                 mtime: NaiveDateTime::default(),
+                timezone: None,
                 skip_check: true,
             }),
             relative: package.relative.clone(),

@@ -82,15 +82,27 @@ fn contains_two_colons(s: &str) -> bool {
     s.matches(':').count() >= 2
 }
 
-fn has_numeric_prefix(s: &str) -> bool {
+fn has_four_numeric_prefix(s: &str) -> bool {
     s.chars().take(4).all(|c| c.is_ascii_digit()) && s.len() >= 4
+}
+
+fn has_timezone_suffix(s: &str) -> bool {
+    if s.len() < 5 {
+        return false;
+    }
+    let chars: Vec<char> = s.chars().collect();
+    let c1 = chars[chars.len() - 4..].iter().all(|c| c.is_ascii_digit());
+    let c2 = chars[chars.len() - 5] == '+' || chars[chars.len() - 5] == '-';
+
+    c1 && c2
 }
 
 // Returns format and regex string
 fn guess_date_fmt(date: &str) -> (String, String) {
     let two_colons = contains_two_colons(date);
     let abbr_month = contains_abbreviated_month(date);
-    let year_first = has_numeric_prefix(date);
+    let year_first = has_four_numeric_prefix(date);
+    let has_timezone = has_timezone_suffix(date);
     let (dfmt, dfmt_regex) = match (abbr_month, year_first) {
         (true, true) => ("%Y-%b-%d", r"\d{4}-\w{3}-\d{2}"),
         (true, false) => ("%d-%b-%Y", r"\d{2}-\w{3}-\d{4}"),
@@ -102,10 +114,19 @@ fn guess_date_fmt(date: &str) -> (String, String) {
     } else {
         ("%H:%M", r"\d{2}:\d{2}")
     };
+    let (zfmt, zfmt_regex) = if has_timezone {
+        (" %z", r" [+-]\d{4}")
+    } else {
+        ("", "")
+    };
     (
-        format!("{} {}", dfmt, tfmt),
-        format!("{} {}", dfmt_regex, tfmt_regex),
+        format!("{} {}{}", dfmt, tfmt, zfmt),
+        format!("{} {}{}", dfmt_regex, tfmt_regex, zfmt_regex),
     )
+}
+
+fn date_fmt_has_timezone(datefmt: &str) -> bool {
+    datefmt.contains("%z")
 }
 
 #[cfg(test)]
@@ -128,6 +149,13 @@ mod tests {
             (
                 "%Y-%b-%d %H:%M".to_owned(),
                 r"\d{4}-\w{3}-\d{2} \d{2}:\d{2}".to_owned()
+            )
+        );
+        assert_eq!(
+            guess_date_fmt("2023-11-27 14:22:08 +0000"),
+            (
+                "%Y-%m-%d %H:%M:%S %z".to_owned(),
+                r"\d{4}-\d{2}-\d{2} \d{2}:\d{2}:\d{2} [+-]\d{4}".to_owned()
             )
         );
     }

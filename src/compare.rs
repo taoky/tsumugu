@@ -76,10 +76,15 @@ pub fn should_download_by_list(
         }
     }
     .into();
-    let remote_mtime = naive_to_utc(&remote.mtime, remote_timezone);
+    // Use remote timezone or not?
+    let timezone = match remote.timezone {
+        None => remote_timezone,
+        Some(tz) => Some(tz),
+    };
+    let remote_mtime = naive_to_utc(&remote.mtime, timezone);
     let offset = remote_mtime - local_mtime;
     debug!("DateTime offset: {:?} {:?}", path, offset);
-    match remote_timezone {
+    match timezone {
         None => {
             // allow an offset to up to 24hrs
             offset.num_hours().abs() > 24
@@ -107,6 +112,7 @@ pub fn should_download_by_head(path: &Path, resp: &reqwest::Response, size_only:
                 .expect("No content-length from upstream"),
         )),
         mtime: utils::get_response_mtime(resp).unwrap().naive_utc(),
+        timezone: None,
         skip_check: false,
     };
     should_download_by_list(path, &item, FixedOffset::east_opt(0), false, size_only)

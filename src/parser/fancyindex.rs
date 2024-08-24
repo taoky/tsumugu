@@ -6,8 +6,8 @@ use crate::{
 };
 
 use super::*;
-use anyhow::Result;
-use chrono::NaiveDateTime;
+use anyhow::{anyhow, Result};
+use chrono::{DateTime, NaiveDateTime};
 use scraper::{Html, Selector};
 
 #[derive(Debug, Clone, Default)]
@@ -27,11 +27,27 @@ impl Parser for FancyIndexListingParser {
         let selector = Selector::parse("tbody tr").unwrap();
         let mut items = Vec::new();
         for element in document.select(&selector) {
-            let link_selector = Selector::parse("td.link a").unwrap();
-            let size_selector = Selector::parse("td.size").unwrap();
-            let date_selector = Selector::parse("td.date").unwrap();
+            // let link_selector = Selector::parse("td.link a").unwrap();
+            // let size_selector = Selector::parse("td.size").unwrap();
+            // let date_selector = Selector::parse("td.date").unwrap();
 
-            let a = element.select(&link_selector).next().unwrap();
+            // Select <td> in order, instead of using class name, to improve compatibility for strange pages
+            let td_selector = Selector::parse("td").unwrap();
+            let mut td_iterator = element.select(&td_selector);
+
+            let td_a = match td_iterator.next() {
+                Some(tda) => tda,
+                None => {
+                    warn!("Cannot find <td> in this <tr> (header maybe?), skipping...");
+                    continue;
+                }
+            };
+            let a = match td_a.select(&Selector::parse("a").unwrap()).next() {
+                Some(a) => a,
+                None => {
+                    return Err(anyhow!("Cannot find <a> in first cell."));
+                }
+            };
             let href = a.value().attr("href").unwrap();
             let displayed_filename = a.inner_html();
 
@@ -46,14 +62,23 @@ impl Parser for FancyIndexListingParser {
             } else {
                 FileType::File
             };
-            let size = element.select(&size_selector).next().unwrap().inner_html();
+            let size = td_iterator.next().unwrap().inner_html();
             let size = size.trim();
-            let date = element.select(&date_selector).next().unwrap().inner_html();
+            let date = td_iterator.next().unwrap().inner_html();
             let date = date.trim();
 
             // decide (guess) which time format to use
             let (date_fmt, _) = guess_date_fmt(date);
-            let date = NaiveDateTime::parse_from_str(date, &date_fmt)?;
+            let naive_date;
+            let timezone;
+            if !date_fmt_has_timezone(&date_fmt) {
+                naive_date = NaiveDateTime::parse_from_str(date, &date_fmt)?;
+                timezone = None;
+            } else {
+                let date = DateTime::parse_from_str(date, &date_fmt)?;
+                naive_date = date.naive_utc();
+                timezone = Some(date.offset().to_owned());
+            }
 
             items.push(ListItem::new(
                 href,
@@ -67,7 +92,8 @@ impl Parser for FancyIndexListingParser {
                         Some(FileSize::HumanizedBinary(n_size, unit))
                     }
                 },
-                date,
+                naive_date,
+                timezone,
             ));
         }
 
@@ -77,6 +103,8 @@ impl Parser for FancyIndexListingParser {
 
 #[cfg(test)]
 mod tests {
+    use chrono::FixedOffset;
+
     use super::*;
     use crate::listing::SizeUnit;
     use crate::parser::tests::*;
@@ -144,6 +172,36 @@ mod tests {
                     items[items.len() - 1].mtime,
                     NaiveDateTime::parse_from_str("2023-08-15 05:48", "%Y-%m-%d %H:%M").unwrap()
                 );
+            }
+            _ => unreachable!(),
+        }
+    }
+
+    #[test]
+    fn test_misc_1() {
+        // In fact this is NOT a fancyindex page, but it basically match the layout of that.
+        let context = init_async_context();
+        let items = FancyIndexListingParser
+            .get_list(
+                &context,
+                &Url::parse("http://localhost:1921/misc/1/").unwrap(),
+            )
+            .unwrap();
+        match items {
+            ListResult::List(items) => {
+                assert_eq!(items.len(), 1);
+                assert_eq!(items[0].name, "passwd");
+                assert_eq!(items[0].type_, FileType::File);
+                assert_eq!(
+                    items[0].size,
+                    Some(FileSize::HumanizedBinary(3.3, SizeUnit::K))
+                );
+                assert_eq!(
+                    items[0].mtime,
+                    NaiveDateTime::parse_from_str("2024-08-24 15:04:11", "%Y-%m-%d %H:%M:%S")
+                        .unwrap()
+                );
+                assert_eq!(items[0].timezone, FixedOffset::east_opt(0),);
             }
             _ => unreachable!(),
         }

@@ -62,7 +62,7 @@ impl Parser for CaddyListingParser {
             // Store UTC time
             let date = NaiveDateTime::parse_from_str(mtime, "%Y-%m-%dT%H:%M:%S%Z")?;
 
-            items.push(ListItem::new(href, name, type_, size, date))
+            items.push(ListItem::new(href, name, type_, size, date, None))
         }
 
         Ok(ListResult::List(items))

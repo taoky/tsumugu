@@ -111,6 +111,7 @@ impl Parser for NginxListingParser {
                     }
                 },
                 date,
+                None,
             ))
         }
         Ok(ListResult::List(items))

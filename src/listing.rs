@@ -130,6 +130,8 @@ pub struct ListItem {
     pub size: Option<FileSize>,
     /// mtime is parsed from HTML, which is the local datetime of the "server" (not necessarily localtime or UTC)
     pub mtime: NaiveDateTime,
+    /// Some HTML provides "timezone", parser shall set this if so (otherwise just None)
+    pub timezone: Option<FixedOffset>,
     /// Don't check size and mtime: download only if the file doesn't exist.
     /// This is expected to be set by apt/yum parser extension (parser will not use this).
     pub skip_check: bool,
@@ -142,6 +144,7 @@ impl ListItem {
         type_: FileType,
         size: Option<FileSize>,
         mtime: NaiveDateTime,
+        timezone: Option<FixedOffset>,
     ) -> Self {
         Self {
             url,
@@ -149,6 +152,7 @@ impl ListItem {
             type_,
             size,
             mtime,
+            timezone,
             skip_check: false,
         }
     }
@@ -161,10 +165,14 @@ impl Display for ListItem {
             None => String::from("(none)"),
         };
         let mtime_str = self.mtime.format("%Y-%m-%d %H:%M:%S").to_string();
+        let timezone = match self.timezone {
+            None => "",
+            Some(tz) => &format!("({})", tz),
+        };
         write!(
             f,
-            "{} {:?} {} {} {}",
-            self.url, self.type_, size_str, mtime_str, self.name
+            "{} {:?} {} {}{} {}",
+            self.url, self.type_, size_str, mtime_str, timezone, self.name
         )
     }
 }

@@ -101,7 +101,14 @@ impl Parser for DockerListingParser {
                 href.set_path(&format!("{}/", href.path()));
             }
 
-            items.push(ListItem::new(href, name.to_string(), type_, size, date))
+            items.push(ListItem::new(
+                href,
+                name.to_string(),
+                type_,
+                size,
+                date,
+                None,
+            ))
         }
         Ok(ListResult::List(items))
     }

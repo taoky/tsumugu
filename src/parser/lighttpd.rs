@@ -81,7 +81,7 @@ impl Parser for LighttpdListingParser {
             };
 
             // debug!("{} {} {} {:?} {:?}", href, name, mtime, size, type_);
-            items.push(ListItem::new(href, name, type_, size, mtime))
+            items.push(ListItem::new(href, name, type_, size, mtime, None))
         }
 
         Ok(ListResult::List(items))
