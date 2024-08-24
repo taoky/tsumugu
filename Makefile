@@ -9,5 +9,8 @@ release:
 ifndef version
 	$(error version is not set. Usage: make release version=<version>)
 endif
-	cargo set-version $(version)
+	@full_version=$(shell echo $(version) | grep -q '\.' && echo "0.$(version)" || echo "0.$(version).0"); \
+	echo $$full_version; \
+	cargo set-version $$full_version; \
+	git commit -a -m "Bump version to $$full_version" ; \
 	git tag $(version)
