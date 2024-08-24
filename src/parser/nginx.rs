@@ -74,7 +74,7 @@ impl Parser for NginxListingParser {
             if date_fmt.is_none() {
                 let (f, r) = guess_date_fmt(metadata_raw);
                 date_fmt = Some(f);
-                date_regex = Some(Regex::new(&format!(r"({})\s+([\d\.\-kKMG]+)$", r))?);
+                date_regex = Some(Regex::new(&format!(r"({})\s+([\d\.\-]+ ?[kKMGB]*)$", r))?);
                 debug!("date_fmt: {:?} date_regex: {:?}", date_fmt, date_regex)
             }
             let metadata = date_regex
@@ -234,6 +234,52 @@ mod tests {
                 assert_eq!(
                     items[3].mtime,
                     NaiveDateTime::parse_from_str("2020-12-21 02:34", "%Y-%m-%d %H:%M").unwrap()
+                );
+            }
+            _ => unreachable!(),
+        }
+    }
+
+    #[test]
+    fn test_artifactrepo() {
+        let context = init_async_context();
+        let items = NginxListingParser::default()
+            .get_list(
+                &context,
+                &url::Url::parse("http://localhost:1921/artifactrepo/").unwrap(),
+            )
+            .unwrap();
+        match items {
+            ListResult::List(items) => {
+                assert_eq!(items.len(), 44);
+                assert_eq!(items[0].name, "10");
+                assert_eq!(items[0].type_, FileType::Directory);
+                assert_eq!(items[0].size, None);
+                assert_eq!(
+                    items[0].mtime,
+                    NaiveDateTime::parse_from_str("2021-08-22 15:18", "%Y-%m-%d %H:%M").unwrap()
+                );
+            }
+            _ => unreachable!(),
+        }
+        let items = NginxListingParser::default()
+            .get_list(
+                &context,
+                &url::Url::parse("http://localhost:1921/artifactrepo/10/").unwrap(),
+            )
+            .unwrap();
+        match items {
+            ListResult::List(items) => {
+                assert_eq!(items.len(), 3);
+                assert_eq!(items[0].name, "openjdk-10_linux-x64_bin.tar.gz");
+                assert_eq!(items[0].type_, FileType::File);
+                assert_eq!(
+                    items[0].size,
+                    Some(FileSize::HumanizedBinary(195.38, SizeUnit::M))
+                );
+                assert_eq!(
+                    items[0].mtime,
+                    NaiveDateTime::parse_from_str("2018-03-08 10:06", "%Y-%m-%d %H:%M").unwrap()
                 );
             }
             _ => unreachable!(),
