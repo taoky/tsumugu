@@ -96,7 +96,7 @@ pub fn should_download_by_list(
     }
 }
 
-pub fn should_download_by_head(path: &Path, resp: &reqwest::Response, size_only: bool) -> bool {
+pub fn should_download_by_header(path: &Path, resp: &reqwest::Response, size_only: bool) -> bool {
     // Construct a valid "ListItem" and pass to should_download_by_list
     debug!("Checking {:?} by HEAD: {:?}", path, resp);
     let item = ListItem {
@@ -107,11 +107,28 @@ pub fn should_download_by_head(path: &Path, resp: &reqwest::Response, size_only:
         } else {
             FileType::File
         },
-        size: Some(FileSize::Precise(
-            resp.content_length()
-                .expect("No content-length from upstream"),
-        )),
-        mtime: utils::get_response_mtime(resp).unwrap().naive_utc(),
+        size: Some(FileSize::Precise(match resp.content_length() {
+            Some(l) => l,
+            None => {
+                warn!(
+                    "No content-length from upstream ({}), go downloading anyway",
+                    resp.url()
+                );
+                return true;
+            }
+        })),
+        mtime: match utils::get_response_mtime(resp) {
+            Ok(m) => m,
+            Err(e) => {
+                warn!(
+                    "Cannot get mtime from {} ({}), go downloading anyway",
+                    resp.url(),
+                    e
+                );
+                return true;
+            }
+        }
+        .naive_utc(),
         timezone: None,
         skip_check: false,
     };

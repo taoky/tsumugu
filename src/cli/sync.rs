@@ -19,7 +19,7 @@ use tracing::{debug, error, info, warn};
 use url::Url;
 
 use crate::{
-    compare::{should_download_by_head, should_download_by_list},
+    compare::{should_download_by_header, should_download_by_list},
     extensions::{extension_handler, ExtensionPackage},
     listing::{self, ListItem},
     parser::ListResult,
@@ -133,14 +133,16 @@ fn determinate_timezone(
 }
 
 fn download_file(
-    async_context: &AsyncContext,
+    task_context: &TaskContext,
     item: &ListItem,
     path: &Path,
     args: &SyncArgs,
     mprogress: &MultiProgress,
-    timezone: Option<FixedOffset>,
     cwd: &Path,
+    check_header: bool,
 ) -> Result<()> {
+    let async_context = task_context.async_context;
+    let timezone = task_context.timezone;
     let client = &async_context.download_client;
     let runtime = &async_context.runtime;
     // Here we use async to allow streaming and progress bar
@@ -155,6 +157,10 @@ fn download_file(
                     return Err(e);
                 }
             };
+            if check_header && !should_download_by_header(path, &resp, false) {
+                warn!("Skipping {} (GET header matches local file)", url);
+                return Ok(());
+            }
             let total_size = match resp.content_length() {
                 Some(s) => s,
                 None => {
@@ -432,7 +438,7 @@ fn download_handler(
             args.retry,
         ) {
             Ok(resp) => {
-                if !should_download_by_head(&expected_path, &resp, compare_size_only) {
+                if !should_download_by_header(&expected_path, &resp, compare_size_only) {
                     info!("Skipping (by HEAD) {}", task.url);
                     should_download = false;
                 }
@@ -449,13 +455,14 @@ fn download_handler(
 
     if should_download && !args.dry_run {
         if (download_file(
-            task_context.async_context,
+            task_context,
             item,
             &expected_path,
             args,
             mprogress,
-            task_context.timezone,
             cwd,
+            // If no sending HEAD before GET, check header here
+            !args.head_before_get,
         ))
         .is_err()
         {
