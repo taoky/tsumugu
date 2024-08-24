@@ -27,6 +27,14 @@ impl Parser for NginxListingParser {
         let mut date_fmt = None;
         let mut date_regex = None;
         for element in document.select(&selector) {
+            match element.value().attr("target") {
+                Some(target) => {
+                    if target == "_blank" {
+                        continue;
+                    }
+                }
+                None => {}
+            };
             let href = match element.value().attr("href") {
                 Some(href) => href,
                 None => continue,
@@ -280,6 +288,30 @@ mod tests {
                 assert_eq!(
                     items[0].mtime,
                     NaiveDateTime::parse_from_str("2018-03-08 10:06", "%Y-%m-%d %H:%M").unwrap()
+                );
+            }
+            _ => unreachable!(),
+        }
+    }
+
+    #[test]
+    fn test_zabbix() {
+        let context = init_async_context();
+        let items = NginxListingParser::default()
+            .get_list(
+                &context,
+                &url::Url::parse("http://localhost:1921/zabbix/").unwrap(),
+            )
+            .unwrap();
+        match items {
+            ListResult::List(items) => {
+                assert_eq!(items.len(), 5);
+                assert_eq!(items[0].name, "appliances");
+                assert_eq!(items[0].type_, FileType::Directory);
+                assert_eq!(items[0].size, None);
+                assert_eq!(
+                    items[0].mtime,
+                    NaiveDateTime::parse_from_str("2020-07-27 11:06", "%Y-%m-%d %H:%M").unwrap()
                 );
             }
             _ => unreachable!(),
