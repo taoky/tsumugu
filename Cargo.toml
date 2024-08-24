@@ -3,6 +3,8 @@ name = "tsumugu"
 version = "0.20240824.0"
 edition = "2021"
 description = "A HTTP(S) syncing tool with lower overhead, for OSS mirrors"
+license-file = "LICENSE"
+repository = "https://github.com/taoky/tsumugu"
 
 # See more keys and their definitions at https://doc.rust-lang.org/cargo/reference/manifest.html
 
