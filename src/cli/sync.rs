@@ -21,7 +21,7 @@ use url::Url;
 use crate::{
     compare::{should_download_by_header, should_download_by_list},
     extensions::{extension_handler, ExtensionPackage},
-    listing::{self, ListItem},
+    listing::{self, FileType, ListItem},
     parser::ListResult,
     regex_process::{self, ExclusionManager},
     term::AlternativeTerm,
@@ -86,26 +86,44 @@ fn determinate_timezone(
                 },
                 None => {
                     // eek, try getting first file in root index
-                    let list = again(
-                        || parser.get_list(async_context, &args.upstream),
-                        args.retry,
-                    )
-                    .unwrap();
-                    match list {
-                        ListResult::List(list) => {
-                            match list.iter().find(|x| x.type_ == listing::FileType::File) {
-                                None => {
-                                    warn!("No files in root index, disabling timezone guessing");
-                                    None
+                    fn find_first_file(
+                        args: &SyncArgs,
+                        parser: &dyn crate::parser::Parser,
+                        async_context: &AsyncContext,
+                        url: &Url,
+                    ) -> Option<Url> {
+                        info!("Try finding first File in {}", url);
+                        let list =
+                            again(|| parser.get_list(async_context, url), args.retry).unwrap();
+                        match list {
+                            ListResult::List(list) => {
+                                for item in list {
+                                    match item.type_ {
+                                        FileType::File => {
+                                            info!("Find a file! URL: {}", item.url);
+                                            return Some(item.url);
+                                        }
+                                        FileType::Directory => {
+                                            if let Some(file) = find_first_file(
+                                                args,
+                                                parser,
+                                                async_context,
+                                                &item.url,
+                                            ) {
+                                                return Some(file);
+                                            }
+                                        }
+                                    }
                                 }
-                                Some(x) => Some(x.url.clone()),
+                                None
+                            }
+                            ListResult::Redirect(_) => {
+                                info!("Get a manual redirect instead of a file");
+                                None
                             }
                         }
-                        ListResult::Redirect(_) => {
-                            warn!("Root index is a redirect, disabling timezone guessing");
-                            None
-                        }
                     }
+                    find_first_file(args, parser, async_context, &args.upstream)
                 }
             };
             match timezone_file {
