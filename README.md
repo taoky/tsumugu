@@ -65,7 +65,7 @@ Options:
       --retry <RETRY>
           Retry count for each request [default: 3]
       --head-before-get
-          Do an HEAD before actual GET. Add this if you are not sure if the results from parser is correct
+          Do an HEAD before actual GET. Otherwise when head-before-get and allow-time-from-parser are not set, when GETting tsumugu would try checking if we still need to download it
       --parser <PARSER>
           Choose a parser [default: nginx] [possible values: nginx, apache-f2, docker, directory-lister, lighttpd, caddy]
       --exclude <EXCLUDE>

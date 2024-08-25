@@ -27,13 +27,10 @@ impl Parser for NginxListingParser {
         let mut date_fmt = None;
         let mut date_regex = None;
         for element in document.select(&selector) {
-            match element.value().attr("target") {
-                Some(target) => {
-                    if target == "_blank" {
-                        continue;
-                    }
+            if let Some(target) = element.value().attr("target") {
+                if target == "_blank" {
+                    continue;
                 }
-                None => {}
             };
             let href = match element.value().attr("href") {
                 Some(href) => href,

@@ -461,8 +461,8 @@ fn download_handler(
             args,
             mprogress,
             cwd,
-            // If no sending HEAD before GET, check header here
-            !args.head_before_get,
+            // If no sending HEAD before GET, and don't take mtime from parser, check header here
+            !args.head_before_get && !args.allow_mtime_from_parser,
         ))
         .is_err()
         {

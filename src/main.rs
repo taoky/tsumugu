@@ -100,7 +100,8 @@ pub struct SyncArgs {
     retry: usize,
 
     /// Do an HEAD before actual GET.
-    /// Otherwise, when GETting tsumugu would try checking if we still need to download it...
+    /// Otherwise when head-before-get and allow-time-from-parser are not set,
+    /// when GETting tsumugu would try checking if we still need to download it.
     #[clap(long)]
     head_before_get: bool,
 
