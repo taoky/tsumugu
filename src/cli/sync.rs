@@ -191,6 +191,7 @@ fn download_file(
                     }
                 }
             };
+            debug!("Get mtime to set for {:?}: {}", path, mtime);
 
             let tmp_path = cwd.join(format!(".tmp.{}", item.name));
             {
