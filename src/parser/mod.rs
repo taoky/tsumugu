@@ -12,6 +12,7 @@ pub mod caddy;
 pub mod directory_lister;
 pub mod docker;
 pub mod fancyindex;
+pub mod gradle;
 pub mod lighttpd;
 pub mod nginx;
 
@@ -37,6 +38,7 @@ pub enum ParserType {
     Lighttpd,
     Caddy,
     FancyIndex,
+    Gradle,
 }
 
 impl ParserType {
@@ -52,6 +54,7 @@ impl ParserType {
             Self::Lighttpd => Box::<lighttpd::LighttpdListingParser>::default(),
             Self::Caddy => Box::<caddy::CaddyListingParser>::default(),
             Self::FancyIndex => Box::<fancyindex::FancyIndexListingParser>::default(),
+            Self::Gradle => Box::<gradle::GradleListingParser>::default(),
         }
     }
 }
@@ -64,10 +67,21 @@ fn assert_if_url_has_no_trailing_slash(url: &Url) {
 }
 
 fn get_real_name_from_href(href: &str) -> String {
-    let name: String = url::form_urlencoded::parse(href.as_bytes())
+    // Remove trailing slashes for correct name extraction.
+    let trimmed = href.trim_end_matches('/');
+
+    // Find the position of the last '/' and take the substring after it.
+    let last_slash_pos = trimmed.rfind('/').map(|pos| pos + 1).unwrap_or(0);
+    let after_last_slash = &trimmed[last_slash_pos..];
+
+    // Find the position of the first '?' and take the substring before it.
+    let query_pos = after_last_slash.find('?').unwrap_or(after_last_slash.len());
+    let before_query = &after_last_slash[..query_pos];
+
+    let name: String = url::form_urlencoded::parse(before_query.as_bytes())
         .map(|(k, v)| [k, v].concat())
         .collect();
-    name.trim_end_matches('/').to_string()
+    name
 }
 
 fn contains_abbreviated_month(s: &str) -> bool {
@@ -158,5 +172,16 @@ mod tests {
                 r"\d{4}-\d{2}-\d{2} \d{2}:\d{2}:\d{2} [+-]\d{4}".to_owned()
             )
         );
+    }
+
+    #[test]
+    fn test_get_real_name_from_href() {
+        assert_eq!(get_real_name_from_href("test/"), "test");
+        assert_eq!(
+            get_real_name_from_href("ceph-base_17.2.6-pve1%2B3.changelog"),
+            "ceph-base_17.2.6-pve1+3.changelog"
+        );
+        assert_eq!(get_real_name_from_href("test?sort=name&order=asc"), "test");
+        assert_eq!(get_real_name_from_href("/aaa/bbb"), "bbb");
     }
 }

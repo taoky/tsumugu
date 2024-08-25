@@ -96,7 +96,7 @@ Arguments:
 
 Options:
       --user-agent <USER_AGENT>        Customize tsumugu's user agent [default: tsumugu]
-      --parser <PARSER>                Choose a parser [default: nginx] [possible values: nginx, apache-f2, docker, directory-lister, lighttpd, caddy]
+      --parser <PARSER>                Choose a parser [default: nginx] [possible values: nginx, apache-f2, docker, directory-lister, lighttpd, caddy, fancy-index, gradle]
       --exclude <EXCLUDE>              Excluded file regex. Supports multiple
       --include <INCLUDE>              Included file regex (even if excluded). Supports multiple
       --upstream-base <UPSTREAM_BASE>  The upstream base ending with "/" [default: /]

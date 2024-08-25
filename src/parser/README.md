@@ -9,6 +9,17 @@ This is a list of parsers that tsumugu supports:
 - nginx: [Nginx's autoindex](https://nginx.org/en/docs/http/ngx_http_autoindex_module.html). It should also work with Apache2's autoindex `F=1` mode.
 - caddy: [Caddy's file_server](https://caddyserver.com/docs/caddyfile/directives/file_server).
 - fancyindex: [Nginx fancyindex](https://github.com/aperezdc/ngx-fancyindex).
+- gradle: A specialized parser for <https://services.gradle.org/distributions/>, might suitable for other websites like this:
+
+    ```html
+    <li>
+    <a href="/distributions/gradle-8.10-wrapper.jar.sha256"><img src="/images/file.gif">
+    <span class="name">gradle-8.10-wrapper.jar.sha256</span>
+    <span class="date">14-Aug-2024 11:18 +0000</span>
+    <span class="size">64.00B</span>
+    </a>
+    </li>
+    ```
 
 ## Debugging
 
