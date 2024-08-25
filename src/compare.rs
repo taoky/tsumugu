@@ -98,7 +98,7 @@ pub fn should_download_by_list(
 
 pub fn should_download_by_header(path: &Path, resp: &reqwest::Response, size_only: bool) -> bool {
     // Construct a valid "ListItem" and pass to should_download_by_list
-    debug!("Checking {:?} by HEAD: {:?}", path, resp);
+    debug!("Checking {:?} by header: {:?}", path, resp);
     let item = ListItem {
         url: resp.url().clone(),
         name: path.file_name().unwrap().to_str().unwrap().to_string(),
