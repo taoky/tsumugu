@@ -229,6 +229,10 @@ Workarounds:
 - Use filesystem-level/block-level deduplication like `zfs dedup`.
 - Use another file-level deduplicator which considers mtime (though I don't know which would do this).
 
+## Acknowledgements
+
+Special thanks to [NJU Mirror](https://mirrors.nju.edu.cn/) for extensive testing and bug reporting.
+
 ## Naming
 
 The name "tsumugu", and current branch name "pudding", are derived from the manga *A Drift Girl and a Noble Moon*.
