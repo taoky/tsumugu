@@ -219,6 +219,16 @@ let relative_filepath = relative_filepath.to_string_lossy();
 
 You might see arguments like `--exclude debian/ --include debian/dists/${DEBIAN_CURRENT}`, with trailing slash exclusion in examples. This is just because we don't need to exclude directory listing of `debian` folder out.
 
+### Deduplication
+
+Tsumugu relies on local file size and mtime to check if file shall be downloaded. Some file-level deduplicators like [jdupes](https://codeberg.org/jbruchon/jdupes) would ignore file mtime when deduplicating with hard links. This could be an issue for some repos, as some files would be redownloaded again and again every time as it does not have a correct mtime locally.
+
+Workarounds:
+
+- Set `--compare-size-only`.
+- Use filesystem-level/block-level deduplication like `zfs dedup`.
+- Use another file-level deduplicator which considers mtime (though I don't know which would do this).
+
 ## Naming
 
 The name "tsumugu", and current branch name "pudding", are derived from the manga *A Drift Girl and a Noble Moon*.
