@@ -13,7 +13,7 @@ anyhow = { version = "1.0.71", features = ["backtrace"] }
 chrono = { version = "0.4.26", default-features = false, features = ["clock"] }
 clap = { version = "4.3.12", features = ["derive"] }
 regex = "1.9.1"
-reqwest = { version = "0.12.7", features = ["stream", "gzip", "deflate", "brotli"] }
+reqwest = { version = "0.12.7", features = ["stream", "gzip", "deflate", "brotli", "socks"] }
 scraper = "0.17.1"
 url = "2.4.0"
 tracing = "0.1"
