@@ -180,13 +180,18 @@ impl Display for ListItem {
 pub fn guess_remote_timezone(
     parser: &dyn parser::Parser,
     async_context: &AsyncContext,
+    base_url: Option<Url>,
     file_url: Url,
 ) -> Result<FixedOffset> {
     assert!(!file_url.as_str().ends_with('/'));
     // trim after the latest '/'
     // TODO: improve this
+
     let file_url_str = file_url.as_str();
-    let base_url = Url::parse(&file_url_str[..=file_url_str.rfind('/').unwrap()]).unwrap();
+    let base_url = match base_url {
+        Some(b) => b,
+        None => Url::parse(&file_url_str[..=file_url_str.rfind('/').unwrap()]).unwrap(),
+    };
 
     info!("base: {:?}", base_url);
     info!("file: {:?}", file_url);

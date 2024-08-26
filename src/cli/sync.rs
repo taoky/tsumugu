@@ -77,12 +77,21 @@ fn determinate_timezone(
     match args.timezone {
         None => {
             // Check if to guess timezone
-            let timezone_file = match &args.timezone_file {
+            // Some parsers like directory-lister, requires special handling for URL --
+            // we cannot deduce "base" from file URL. Most normal websites work like this
+            // File http://example.com/d1/f1 => Listing http://example.com/d1/
+            // However directory-lister:
+            // File https://example.com/d1/f1 => Listing https://example.com/?dir=d1/
+            // So we have to remember the listing URL here, too
+            let timezone_base_and_url = match &args.timezone_file {
                 Some(f) => {
                     if f == "no" {
                         None
                     } else {
-                        Some(Url::parse(f).expect("Invalid timezone file URL"))
+                        // Currently timezone_file could be given from CLI
+                        // In this case, we still use the old logic to "guess" the listing
+                        // by setting the base (listing) url to None
+                        Some((None, Url::parse(f).expect("Invalid timezone file URL")))
                     }
                 }
                 None => {
@@ -92,7 +101,7 @@ fn determinate_timezone(
                         parser: &dyn crate::parser::Parser,
                         async_context: &AsyncContext,
                         url: &Url,
-                    ) -> Option<Url> {
+                    ) -> Option<(Option<Url>, Url)> {
                         info!("Try finding first File in {}", url);
                         let list = again(|| parser.get_list(async_context, url), args.retry)
                             .expect(&format!(
@@ -105,16 +114,16 @@ fn determinate_timezone(
                                     match item.type_ {
                                         FileType::File => {
                                             info!("Find a file! URL: {}", item.url);
-                                            return Some(item.url);
+                                            return Some((Some(url.clone()), item.url));
                                         }
                                         FileType::Directory => {
-                                            if let Some(file) = find_first_file(
+                                            if let Some(res) = find_first_file(
                                                 args,
                                                 parser,
                                                 async_context,
                                                 &item.url,
                                             ) {
-                                                return Some(file);
+                                                return Some(res);
                                             }
                                         }
                                     }
@@ -130,11 +139,15 @@ fn determinate_timezone(
                     find_first_file(args, parser, async_context, &args.upstream)
                 }
             };
-            match timezone_file {
-                Some(timezone_url) => {
-                    let timezone =
-                        listing::guess_remote_timezone(parser, async_context, timezone_url)
-                            .expect("Failed to guess timezone");
+            match timezone_base_and_url {
+                Some((timezone_base_url, timezone_url)) => {
+                    let timezone = listing::guess_remote_timezone(
+                        parser,
+                        async_context,
+                        timezone_base_url,
+                        timezone_url,
+                    )
+                    .expect("Failed to guess timezone");
                     info!("Guessed timezone: {:?}", timezone);
                     Some(timezone)
                 }
