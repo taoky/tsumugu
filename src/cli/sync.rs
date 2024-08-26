@@ -104,10 +104,7 @@ fn determinate_timezone(
                     ) -> Option<(Option<Url>, Url)> {
                         info!("Try finding first File in {}", url);
                         let list = again(|| parser.get_list(async_context, url), args.retry)
-                            .expect(&format!(
-                            "Failed to get list for {}. Maybe you shall disable timezone guessing?",
-                            url
-                        ));
+                            .unwrap_or_else(|_| panic!("Failed to get list for {}. Maybe you shall disable timezone guessing?", url));
                         match list {
                             ListResult::List(list) => {
                                 for item in list {

@@ -98,7 +98,7 @@ mod tests {
     #[test]
     fn test_buildroot_root() {
         let context = init_async_context();
-        let items = LighttpdListingParser::default()
+        let items = LighttpdListingParser
             .get_list(
                 &context,
                 &Url::parse("http://localhost:1921/buildroot/").unwrap(),
@@ -134,7 +134,7 @@ mod tests {
     #[test]
     fn test_buildroot_subfolder() {
         let context = init_async_context();
-        let items = LighttpdListingParser::default()
+        let items = LighttpdListingParser
             .get_list(
                 &context,
                 &Url::parse("http://localhost:1921/buildroot/acl/").unwrap(),
