@@ -15,6 +15,7 @@ use chrono::{FixedOffset, NaiveDateTime};
 use crossbeam_deque::{Injector, Worker};
 use futures_util::StreamExt;
 use indicatif::{MultiProgress, ProgressBar, ProgressDrawTarget, ProgressStyle};
+use reqwest::StatusCode;
 use tracing::{debug, error, info, warn};
 use url::Url;
 
@@ -93,8 +94,11 @@ fn determinate_timezone(
                         url: &Url,
                     ) -> Option<Url> {
                         info!("Try finding first File in {}", url);
-                        let list =
-                            again(|| parser.get_list(async_context, url), args.retry).unwrap();
+                        let list = again(|| parser.get_list(async_context, url), args.retry)
+                            .expect(&format!(
+                            "Failed to get list for {}. Maybe you shall disable timezone guessing?",
+                            url
+                        ));
                         match list {
                             ListResult::List(list) => {
                                 for item in list {
@@ -467,7 +471,7 @@ fn download_handler(
     }
 
     if should_download && !args.dry_run {
-        if (download_file(
+        if let Err(e) = download_file(
             task_context,
             item,
             &expected_path,
@@ -476,12 +480,20 @@ fn download_handler(
             cwd,
             // If no sending HEAD before GET, and don't take mtime from parser, check header here
             !args.head_before_get && !args.allow_mtime_from_parser,
-        ))
-        .is_err()
-        {
-            thr_context
-                .failure_downloading
-                .store(true, Ordering::SeqCst);
+        ) {
+            let mut set_error = true;
+            if args.ignore_nonexist {
+                if let Some(reqwest_err) = e.downcast_ref::<reqwest::Error>() {
+                    if reqwest_err.status() == Some(StatusCode::NOT_FOUND) {
+                        set_error = false;
+                    }
+                }
+            }
+            if set_error {
+                thr_context
+                    .failure_downloading
+                    .store(true, Ordering::SeqCst);
+            }
         }
     } else if should_download {
         info!("Dry run, not downloading {}", task.url);

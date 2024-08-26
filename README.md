@@ -82,6 +82,8 @@ Options:
           (Experimental) APT Packages file parser to find out missing packages
       --yum-packages
           (Experimental) YUM Packages file parser to find out missing packages
+      --ignore-nonexist
+          Ignore 404 NOT FOUND as error when downloading files
   -h, --help
           Print help
   -V, --version

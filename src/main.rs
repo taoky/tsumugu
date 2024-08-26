@@ -142,6 +142,10 @@ pub struct SyncArgs {
     /// (Experimental) YUM Packages file parser to find out missing packages.
     #[clap(long)]
     yum_packages: bool,
+
+    /// Ignore 404 NOT FOUND as error when downloading files.
+    #[clap(long)]
+    ignore_nonexist: bool,
 }
 
 impl SharedArgs for &SyncArgs {
