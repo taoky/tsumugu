@@ -24,7 +24,7 @@ jobs:
           ~/.cargo/registry/cache
           ~/.cargo/git
           target
-        key: musl-cargo-${{ hashFiles('**/Cargo.toml.cache') }}
+        key: musl-cargo-${{ hashFiles('./Cargo.toml.cache') }}
     - name: Run fileserver
       run: |
         fixtures/start_fileserver.sh &
