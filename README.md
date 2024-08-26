@@ -67,7 +67,7 @@ Options:
       --head-before-get
           Do an HEAD before actual GET. Otherwise when head-before-get and allow-time-from-parser are not set, when GETting tsumugu would try checking if we still need to download it
       --parser <PARSER>
-          Choose a parser [default: nginx] [possible values: nginx, apache-f2, docker, directory-lister, lighttpd, caddy]
+          Choose a parser [default: nginx] [possible values: nginx, apache-f2, docker, directory-lister, lighttpd, caddy, fancy-index, gradle]
       --exclude <EXCLUDE>
           Excluded file regex. Supports multiple
       --include <INCLUDE>
