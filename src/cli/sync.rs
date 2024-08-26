@@ -77,13 +77,13 @@ fn determinate_timezone(
         None => {
             // Check if to guess timezone
             let timezone_file = match &args.timezone_file {
-                Some(f) => match Url::parse(f) {
-                    Ok(url) => Some(url),
-                    Err(_) => {
-                        warn!("Invalid timezone file URL, disabling timezone guessing");
+                Some(f) => {
+                    if f == "no" {
                         None
+                    } else {
+                        Some(Url::parse(f).expect("Invalid timezone file URL"))
                     }
-                },
+                }
                 None => {
                     // eek, try getting first file in root index
                     fn find_first_file(
@@ -129,16 +129,10 @@ fn determinate_timezone(
             match timezone_file {
                 Some(timezone_url) => {
                     let timezone =
-                        listing::guess_remote_timezone(parser, async_context, timezone_url);
-                    let timezone = match timezone {
-                        Ok(tz) => Some(tz),
-                        Err(e) => {
-                            warn!("Failed to guess timezone: {:?}", e);
-                            None
-                        }
-                    };
+                        listing::guess_remote_timezone(parser, async_context, timezone_url)
+                            .expect("Failed to guess timezone");
                     info!("Guessed timezone: {:?}", timezone);
-                    timezone
+                    Some(timezone)
                 }
                 None => None,
             }
