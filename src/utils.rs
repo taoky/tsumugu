@@ -4,11 +4,72 @@ use chrono::FixedOffset;
 use chrono::TimeZone;
 use chrono::{DateTime, Utc};
 use futures_util::Future;
+use tracing::debug;
 use tracing::warn;
 use url::Url;
 
 use crate::parser::Parser;
 use crate::SharedArgs;
+
+// A simple diagnose of (frustrating) proxy settings
+fn proxy_precheck() {
+    // follows the order of get_from_environment() in reqwest src/proxy.rs
+    let mut http_proxy = std::env::var("HTTP_PROXY");
+    if http_proxy.is_err() {
+        http_proxy = std::env::var("http_proxy");
+    }
+    let mut https_proxy = std::env::var("HTTPS_PROXY");
+    if https_proxy.is_err() {
+        https_proxy = std::env::var("https_proxy");
+    }
+    let mut all_proxy = std::env::var("ALL_PROXY");
+    if all_proxy.is_err() {
+        all_proxy = std::env::var("all_proxy");
+    }
+    if http_proxy.is_err() && https_proxy.is_err() && all_proxy.is_err() {
+        debug!("No proxy environment is given.");
+        return;
+    }
+    fn check_format(s: &str) {
+        if s.starts_with("socks://") {
+            warn!("Typo in proxy env detected: use socks5:// or socks5h:// protocol please.");
+            return;
+        }
+        if !s.starts_with("http://")
+            && !s.starts_with("https://")
+            && !s.starts_with("socks5://")
+            && !s.starts_with("socks5h://")
+        {
+            warn!("Unknown protcol in proxy env, this might be silently ignored by reqwest.");
+            return;
+        }
+        let url = match Url::parse(s) {
+            Ok(s) => s,
+            Err(e) => {
+                warn!("Failed to parse proxy URL {}: {}", s, e);
+                return;
+            }
+        };
+        if url.scheme() == "socks5" || url.scheme() == "socks5h" {
+            // extra check for hostname resolve ability
+            if let Err(e) = url.socket_addrs(|| Some(1080)) {
+                warn!("Failed to get socket addr from {}: {}", url, e);
+                warn!("This might be silently ignored later.");
+                return;
+            }
+        }
+        debug!("Seems OK with this proxy URL: {}", url);
+    }
+    if let Ok(s) = http_proxy {
+        check_format(&s);
+    }
+    if let Ok(s) = https_proxy {
+        check_format(&s);
+    }
+    if let Ok(s) = all_proxy {
+        check_format(&s);
+    }
+}
 
 pub fn build_client(
     args: impl SharedArgs,
@@ -16,6 +77,7 @@ pub fn build_client(
     bind_address: Option<&String>,
     auto_compress: bool,
 ) -> reqwest::Client {
+    proxy_precheck();
     let minute = std::time::Duration::new(60, 0);
     let mut builder = reqwest::Client::builder()
         .user_agent(args.user_agent())
