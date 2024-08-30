@@ -199,7 +199,7 @@ pub fn guess_remote_timezone(
     let list = parser.get_list(async_context, &base_url)?;
     let list = match list {
         parser::ListResult::Redirect(_) => {
-            return Err(anyhow::anyhow!("Redirection not supported"));
+            anyhow::bail!("Redirection not supported");
         }
         parser::ListResult::List(list) => list,
     };
@@ -229,5 +229,5 @@ pub fn guess_remote_timezone(
             return Ok(timezone);
         }
     }
-    Err(anyhow::anyhow!("File not found"))
+    anyhow::bail!("File not found")
 }

@@ -12,6 +12,10 @@ use regex::Regex;
 pub struct NginxListingParser {}
 
 impl Parser for NginxListingParser {
+    fn name(&self) -> &'static str {
+        "Nginx autoindex"
+    }
+
     fn get_list(&self, async_context: &AsyncContext, url: &url::Url) -> Result<ListResult> {
         let resp = get(
             &async_context.runtime,

@@ -30,23 +30,23 @@ fn get_debian_root(
 ) -> Result<(PathBuf, Vec<String>, Url)> {
     fn pop(p: &mut PathBuf, r: Option<&mut Vec<String>>, u: &mut Url) -> Result<()> {
         if !p.pop() {
-            return Err(anyhow::anyhow!(
+            anyhow::bail!(
                 "Cannot find debian root (path can not be popped, path = {:?})",
                 p
-            ));
+            );
         }
         if u.path() == "/" {
-            return Err(anyhow::anyhow!(
+            anyhow::bail!(
                 "Cannot find debian root (url can not be popped, url = {:?})",
                 u
-            ));
+            );
         }
         if let Some(r) = r {
             if r.pop().is_none() {
-                return Err(anyhow::anyhow!(
+                anyhow::bail!(
                     "Cannot find debian root (relative can not be popped, relative = {:?})",
                     r
-                ));
+                );
             }
         }
         u.path_segments_mut().unwrap().pop();

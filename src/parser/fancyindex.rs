@@ -6,7 +6,7 @@ use crate::{
 };
 
 use super::*;
-use anyhow::{anyhow, Result};
+use anyhow::Result;
 use chrono::{DateTime, NaiveDateTime};
 use scraper::{Html, Selector};
 
@@ -14,6 +14,10 @@ use scraper::{Html, Selector};
 pub struct FancyIndexListingParser;
 
 impl Parser for FancyIndexListingParser {
+    fn name(&self) -> &'static str {
+        "Fancyindex"
+    }
+
     fn get_list(&self, async_context: &AsyncContext, url: &url::Url) -> Result<ListResult> {
         let resp = get(
             &async_context.runtime,
@@ -45,7 +49,7 @@ impl Parser for FancyIndexListingParser {
             let a = match td_a.select(&Selector::parse("a").unwrap()).next() {
                 Some(a) => a,
                 None => {
-                    return Err(anyhow!("Cannot find <a> in first cell."));
+                    bail!("Cannot find <a> in first cell.");
                 }
             };
             let href = a.value().attr("href").unwrap();

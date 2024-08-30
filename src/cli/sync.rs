@@ -23,7 +23,7 @@ use crate::{
     compare::{should_download_by_header, should_download_by_list},
     extensions::{extension_handler, ExtensionPackage},
     listing::{self, FileType, ListItem},
-    parser::ListResult,
+    parser::{ListResult, MainSupplementaryCombinedParser},
     regex_process::{self, ExclusionManager},
     term::AlternativeTerm,
     utils::{self, again, again_async, build_client, get_async, head, is_symlink, naive_to_utc},
@@ -520,7 +520,7 @@ fn sync_threads(args: &SyncArgs, parser: &dyn crate::parser::Parser, thr_context
     // Handling listing
     let listing_client = build_client(
         args,
-        parser,
+        parser.is_auto_redirect(),
         thr_context.bind_address.as_ref(),
         // some servers (such as download.zerotier.com) would give you gziped list even if you don't ask for that,
         // so just enable auto compression when requesting listing
@@ -529,7 +529,7 @@ fn sync_threads(args: &SyncArgs, parser: &dyn crate::parser::Parser, thr_context
     // Handling download
     let download_client = build_client(
         args,
-        parser,
+        true,
         thr_context.bind_address.as_ref(),
         // auto compression is set to off here, as is known that some servers would wrongly report Content-Encoding for compressed files
         // like cloud.centos.org
@@ -666,7 +666,8 @@ fn sync_threads(args: &SyncArgs, parser: &dyn crate::parser::Parser, thr_context
 
 pub fn sync(args: &SyncArgs, bind_address: Option<String>) -> ! {
     debug!("{:?}", args);
-    let parser = args.parser.build();
+    let parser =
+        MainSupplementaryCombinedParser::new(args.parser.clone(), args.parser_match.clone());
 
     let download_dir = args.local.as_path();
 
@@ -680,7 +681,7 @@ pub fn sync(args: &SyncArgs, bind_address: Option<String>) -> ! {
 
     sync_threads(
         args,
-        &*parser,
+        &parser,
         &ThreadsContext {
             bind_address,
             download_dir,

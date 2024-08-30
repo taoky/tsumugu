@@ -16,6 +16,10 @@ use scraper::{Html, Selector};
 pub struct ApacheF2ListingParser;
 
 impl Parser for ApacheF2ListingParser {
+    fn name(&self) -> &'static str {
+        "Apache-f2 format"
+    }
+
     fn get_list(&self, async_context: &AsyncContext, url: &url::Url) -> Result<ListResult> {
         let resp = get(
             &async_context.runtime,

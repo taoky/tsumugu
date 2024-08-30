@@ -3,7 +3,7 @@ use std::path::PathBuf;
 
 use clap::{Parser, Subcommand};
 
-use parser::ParserType;
+use parser::{ParserType, ParserTypeMatch};
 use tracing_subscriber::EnvFilter;
 use url::Url;
 
@@ -111,15 +111,21 @@ pub struct SyncArgs {
     #[clap(long)]
     head_before_get: bool,
 
-    /// Choose a parser.
+    /// Choose a main parser.
     #[clap(long, value_enum, default_value_t = ParserType::Nginx)]
     parser: ParserType,
 
-    /// Excluded file regex. Supports multiple.
+    /// Choose supplementary parsers. Format: "parsername:matchpattern".
+    /// matchpattern matches WHOLE URL.
+    /// Supports multiple.
+    #[clap(long, value_parser)]
+    parser_match: Vec<ParserTypeMatch>,
+
+    /// Excluded relative path regex. Supports multiple.
     #[clap(long, value_parser)]
     exclude: Vec<ExpandedRegex>,
 
-    /// Included file regex (when it startswith any exclude regexes). Supports multiple.
+    /// Included relative path regex (even if excluded). Supports multiple.
     #[clap(long, value_parser)]
     include: Vec<ExpandedRegex>,
 
@@ -164,15 +170,15 @@ pub struct ListArgs {
     #[clap(value_parser)]
     upstream_folder: Url,
 
-    /// Choose a parser.
+    /// Choose a main parser.
     #[clap(long, value_enum, default_value_t=ParserType::Nginx)]
     parser: ParserType,
 
-    /// Excluded file regex. Supports multiple.
+    /// Excluded relative path regex. Supports multiple.
     #[clap(long, value_parser)]
     exclude: Vec<ExpandedRegex>,
 
-    /// Included file regex (even if excluded). Supports multiple.
+    /// Included relative path regex (even if excluded). Supports multiple.
     #[clap(long, value_parser)]
     include: Vec<ExpandedRegex>,
 

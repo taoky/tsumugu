@@ -1,6 +1,9 @@
-use anyhow::Result;
+use std::str::FromStr;
+
+use anyhow::{anyhow, bail, Result};
 use clap::ValueEnum;
-use tracing::warn;
+use regex::Regex;
+use tracing::{info, warn};
 use url::Url;
 
 use crate::utils::{get, get_text};
@@ -27,6 +30,7 @@ pub trait Parser: Sync {
     fn is_auto_redirect(&self) -> bool {
         true
     }
+    fn name(&self) -> &'static str;
 }
 
 #[derive(ValueEnum, Clone, Debug)]
@@ -56,6 +60,80 @@ impl ParserType {
             Self::FancyIndex => Box::<fancyindex::FancyIndexListingParser>::default(),
             Self::Gradle => Box::<gradle::GradleListingParser>::default(),
         }
+    }
+}
+
+#[derive(Debug, Clone)]
+pub struct ParserTypeMatch {
+    parser_type: ParserType,
+    regex: Regex,
+}
+
+impl FromStr for ParserTypeMatch {
+    type Err = anyhow::Error;
+
+    fn from_str(s: &str) -> std::result::Result<Self, Self::Err> {
+        // split by first :
+        let (p, r) = match s.split_once(':') {
+            Some((l, r)) => {
+                let p = ParserType::from_str(l, true).map_err(|s| anyhow!(s))?;
+                let r = Regex::new(r)?;
+                (p, r)
+            }
+            None => bail!("No ':' in given ParserTypeMatch"),
+        };
+        Ok(ParserTypeMatch {
+            parser_type: p,
+            regex: r,
+        })
+    }
+}
+
+// A "combined" parser from main parser + supplementary parsers
+// #[derive(Debug, Clone)]
+pub struct MainSupplementaryCombinedParser {
+    main: Box<dyn Parser>,
+    supplementaries: Vec<(Box<dyn Parser>, Regex)>,
+}
+
+impl MainSupplementaryCombinedParser {
+    pub fn new(main_parser: ParserType, supplementary_parsers: Vec<ParserTypeMatch>) -> Self {
+        let main = main_parser.build();
+        let supplementaries = supplementary_parsers
+            .into_iter()
+            .map(|s| (s.parser_type.build(), s.regex))
+            .collect();
+        MainSupplementaryCombinedParser {
+            main,
+            supplementaries,
+        }
+    }
+}
+
+impl Parser for MainSupplementaryCombinedParser {
+    fn name(&self) -> &'static str {
+        "MainSupplementaryCombinedParser"
+    }
+
+    fn get_list(&self, async_context: &AsyncContext, url: &Url) -> Result<ListResult> {
+        for s in self.supplementaries.iter() {
+            let regex = &s.1;
+            if regex.is_match(url.as_str()) {
+                info!("URL {} Matches subparser {}", url, s.0.name());
+                return s.0.get_list(async_context, url);
+            }
+        }
+        self.main.get_list(async_context, url)
+    }
+
+    fn is_auto_redirect(&self) -> bool {
+        let main_redirect = self.main.is_auto_redirect();
+        for s in self.supplementaries.iter() {
+            if s.0.is_auto_redirect() != main_redirect {
+                warn!("Supplementary parsers do not have same redirect settings as main parser. Ignored.")
+            }
+        }
+        main_redirect
     }
 }
 

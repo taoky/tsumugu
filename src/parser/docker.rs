@@ -27,6 +27,10 @@ impl Default for DockerListingParser {
 }
 
 impl Parser for DockerListingParser {
+    fn name(&self) -> &'static str {
+        "download.docker.com"
+    }
+
     fn is_auto_redirect(&self) -> bool {
         false
     }

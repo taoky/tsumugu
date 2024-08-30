@@ -13,6 +13,10 @@ use anyhow::{anyhow, Result};
 pub struct LighttpdListingParser;
 
 impl Parser for LighttpdListingParser {
+    fn name(&self) -> &'static str {
+        "Lighttpd"
+    }
+
     fn get_list(&self, async_context: &AsyncContext, url: &url::Url) -> Result<ListResult> {
         let resp = get(
             &async_context.runtime,

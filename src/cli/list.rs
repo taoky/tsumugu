@@ -8,7 +8,7 @@ use crate::{
 // TODO: clean code
 pub fn list(args: &ListArgs, bind_address: Option<String>) -> ! {
     let parser = args.parser.build();
-    let client = build_client(args, parser.as_ref(), bind_address.as_ref(), true);
+    let client = build_client(args, parser.is_auto_redirect(), bind_address.as_ref(), true);
     let async_context = AsyncContext {
         runtime: tokio::runtime::Runtime::new().unwrap(),
         listing_client: client.clone(),

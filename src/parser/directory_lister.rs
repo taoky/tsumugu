@@ -12,6 +12,10 @@ use scraper::{Html, Selector};
 pub struct DirectoryListerListingParser;
 
 impl Parser for DirectoryListerListingParser {
+    fn name(&self) -> &'static str {
+        "Directory Lister"
+    }
+
     fn get_list(&self, async_context: &AsyncContext, url: &url::Url) -> Result<ListResult> {
         let resp = get(
             &async_context.runtime,

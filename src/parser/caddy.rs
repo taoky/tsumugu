@@ -13,6 +13,10 @@ use scraper::{Html, Selector};
 pub struct CaddyListingParser;
 
 impl Parser for CaddyListingParser {
+    fn name(&self) -> &'static str {
+        "Caddy"
+    }
+
     fn get_list(&self, async_context: &AsyncContext, url: &url::Url) -> Result<ListResult> {
         let resp = get(
             &async_context.runtime,

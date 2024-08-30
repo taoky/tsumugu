@@ -4,12 +4,16 @@ use scraper::{Html, Selector};
 use tracing::info;
 
 use super::*;
-use anyhow::{anyhow, Result};
+use anyhow::Result;
 
 #[derive(Debug, Clone, Default)]
 pub struct GradleListingParser {}
 
 impl Parser for GradleListingParser {
+    fn name(&self) -> &'static str {
+        "services.gradle.org"
+    }
+
     fn get_list(&self, async_context: &AsyncContext, url: &url::Url) -> Result<ListResult> {
         let resp = get(
             &async_context.runtime,
@@ -37,7 +41,7 @@ impl Parser for GradleListingParser {
             let a = match element.select(&a_selector).next() {
                 Some(a) => a,
                 None => {
-                    return Err(anyhow!("No <a> in given <li>"));
+                    bail!("No <a> in given <li>");
                 }
             };
             let href = a.value().attr("href").unwrap();

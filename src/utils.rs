@@ -8,7 +8,6 @@ use tracing::debug;
 use tracing::warn;
 use url::Url;
 
-use crate::parser::Parser;
 use crate::SharedArgs;
 
 // A simple diagnose of (frustrating) proxy settings
@@ -73,7 +72,7 @@ fn proxy_precheck() {
 
 pub fn build_client(
     args: impl SharedArgs,
-    parser: &dyn Parser,
+    redirect: bool,
     bind_address: Option<&String>,
     auto_compress: bool,
 ) -> reqwest::Client {
@@ -88,7 +87,7 @@ pub fn build_client(
         .gzip(auto_compress)
         .brotli(auto_compress)
         .deflate(auto_compress);
-    if !parser.is_auto_redirect() {
+    if !redirect {
         builder = builder.redirect(reqwest::redirect::Policy::none());
     }
     builder.build().unwrap()
