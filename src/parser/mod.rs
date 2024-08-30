@@ -14,6 +14,7 @@ pub mod apache_f2;
 pub mod caddy;
 pub mod directory_lister;
 pub mod docker;
+pub mod fallback;
 pub mod fancyindex;
 pub mod gradle;
 pub mod lighttpd;
@@ -33,7 +34,7 @@ pub trait Parser: Sync {
     fn name(&self) -> &'static str;
 }
 
-#[derive(ValueEnum, Clone, Debug)]
+#[derive(ValueEnum, Clone, Debug, PartialEq)]
 pub enum ParserType {
     Nginx,
     ApacheF2,
@@ -43,6 +44,8 @@ pub enum ParserType {
     Caddy,
     FancyIndex,
     Gradle,
+
+    Fallback,
 }
 
 impl ParserType {
@@ -59,6 +62,7 @@ impl ParserType {
             Self::Caddy => Box::<caddy::CaddyListingParser>::default(),
             Self::FancyIndex => Box::<fancyindex::FancyIndexListingParser>::default(),
             Self::Gradle => Box::<gradle::GradleListingParser>::default(),
+            Self::Fallback => Box::<fallback::FallbackParser>::default(),
         }
     }
 }
@@ -90,7 +94,6 @@ impl FromStr for ParserTypeMatch {
 }
 
 // A "combined" parser from main parser + supplementary parsers
-// #[derive(Debug, Clone)]
 pub struct MainSupplementaryCombinedParser {
     main: Box<dyn Parser>,
     supplementaries: Vec<(Box<dyn Parser>, Regex)>,
@@ -98,6 +101,9 @@ pub struct MainSupplementaryCombinedParser {
 
 impl MainSupplementaryCombinedParser {
     pub fn new(main_parser: ParserType, supplementary_parsers: Vec<ParserTypeMatch>) -> Self {
+        if main_parser == ParserType::Fallback {
+            warn!("Please reconsider: fallback parser SHOULD NOT be used as main parser.");
+        }
         let main = main_parser.build();
         let supplementaries = supplementary_parsers
             .into_iter()
@@ -152,11 +158,17 @@ fn get_real_name_from_href(href: &str) -> String {
     let last_slash_pos = trimmed.rfind('/').map(|pos| pos + 1).unwrap_or(0);
     let after_last_slash = &trimmed[last_slash_pos..];
 
+    // TODO: this might have issues (inconsistent with other impls)
+
     // Find the position of the first '?' and take the substring before it.
     let query_pos = after_last_slash.find('?').unwrap_or(after_last_slash.len());
     let before_query = &after_last_slash[..query_pos];
 
-    let name: String = url::form_urlencoded::parse(before_query.as_bytes())
+    // Also do this for '#'
+    let hash_pos = before_query.find('#').unwrap_or(before_query.len());
+    let name = &before_query[..hash_pos];
+
+    let name: String = url::form_urlencoded::parse(name.as_bytes())
         .map(|(k, v)| [k, v].concat())
         .collect();
     name
@@ -261,5 +273,7 @@ mod tests {
         );
         assert_eq!(get_real_name_from_href("test?sort=name&order=asc"), "test");
         assert_eq!(get_real_name_from_href("/aaa/bbb"), "bbb");
+
+        assert_eq!(get_real_name_from_href("somefile#performance"), "somefile");
     }
 }
