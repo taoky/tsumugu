@@ -152,6 +152,10 @@ pub struct SyncArgs {
     /// Ignore 404 NOT FOUND as error when downloading files.
     #[clap(long)]
     ignore_nonexist: bool,
+
+    /// Allow automatically choose fallback parser when ParseError occurred.
+    #[clap(long)]
+    auto_fallback: bool,
 }
 
 impl SharedArgs for &SyncArgs {

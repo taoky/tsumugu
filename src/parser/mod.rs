@@ -124,10 +124,15 @@ impl FromStr for ParserTypeMatch {
 pub struct MainSupplementaryCombinedParser {
     main: Box<dyn Parser>,
     supplementaries: Vec<(Box<dyn Parser>, Regex)>,
+    auto_fallback: bool,
 }
 
 impl MainSupplementaryCombinedParser {
-    pub fn new(main_parser: ParserType, supplementary_parsers: Vec<ParserTypeMatch>) -> Self {
+    pub fn new(
+        main_parser: ParserType,
+        supplementary_parsers: Vec<ParserTypeMatch>,
+        auto_fallback: bool,
+    ) -> Self {
         if main_parser == ParserType::Fallback {
             warn!("Please reconsider: fallback parser SHOULD NOT be used as main parser.");
         }
@@ -139,6 +144,7 @@ impl MainSupplementaryCombinedParser {
         MainSupplementaryCombinedParser {
             main,
             supplementaries,
+            auto_fallback,
         }
     }
 }
@@ -149,14 +155,36 @@ impl Parser for MainSupplementaryCombinedParser {
     }
 
     fn get_list(&self, async_context: &AsyncContext, url: &Url) -> Result<ListResult, ParserError> {
-        for s in self.supplementaries.iter() {
-            let regex = &s.1;
-            if regex.is_match(url.as_str()) {
-                info!("URL {} Matches subparser {}", url, s.0.name());
-                return s.0.get_list(async_context, url);
+        fn get_list_inner(
+            s: &MainSupplementaryCombinedParser,
+            async_context: &AsyncContext,
+            url: &Url,
+        ) -> Result<ListResult, ParserError> {
+            for s in s.supplementaries.iter() {
+                let regex = &s.1;
+                if regex.is_match(url.as_str()) {
+                    info!("URL {} Matches subparser {}", url, s.0.name());
+                    return s.0.get_list(async_context, url);
+                }
             }
+            s.main.get_list(async_context, url)
         }
-        self.main.get_list(async_context, url)
+
+        let res = get_list_inner(self, async_context, url);
+        if !self.auto_fallback {
+            return res;
+        }
+        let e = match res {
+            Ok(r) => return Ok(r),
+            Err(e) => e,
+        };
+        let e = match e {
+            ParserError::NetworkError(_) => return Err(e),
+            ParserError::ParseError(e) => e,
+        };
+        // start autofallback logic
+        warn!("Parse error with {url}: {e}, try fallback...");
+        ParserType::Fallback.build().get_list(async_context, url)
     }
 
     fn is_auto_redirect(&self) -> bool {

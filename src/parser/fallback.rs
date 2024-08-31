@@ -143,14 +143,13 @@ impl Parser for FallbackParser {
                 ) {
                     Ok(r) => r,
                     Err(e) => {
-                        if let Some(reqwest_err) = e.downcast_ref::<reqwest::Error>() {
-                            let status = reqwest_err.status();
-                            if status == Some(reqwest::StatusCode::NOT_FOUND)
-                                || status == Some(reqwest::StatusCode::FORBIDDEN)
-                            {
-                                continue;
-                            }
+                        let status = e.status();
+                        if status == Some(reqwest::StatusCode::NOT_FOUND)
+                            || status == Some(reqwest::StatusCode::FORBIDDEN)
+                        {
+                            continue;
                         }
+
                         // TODO: what to do here?
                         warn!("Cannot get from {}, skipping", href);
                         continue;

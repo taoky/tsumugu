@@ -138,33 +138,42 @@ where
     }
 }
 
-pub async fn get_async(client: &reqwest::Client, url: Url) -> Result<reqwest::Response> {
-    Ok(client.get(url).send().await?.error_for_status()?)
+pub async fn get_async(
+    client: &reqwest::Client,
+    url: Url,
+) -> Result<reqwest::Response, reqwest::Error> {
+    client.get(url).send().await?.error_for_status()
 }
 
-pub async fn head_async(client: &reqwest::Client, url: Url) -> Result<reqwest::Response> {
-    Ok(client.head(url).send().await?.error_for_status()?)
+pub async fn head_async(
+    client: &reqwest::Client,
+    url: Url,
+) -> Result<reqwest::Response, reqwest::Error> {
+    client.head(url).send().await?.error_for_status()
 }
 
 pub fn get(
     runtime: &tokio::runtime::Runtime,
     client: &reqwest::Client,
     url: Url,
-) -> Result<reqwest::Response> {
+) -> Result<reqwest::Response, reqwest::Error> {
     let future = async { get_async(client, url).await };
     runtime.block_on(future)
 }
 
-pub fn get_text(runtime: &tokio::runtime::Runtime, response: reqwest::Response) -> Result<String> {
+pub fn get_text(
+    runtime: &tokio::runtime::Runtime,
+    response: reqwest::Response,
+) -> Result<String, reqwest::Error> {
     let future = async { response.text().await };
-    Ok(runtime.block_on(future)?)
+    runtime.block_on(future)
 }
 
 pub fn head(
     runtime: &tokio::runtime::Runtime,
     client: &reqwest::Client,
     url: Url,
-) -> Result<reqwest::Response> {
+) -> Result<reqwest::Response, reqwest::Error> {
     let future = async { head_async(client, url).await };
     runtime.block_on(future)
 }

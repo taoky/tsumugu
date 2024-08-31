@@ -41,6 +41,8 @@ Options:
 > cargo run -- sync --help
     Finished dev [unoptimized + debuginfo] target(s) in 0.07s
      Running `target/debug/tsumugu sync --help`
+Sync files from upstream to local
+
 Usage: tsumugu sync [OPTIONS] <UPSTREAM> <LOCAL>
 
 Arguments:
@@ -67,11 +69,13 @@ Options:
       --head-before-get
           Do an HEAD before actual GET. Otherwise when head-before-get and allow-time-from-parser are not set, when GETting tsumugu would try checking if we still need to download it
       --parser <PARSER>
-          Choose a parser [default: nginx] [possible values: nginx, apache-f2, docker, directory-lister, lighttpd, caddy, fancy-index, gradle]
+          Choose a main parser [default: nginx] [possible values: nginx, apache-f2, docker, directory-lister, lighttpd, caddy, fancy-index, gradle, fallback]
+      --parser-match <PARSER_MATCH>
+          Choose supplementary parsers. Format: "parsername:matchpattern". matchpattern matches WHOLE URL. Supports multiple
       --exclude <EXCLUDE>
-          Excluded file regex. Supports multiple
+          Excluded relative path regex. Supports multiple
       --include <INCLUDE>
-          Included file regex (when it startswith any exclude regexes). Supports multiple
+          Included relative path regex (even if excluded). Supports multiple
       --skip-if-exists <SKIP_IF_EXISTS>
           Skip file regex if they exist. Supports multiple
       --compare-size-only <COMPARE_SIZE_ONLY>
@@ -84,6 +88,8 @@ Options:
           (Experimental) YUM Packages file parser to find out missing packages
       --ignore-nonexist
           Ignore 404 NOT FOUND as error when downloading files
+      --auto-fallback
+          Allow automatically choose fallback parser when ParseError occurred
   -h, --help
           Print help
   -V, --version
@@ -91,16 +97,18 @@ Options:
 > cargo run -- list --help
     Finished dev [unoptimized + debuginfo] target(s) in 0.06s
      Running `target/debug/tsumugu list --help`
-Usage: tsumugu list [OPTIONS] <UPSTREAM>
+List files from upstream
+
+Usage: tsumugu list [OPTIONS] <UPSTREAM_FOLDER>
 
 Arguments:
-  <UPSTREAM>  The upstream URL
+  <UPSTREAM_FOLDER>  The upstream URL
 
 Options:
       --user-agent <USER_AGENT>        Customize tsumugu's user agent [default: tsumugu]
-      --parser <PARSER>                Choose a parser [default: nginx] [possible values: nginx, apache-f2, docker, directory-lister, lighttpd, caddy, fancy-index, gradle]
-      --exclude <EXCLUDE>              Excluded file regex. Supports multiple
-      --include <INCLUDE>              Included file regex (even if excluded). Supports multiple
+      --parser <PARSER>                Choose a main parser [default: nginx] [possible values: nginx, apache-f2, docker, directory-lister, lighttpd, caddy, fancy-index, gradle, fallback]
+      --exclude <EXCLUDE>              Excluded relative path regex. Supports multiple
+      --include <INCLUDE>              Included relative path regex (even if excluded). Supports multiple
       --upstream-base <UPSTREAM_BASE>  The upstream base ending with "/" [default: /]
   -h, --help                           Print help
   -V, --version                        Print version

@@ -180,7 +180,7 @@ fn download_file(
                 Ok(resp) => resp,
                 Err(e) => {
                     error!("Failed to GET {}: {:?}", url, e);
-                    return Err(e);
+                    return Err(e.into());
                 }
             };
             if check_header && !should_download_by_header(path, &resp, false) {
@@ -456,11 +456,11 @@ fn download_handler(
     if should_download && args.head_before_get {
         match again(
             || {
-                head(
+                Ok(head(
                     &task_context.async_context.runtime,
                     &task_context.async_context.download_client,
                     item.url.clone(),
-                )
+                )?)
             },
             args.retry,
         ) {
@@ -666,8 +666,11 @@ fn sync_threads(args: &SyncArgs, parser: &dyn crate::parser::Parser, thr_context
 
 pub fn sync(args: &SyncArgs, bind_address: Option<String>) -> ! {
     debug!("{:?}", args);
-    let parser =
-        MainSupplementaryCombinedParser::new(args.parser.clone(), args.parser_match.clone());
+    let parser = MainSupplementaryCombinedParser::new(
+        args.parser.clone(),
+        args.parser_match.clone(),
+        args.auto_fallback,
+    );
 
     let download_dir = args.local.as_path();
 
