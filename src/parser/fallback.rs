@@ -133,28 +133,29 @@ impl Parser for FallbackParser {
                 FileType::File
             };
 
-            let item = if type_ == FileType::File {
-                // Try HEAD it if it's a file
-                debug!("HEADing {href} in fallback parser");
-                let resp = match head(
-                    &async_context.runtime,
-                    &async_context.listing_client,
-                    href.clone(),
-                ) {
-                    Ok(r) => r,
-                    Err(e) => {
-                        let status = e.status();
-                        if status == Some(reqwest::StatusCode::NOT_FOUND)
-                            || status == Some(reqwest::StatusCode::FORBIDDEN)
-                        {
-                            continue;
-                        }
-
-                        // TODO: what to do here?
-                        warn!("Cannot get from {}, skipping", href);
+            // Try HEAD
+            debug!("HEADing {href} in fallback parser");
+            let resp = match head(
+                &async_context.runtime,
+                &async_context.listing_client,
+                href.clone(),
+            ) {
+                Ok(r) => r,
+                Err(e) => {
+                    let status = e.status();
+                    if status == Some(reqwest::StatusCode::NOT_FOUND)
+                        || status == Some(reqwest::StatusCode::FORBIDDEN)
+                    {
                         continue;
                     }
-                };
+
+                    // TODO: what to do here?
+                    warn!("Cannot get from {}, skipping", href);
+                    continue;
+                }
+            };
+
+            let item = if type_ == FileType::File {
                 let size = resp.content_length();
                 let mtime = match get_response_mtime(&resp) {
                     Ok(m) => m,
