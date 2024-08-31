@@ -31,7 +31,7 @@ impl Parser for FallbackParser {
         "Fallback for non-listing directory HTML (index.html) only"
     }
 
-    fn get_list(&self, async_context: &AsyncContext, url: &Url) -> Result<ListResult> {
+    fn get_list(&self, async_context: &AsyncContext, url: &Url) -> Result<ListResult, ParserError> {
         let url = if !url.path().ends_with('/') {
             Url::parse(&format!("{}/", url.path())).unwrap()
         } else {

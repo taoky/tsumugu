@@ -35,7 +35,11 @@ impl Parser for DockerListingParser {
         false
     }
 
-    fn get_list(&self, async_context: &AsyncContext, url: &url::Url) -> Result<ListResult> {
+    fn get_list(
+        &self,
+        async_context: &AsyncContext,
+        url: &url::Url,
+    ) -> Result<ListResult, ParserError> {
         assert_if_url_has_no_trailing_slash(url);
         let resp = get(
             &async_context.runtime,

@@ -29,6 +29,7 @@ console = { version = "0.15", default-features = false, features = ["ansi-parsin
 apt-parser = "1.0.0"
 flate2 = "1.0.28"
 shadow-rs = "0.32.0"
+thiserror = "1.0.63"
 
 [build-dependencies]
 shadow-rs = "0.32.0"

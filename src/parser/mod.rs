@@ -26,8 +26,35 @@ pub enum ListResult {
     Redirect(String),
 }
 
+#[derive(thiserror::Error, Debug)]
+pub enum ParserError {
+    #[error("network error: {0}")]
+    NetworkError(#[from] reqwest::Error),
+    #[error("parse error: {0}")]
+    ParseError(#[from] anyhow::Error),
+}
+
+macro_rules! impl_parser_error {
+    ($($ty:ty),*) => {
+        $(
+            impl From<$ty> for ParserError {
+                fn from(value: $ty) -> Self {
+                    ParserError::ParseError(anyhow::Error::from(value))
+                }
+            }
+        )*
+    };
+}
+
+impl_parser_error!(
+    url::ParseError,
+    reqwest::header::ToStrError,
+    chrono::ParseError,
+    regex::Error
+);
+
 pub trait Parser: Sync {
-    fn get_list(&self, async_context: &AsyncContext, url: &Url) -> Result<ListResult>;
+    fn get_list(&self, async_context: &AsyncContext, url: &Url) -> Result<ListResult, ParserError>;
     fn is_auto_redirect(&self) -> bool {
         true
     }
@@ -121,7 +148,7 @@ impl Parser for MainSupplementaryCombinedParser {
         "MainSupplementaryCombinedParser"
     }
 
-    fn get_list(&self, async_context: &AsyncContext, url: &Url) -> Result<ListResult> {
+    fn get_list(&self, async_context: &AsyncContext, url: &Url) -> Result<ListResult, ParserError> {
         for s in self.supplementaries.iter() {
             let regex = &s.1;
             if regex.is_match(url.as_str()) {

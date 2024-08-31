@@ -16,7 +16,11 @@ impl Parser for NginxListingParser {
         "Nginx autoindex"
     }
 
-    fn get_list(&self, async_context: &AsyncContext, url: &url::Url) -> Result<ListResult> {
+    fn get_list(
+        &self,
+        async_context: &AsyncContext,
+        url: &url::Url,
+    ) -> Result<ListResult, ParserError> {
         let resp = get(
             &async_context.runtime,
             &async_context.listing_client,

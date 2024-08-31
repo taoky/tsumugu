@@ -2229,6 +2229,7 @@ dependencies = [
  "scraper",
  "shadow-rs",
  "test-log",
+ "thiserror",
  "tokio",
  "tracing",
  "tracing-subscriber",

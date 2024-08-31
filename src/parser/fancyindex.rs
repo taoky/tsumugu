@@ -18,7 +18,11 @@ impl Parser for FancyIndexListingParser {
         "Fancyindex"
     }
 
-    fn get_list(&self, async_context: &AsyncContext, url: &url::Url) -> Result<ListResult> {
+    fn get_list(
+        &self,
+        async_context: &AsyncContext,
+        url: &url::Url,
+    ) -> Result<ListResult, ParserError> {
         let resp = get(
             &async_context.runtime,
             &async_context.listing_client,
@@ -49,7 +53,7 @@ impl Parser for FancyIndexListingParser {
             let a = match td_a.select(&Selector::parse("a").unwrap()).next() {
                 Some(a) => a,
                 None => {
-                    bail!("Cannot find <a> in first cell.");
+                    return Err(anyhow!("Cannot find <a> in first cell.").into());
                 }
             };
             let href = a.value().attr("href").unwrap();

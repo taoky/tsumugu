@@ -103,7 +103,7 @@ fn determinate_timezone(
                         url: &Url,
                     ) -> Option<(Option<Url>, Url)> {
                         info!("Try finding first File in {}", url);
-                        let list = again(|| parser.get_list(async_context, url), args.retry)
+                        let list = again(|| Ok(parser.get_list(async_context, url)?), args.retry)
                             .unwrap_or_else(|_| panic!("Failed to get list for {}. Maybe you shall disable timezone guessing?", url));
                         match list {
                             ListResult::List(list) => {
@@ -297,7 +297,7 @@ fn list_handler(
     }
 
     let items = match again(
-        || parser.get_list(task_context.async_context, &task.url),
+        || Ok(parser.get_list(task_context.async_context, &task.url)?),
         args.retry,
     ) {
         Ok(items) => items,

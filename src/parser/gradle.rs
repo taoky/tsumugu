@@ -14,7 +14,11 @@ impl Parser for GradleListingParser {
         "services.gradle.org"
     }
 
-    fn get_list(&self, async_context: &AsyncContext, url: &url::Url) -> Result<ListResult> {
+    fn get_list(
+        &self,
+        async_context: &AsyncContext,
+        url: &url::Url,
+    ) -> Result<ListResult, ParserError> {
         let resp = get(
             &async_context.runtime,
             &async_context.listing_client,
@@ -41,7 +45,7 @@ impl Parser for GradleListingParser {
             let a = match element.select(&a_selector).next() {
                 Some(a) => a,
                 None => {
-                    bail!("No <a> in given <li>");
+                    return Err(anyhow!("No <a> in given <li>").into());
                 }
             };
             let href = a.value().attr("href").unwrap();
