@@ -116,7 +116,7 @@ pub struct SyncArgs {
     parser: ParserType,
 
     /// Choose supplementary parsers. Format: "parsername:matchpattern".
-    /// matchpattern matches WHOLE URL.
+    /// matchpattern is a relative path regex.
     /// Supports multiple.
     #[clap(long, value_parser)]
     parser_match: Vec<ParserTypeMatch>,
@@ -129,11 +129,11 @@ pub struct SyncArgs {
     #[clap(long, value_parser)]
     include: Vec<ExpandedRegex>,
 
-    /// Skip file regex if they exist. Supports multiple.
+    /// Skip relative path regex if they exist. Supports multiple.
     #[clap(long, value_parser)]
     skip_if_exists: Vec<ExpandedRegex>,
 
-    /// File regex for those compare size only in HEAD requests. This only works with head_before_get.
+    /// Relative path regex for those compare size only in HEAD requests. This only works with head_before_get.
     #[clap(long, value_parser)]
     compare_size_only: Vec<ExpandedRegex>,
 

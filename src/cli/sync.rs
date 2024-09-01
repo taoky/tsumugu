@@ -23,7 +23,7 @@ use crate::{
     compare::{should_download_by_header, should_download_by_list},
     extensions::{extension_handler, ExtensionPackage},
     listing::{self, FileType, ListItem},
-    parser::{ListResult, MainSupplementaryCombinedParser},
+    parser::{ListResult, MainSupplementaryCombinedParser, Parser as _},
     regex_process::{self, ExclusionManager},
     term::AlternativeTerm,
     utils::{self, again, again_async, build_client, get_async, head, is_symlink, naive_to_utc},
@@ -71,7 +71,7 @@ fn extension_push_task(worker: &Worker<Task>, wake: &AtomicUsize, package: &Exte
 
 fn determinate_timezone(
     args: &SyncArgs,
-    parser: &dyn crate::parser::Parser,
+    parser: &MainSupplementaryCombinedParser,
     async_context: &AsyncContext,
 ) -> Option<FixedOffset> {
     match args.timezone {
@@ -98,12 +98,14 @@ fn determinate_timezone(
                     // eek, try getting first file in root index
                     fn find_first_file(
                         args: &SyncArgs,
-                        parser: &dyn crate::parser::Parser,
+                        parser: &MainSupplementaryCombinedParser,
                         async_context: &AsyncContext,
                         url: &Url,
+                        relative: Vec<String>,
                     ) -> Option<(Option<Url>, Url)> {
                         info!("Try finding first File in {}", url);
-                        let list = again(|| Ok(parser.get_list(async_context, url)?), args.retry)
+                        let relative_str = relative.join("/");
+                        let list = again(|| Ok(parser.get_list_with_filter(async_context, url, &relative_str)?), args.retry)
                             .unwrap_or_else(|_| panic!("Failed to get list for {}. Maybe you shall disable timezone guessing?", url));
                         match list {
                             ListResult::List(list) => {
@@ -114,11 +116,14 @@ fn determinate_timezone(
                                             return Some((Some(url.clone()), item.url));
                                         }
                                         FileType::Directory => {
+                                            let mut relative = relative.clone();
+                                            relative.push(item.name);
                                             if let Some(res) = find_first_file(
                                                 args,
                                                 parser,
                                                 async_context,
                                                 &item.url,
+                                                relative,
                                             ) {
                                                 return Some(res);
                                             }
@@ -133,7 +138,7 @@ fn determinate_timezone(
                             }
                         }
                     }
-                    find_first_file(args, parser, async_context, &args.upstream)
+                    find_first_file(args, parser, async_context, &args.upstream, [].to_vec())
                 }
             };
             match timezone_base_and_url {
@@ -276,7 +281,7 @@ struct TaskContext<'a> {
 
 fn list_handler(
     args: &SyncArgs,
-    parser: &dyn crate::parser::Parser,
+    parser: &MainSupplementaryCombinedParser,
     thr_context: &ThreadsContext,
     task_context: &TaskContext,
 ) {
@@ -297,7 +302,13 @@ fn list_handler(
     }
 
     let items = match again(
-        || Ok(parser.get_list(task_context.async_context, &task.url)?),
+        || {
+            Ok(parser.get_list_with_filter(
+                task_context.async_context,
+                &task.url,
+                task_context.relative,
+            )?)
+        },
         args.retry,
     ) {
         Ok(items) => items,
@@ -514,7 +525,11 @@ fn download_handler(
     });
 }
 
-fn sync_threads(args: &SyncArgs, parser: &dyn crate::parser::Parser, thr_context: &ThreadsContext) {
+fn sync_threads(
+    args: &SyncArgs,
+    parser: &MainSupplementaryCombinedParser,
+    thr_context: &ThreadsContext,
+) {
     let exclusion_manager = ExclusionManager::new(&args.exclude, &args.include);
 
     // Handling listing

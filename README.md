@@ -23,9 +23,7 @@ To successfully sync from these domains, where lftp/rclone fails or finds diffic
 ## Usage
 
 ```console
-> cargo run -- --help
-    Finished dev [unoptimized + debuginfo] target(s) in 0.06s
-     Running `target/debug/tsumugu --help`
+> ./tsumugu --help
 A HTTP(S) syncing tool with lower overhead, for OSS mirrors
 
 Usage: tsumugu <COMMAND>
@@ -38,9 +36,7 @@ Commands:
 Options:
   -h, --help     Print help
   -V, --version  Print version
-> cargo run -- sync --help
-    Finished dev [unoptimized + debuginfo] target(s) in 0.07s
-     Running `target/debug/tsumugu sync --help`
+> ./tsumugu sync --help
 Sync files from upstream to local
 
 Usage: tsumugu sync [OPTIONS] <UPSTREAM> <LOCAL>
@@ -71,15 +67,15 @@ Options:
       --parser <PARSER>
           Choose a main parser [default: nginx] [possible values: nginx, apache-f2, docker, directory-lister, lighttpd, caddy, fancy-index, gradle, fallback]
       --parser-match <PARSER_MATCH>
-          Choose supplementary parsers. Format: "parsername:matchpattern". matchpattern matches WHOLE URL. Supports multiple
+          Choose supplementary parsers. Format: "parsername:matchpattern". matchpattern is a relative path regex. Supports multiple
       --exclude <EXCLUDE>
           Excluded relative path regex. Supports multiple
       --include <INCLUDE>
           Included relative path regex (even if excluded). Supports multiple
       --skip-if-exists <SKIP_IF_EXISTS>
-          Skip file regex if they exist. Supports multiple
+          Skip relative path regex if they exist. Supports multiple
       --compare-size-only <COMPARE_SIZE_ONLY>
-          File regex for those compare size only in HEAD requests. This only works with head_before_get
+          Relative path regex for those compare size only in HEAD requests. This only works with head_before_get
       --allow-mtime-from-parser
           Allow mtime from parser if not available from HTTP headers
       --apt-packages
@@ -94,9 +90,7 @@ Options:
           Print help
   -V, --version
           Print version
-> cargo run -- list --help
-    Finished dev [unoptimized + debuginfo] target(s) in 0.06s
-     Running `target/debug/tsumugu list --help`
+> ./tsumugu list --help
 List files from upstream
 
 Usage: tsumugu list [OPTIONS] <UPSTREAM>
@@ -109,7 +103,7 @@ Options:
       --parser <PARSER>                Choose a main parser [default: nginx] [possible values: nginx, apache-f2, docker, directory-lister, lighttpd, caddy, fancy-index, gradle, fallback]
       --exclude <EXCLUDE>              Excluded relative path regex. Supports multiple
       --include <INCLUDE>              Included relative path regex (even if excluded). Supports multiple
-      --upstream-base <UPSTREAM_BASE>  The upstream base ending with "/" [default: /]
+      --upstream-base <UPSTREAM_BASE>  The upstream base starting with "/" [default: /]
   -h, --help                           Print help
   -V, --version                        Print version
 ```
@@ -187,8 +181,6 @@ YAML example:
 ```yaml
 envs:
   UPSTREAM: http://download.proxmox.com/
-  # tsumugu is not in yuki supported upstream image yet, so this is a workaround to correctly display the upstream URL
-  $UPSTREAM: http://download.proxmox.com/
   TSUMUGU_EXCLUDE: --exclude ^temp --exclude pmg/dists/.+changelog$ --exclude devel/dists/.+changelog$
   TSUMUGU_TIMEZONEFILE: http://download.proxmox.com/images/aplinfo.dat
   TSUMUGU_THREADS: 1

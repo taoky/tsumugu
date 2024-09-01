@@ -2,10 +2,10 @@ use std::str::FromStr;
 
 use anyhow::{anyhow, bail, Result};
 use clap::ValueEnum;
-use regex::Regex;
 use tracing::{info, warn};
 use url::Url;
 
+use crate::regex_process::ExpandedRegex;
 use crate::utils::{get, get_text};
 
 use crate::{listing::ListItem, AsyncContext};
@@ -97,7 +97,7 @@ impl ParserType {
 #[derive(Debug, Clone)]
 pub struct ParserTypeMatch {
     parser_type: ParserType,
-    regex: Regex,
+    regex: ExpandedRegex,
 }
 
 impl FromStr for ParserTypeMatch {
@@ -108,7 +108,7 @@ impl FromStr for ParserTypeMatch {
         let (p, r) = match s.split_once(':') {
             Some((l, r)) => {
                 let p = ParserType::from_str(l, true).map_err(|s| anyhow!(s))?;
-                let r = Regex::new(r)?;
+                let r = ExpandedRegex::from_str(r)?;
                 (p, r)
             }
             None => bail!("No ':' in given ParserTypeMatch"),
@@ -123,7 +123,7 @@ impl FromStr for ParserTypeMatch {
 // A "combined" parser from main parser + supplementary parsers
 pub struct MainSupplementaryCombinedParser {
     main: Box<dyn Parser>,
-    supplementaries: Vec<(Box<dyn Parser>, Regex)>,
+    supplementaries: Vec<(Box<dyn Parser>, ExpandedRegex)>,
     auto_fallback: bool,
 }
 
@@ -149,20 +149,22 @@ impl MainSupplementaryCombinedParser {
     }
 }
 
-impl Parser for MainSupplementaryCombinedParser {
-    fn name(&self) -> &'static str {
-        "MainSupplementaryCombinedParser"
-    }
-
-    fn get_list(&self, async_context: &AsyncContext, url: &Url) -> Result<ListResult, ParserError> {
+impl MainSupplementaryCombinedParser {
+    pub fn get_list_with_filter(
+        &self,
+        async_context: &AsyncContext,
+        url: &Url,
+        relative: &str,
+    ) -> Result<ListResult, ParserError> {
         fn get_list_inner(
             s: &MainSupplementaryCombinedParser,
             async_context: &AsyncContext,
             url: &Url,
+            relative: &str,
         ) -> Result<ListResult, ParserError> {
             for s in s.supplementaries.iter() {
                 let regex = &s.1;
-                if regex.is_match(url.as_str()) {
+                if regex.is_match(relative) {
                     info!("URL {} Matches subparser {}", url, s.0.name());
                     return s.0.get_list(async_context, url);
                 }
@@ -170,7 +172,7 @@ impl Parser for MainSupplementaryCombinedParser {
             s.main.get_list(async_context, url)
         }
 
-        let res = get_list_inner(self, async_context, url);
+        let res = get_list_inner(self, async_context, url, relative);
         if !self.auto_fallback {
             return res;
         }
@@ -185,6 +187,21 @@ impl Parser for MainSupplementaryCombinedParser {
         // start autofallback logic
         warn!("Parse error with {url}: {e}, try fallback...");
         ParserType::Fallback.build().get_list(async_context, url)
+    }
+}
+
+impl Parser for MainSupplementaryCombinedParser {
+    fn name(&self) -> &'static str {
+        "MainSupplementaryCombinedParser"
+    }
+
+    fn get_list(
+        &self,
+        _async_context: &AsyncContext,
+        _url: &Url,
+    ) -> Result<ListResult, ParserError> {
+        // a dirty workaround
+        unreachable!("Please use get_list_with_filter() instead for this parser (as is specially for sync purpose)")
     }
 
     fn is_auto_redirect(&self) -> bool {
