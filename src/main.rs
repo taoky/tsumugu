@@ -172,7 +172,7 @@ pub struct ListArgs {
 
     /// The upstream URL.
     #[clap(value_parser)]
-    upstream_folder: Url,
+    upstream: Url,
 
     /// Choose a main parser.
     #[clap(long, value_enum, default_value_t=ParserType::Nginx)]
@@ -241,12 +241,15 @@ fn main() {
     let args = Cli::parse();
     match args.command {
         Commands::Sync(args) => {
+            if !args.upstream.path().ends_with('/') {
+                tracing::warn!("It's suggested to append backslash to upstream, though this also works in most cases (most web servers redirects this to URL with backslash at end).")
+            }
             cli::sync(&args, bind_address);
         }
         Commands::List(args) => {
             // extra arg check
-            if !args.upstream_folder.path().ends_with('/') {
-                panic!("upstream_folder should end with /");
+            if !args.upstream.path().ends_with('/') {
+                panic!("upstream should end with /");
             }
             cli::list(&args, bind_address);
         }

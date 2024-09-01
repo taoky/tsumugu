@@ -34,7 +34,7 @@ impl Parser for ApacheF2ListingParser {
         let body = get_text(&async_context.runtime, resp)?;
         assert_if_url_has_no_trailing_slash(&url);
         let document = Html::parse_document(&body);
-        // find #indexlist which contains file index
+        // find the indexlist which contains file index
         let selector = Selector::parse("table").unwrap();
         let indexlist;
         loop {

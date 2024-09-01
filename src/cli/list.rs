@@ -1,8 +1,10 @@
 use std::path::PathBuf;
 
 use crate::{
-    parser::ListResult, regex_process::ExclusionManager, utils::build_client, AsyncContext,
-    ListArgs,
+    parser::ListResult,
+    regex_process::{Comparison, ExclusionManager},
+    utils::build_client,
+    AsyncContext, ListArgs,
 };
 
 // TODO: clean code
@@ -16,7 +18,7 @@ pub fn list(args: &ListArgs, bind_address: Option<String>) -> ! {
     };
     let exclusion_manager = ExclusionManager::new(&args.exclude, &args.include);
     // get relative
-    let upstream = &args.upstream_folder;
+    let upstream = &args.upstream;
     let upstream_path = PathBuf::from(upstream.path());
     let relative = upstream_path
         .strip_prefix(&args.upstream_base)
@@ -25,9 +27,13 @@ pub fn list(args: &ListArgs, bind_address: Option<String>) -> ! {
         .unwrap()
         .to_owned();
     let list = parser.get_list(&async_context, upstream).unwrap();
+    let match_cmp = exclusion_manager.match_str(&relative);
 
     println!("Relative: {relative}");
-    println!("Exclusion: {:?}", exclusion_manager.match_str(&relative));
+    println!("Exclusion: {:?}", match_cmp);
+    if match_cmp == Comparison::Stop {
+        tracing::warn!("This listing would NOT be accessed at all.");
+    }
     match list {
         ListResult::Redirect(url) => {
             println!("Redirect to {url}");

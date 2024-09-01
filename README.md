@@ -99,10 +99,10 @@ Options:
      Running `target/debug/tsumugu list --help`
 List files from upstream
 
-Usage: tsumugu list [OPTIONS] <UPSTREAM_FOLDER>
+Usage: tsumugu list [OPTIONS] <UPSTREAM>
 
 Arguments:
-  <UPSTREAM_FOLDER>  The upstream URL
+  <UPSTREAM>  The upstream URL
 
 Options:
       --user-agent <USER_AGENT>        Customize tsumugu's user agent [default: tsumugu]
@@ -114,7 +114,7 @@ Options:
   -V, --version                        Print version
 ```
 
-For a very brief introduction of parser, see [./src/parser/README.md](./src/parser/README.md).
+For a very brief introduction of parser, see [./docs/parser.md](./docs/parser.md).
 
 ## Exit code
 

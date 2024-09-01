@@ -1,16 +1,5 @@
 // An inefficient fallback parser only for non-listing HTML.
-// Limitations:
-// 1. It requires /index.html or /index.htm available.
-// Parser cannot write to disk, so index file would be accessed twice during sync.
-// 2. Currently it ignores files in directories.
-// For example, it recognizes "static/css.css" as contains a "static" directory only.
-// In future it might be implemented when we have another parser returning a full file tree.
-// 3. It would always try HEAD to get file mtime & size. Files with 403/404 code would be ignored.
-// 4. It does not try parse other html files.
-// 5. It only looks for <a>. <img>, <script> and other tags are ignored.
-
-// Remember that tsumugu is NOT a nice tools when upstream does NOT show its file with size & mtime in HTML.
-// This parser shall be used only as a supplementary parser.
+// Read docs/parser.md for known limitations.
 
 use crate::{
     listing::{FileSize, FileType, ListItem},
