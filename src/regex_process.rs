@@ -25,6 +25,8 @@ const REGEX_REPLACEMENTS: &[(&str, &str)] = &[
     ("${SLES_CURRENT}", "(?<distro_ver>12|15)"),
 ];
 
+/// ExpandedRegex contains inner and rev_inner, and would transparently add '/' before string
+/// (and convert regex with ^). A warning would be given if text input contains '/' at front.
 #[derive(Debug, Clone)]
 pub struct ExpandedRegex {
     inner: Regex,
@@ -35,6 +37,12 @@ impl FromStr for ExpandedRegex {
     type Err = regex::Error;
 
     fn from_str(s: &str) -> Result<Self, Self::Err> {
+        // If starts with ^ and not ^/, change start matching character from ^ to ^/
+        let s = if s.starts_with('^') && !s.starts_with("^/") {
+            &format!("^/{}", &s[1..])
+        } else {
+            s
+        };
         let mut s1 = s.to_string();
         for (from, to) in REGEX_REPLACEMENTS {
             s1 = s1.replace(from, to);
@@ -52,11 +60,21 @@ impl FromStr for ExpandedRegex {
 
 // Delegate to inner
 impl ExpandedRegex {
+    fn text_transform(text: &str) -> String {
+        if text.starts_with('/') {
+            tracing::warn!("(unexpected internal input: string given to match_str shall not start with /, anything wrong?)");
+            text.to_string()
+        } else {
+            format!("/{}", text)
+        }
+    }
+
     pub fn is_match(&self, text: &str) -> bool {
-        self.inner.is_match(text)
+        self.inner.is_match(&Self::text_transform(text))
     }
 
     pub fn is_others_match(&self, text: &str) -> bool {
+        let text = &Self::text_transform(text);
         !self.inner.is_match(text) && self.rev_inner.is_match(text)
     }
 }
@@ -151,7 +169,7 @@ mod tests {
     #[test]
     fn test_exclusion() {
         let target =
-            "/debian/pmg/dists/stretch/pmgtest/binary-amd64/grub-efi-amd64-bin_2.02-pve6.changelog";
+            "debian/pmg/dists/stretch/pmgtest/binary-amd64/grub-efi-amd64-bin_2.02-pve6.changelog";
         let exclusions =
             vec![ExpandedRegex::from_str("pmg/dists/.+/pmgtest/.+changelog$").unwrap()];
         let inclusions = vec![];

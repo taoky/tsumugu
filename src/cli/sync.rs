@@ -447,7 +447,7 @@ fn download_handler(
 
     let mut compare_size_only = false;
     for i in &args.compare_size_only {
-        if i.is_match(&expected_path.to_string_lossy()) {
+        if i.is_match(&relative_filepath) {
             compare_size_only = true;
             break;
         }
