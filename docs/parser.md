@@ -46,7 +46,7 @@ You could also check every parser's testing code and corresponding HTML files in
 
 You could use `tsumugu list` to help you debug the parser (and behavior of exclusion/inclusion).
 
-For `--upstream-base`, if your upstream is like `https://some.example.com/`, it would be just `/` (default value). Otherwise if upstream is `https://some.example.com/somedir/`, then it would be `/somedir/`. `upstream_base` is used to show if an item would be included/excluded if `--exclude` or `--include` is set.
+For `--upstream-base`, if your upstream is like `https://some.example.com/`, it would be just `/` (default value). Otherwise if upstream is `https://some.example.com/somedir/`, then it would be `/somedir/` (or `/somedir`). `upstream_base` is used to show if an item would be included/excluded if `--exclude` or `--include` is set.
 
 Example 1:
 

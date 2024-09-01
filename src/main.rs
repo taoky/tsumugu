@@ -186,7 +186,7 @@ pub struct ListArgs {
     #[clap(long, value_parser)]
     include: Vec<ExpandedRegex>,
 
-    /// The upstream base ending with "/".
+    /// The upstream base starting with "/".
     #[clap(long, default_value = "/")]
     upstream_base: String,
 }
@@ -250,6 +250,9 @@ fn main() {
             // extra arg check
             if !args.upstream.path().ends_with('/') {
                 panic!("upstream should end with /");
+            }
+            if !args.upstream_base.starts_with('/') {
+                panic!("upstream_base does not start with /")
             }
             cli::list(&args, bind_address);
         }
