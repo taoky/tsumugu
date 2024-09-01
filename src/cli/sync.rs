@@ -23,7 +23,7 @@ use crate::{
     compare::{should_download_by_header, should_download_by_list},
     extensions::{extension_handler, ExtensionPackage},
     listing::{self, ListItem},
-    parser::{ListResult, MainSupplementaryCombinedParser, Parser as _},
+    parser::{ListResult, ParserMux},
     regex_process::{self, ExclusionManager},
     term::AlternativeTerm,
     timezone::determinate_timezone,
@@ -188,7 +188,7 @@ struct TaskContext<'a> {
 
 fn list_handler(
     args: &SyncArgs,
-    parser: &MainSupplementaryCombinedParser,
+    parser: &ParserMux,
     thr_context: &ThreadsContext,
     task_context: &TaskContext,
 ) {
@@ -432,11 +432,7 @@ fn download_handler(
     });
 }
 
-fn sync_threads(
-    args: &SyncArgs,
-    parser: &MainSupplementaryCombinedParser,
-    thr_context: &ThreadsContext,
-) {
+fn sync_threads(args: &SyncArgs, parser: &ParserMux, thr_context: &ThreadsContext) {
     let exclusion_manager = ExclusionManager::new(&args.exclude, &args.include);
 
     // Handling listing
@@ -588,7 +584,7 @@ fn sync_threads(
 
 pub fn sync(args: &SyncArgs, bind_address: Option<String>) -> ! {
     debug!("{:?}", args);
-    let parser = MainSupplementaryCombinedParser::new(
+    let parser = ParserMux::new(
         args.parser.clone(),
         args.parser_match.clone(),
         args.auto_fallback,

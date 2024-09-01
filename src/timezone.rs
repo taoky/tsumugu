@@ -1,5 +1,5 @@
 use crate::listing::FileType;
-use crate::parser::{ListResult, MainSupplementaryCombinedParser};
+use crate::parser::{ListResult, ParserMux};
 use crate::utils::head;
 use crate::utils::{self, again};
 use crate::AsyncContext;
@@ -12,7 +12,7 @@ use url::Url;
 
 pub fn determinate_timezone(
     args: &SyncArgs,
-    parser: &MainSupplementaryCombinedParser,
+    parser: &ParserMux,
     async_context: &AsyncContext,
 ) -> Option<FixedOffset> {
     match args.timezone {
@@ -39,7 +39,7 @@ pub fn determinate_timezone(
                     // eek, try getting first file in root index
                     fn find_first_file(
                         args: &SyncArgs,
-                        parser: &MainSupplementaryCombinedParser,
+                        parser: &ParserMux,
                         async_context: &AsyncContext,
                         url: &Url,
                         relative: Vec<String>,
@@ -106,7 +106,7 @@ pub fn determinate_timezone(
 }
 
 fn guess_remote_timezone(
-    parser: &MainSupplementaryCombinedParser,
+    parser: &ParserMux,
     async_context: &AsyncContext,
     upstream: &Url,
     base_url: Option<Url>,

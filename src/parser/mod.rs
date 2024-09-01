@@ -121,13 +121,13 @@ impl FromStr for ParserTypeMatch {
 }
 
 // A "combined" parser from main parser + supplementary parsers
-pub struct MainSupplementaryCombinedParser {
+pub struct ParserMux {
     main: Box<dyn Parser>,
     supplementaries: Vec<(Box<dyn Parser>, ExpandedRegex)>,
     auto_fallback: bool,
 }
 
-impl MainSupplementaryCombinedParser {
+impl ParserMux {
     pub fn new(
         main_parser: ParserType,
         supplementary_parsers: Vec<ParserTypeMatch>,
@@ -141,15 +141,13 @@ impl MainSupplementaryCombinedParser {
             .into_iter()
             .map(|s| (s.parser_type.build(), s.regex))
             .collect();
-        MainSupplementaryCombinedParser {
+        ParserMux {
             main,
             supplementaries,
             auto_fallback,
         }
     }
-}
 
-impl MainSupplementaryCombinedParser {
     pub fn get_list_with_filter(
         &self,
         async_context: &AsyncContext,
@@ -157,7 +155,7 @@ impl MainSupplementaryCombinedParser {
         relative: &str,
     ) -> Result<ListResult, ParserError> {
         fn get_list_inner(
-            s: &MainSupplementaryCombinedParser,
+            s: &ParserMux,
             async_context: &AsyncContext,
             url: &Url,
             relative: &str,
@@ -188,23 +186,8 @@ impl MainSupplementaryCombinedParser {
         warn!("Parse error with {url}: {e}, try fallback...");
         ParserType::Fallback.build().get_list(async_context, url)
     }
-}
 
-impl Parser for MainSupplementaryCombinedParser {
-    fn name(&self) -> &'static str {
-        "MainSupplementaryCombinedParser"
-    }
-
-    fn get_list(
-        &self,
-        _async_context: &AsyncContext,
-        _url: &Url,
-    ) -> Result<ListResult, ParserError> {
-        // a dirty workaround
-        unreachable!("Please use get_list_with_filter() instead for this parser (as is specially for sync purpose)")
-    }
-
-    fn is_auto_redirect(&self) -> bool {
+    pub fn is_auto_redirect(&self) -> bool {
         let main_redirect = self.main.is_auto_redirect();
         for s in self.supplementaries.iter() {
             if s.0.is_auto_redirect() != main_redirect {
