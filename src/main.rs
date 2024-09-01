@@ -16,6 +16,7 @@ mod listing;
 mod parser;
 mod regex_process;
 mod term;
+mod timezone;
 mod utils;
 
 mod extensions;

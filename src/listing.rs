@@ -2,15 +2,8 @@
 
 use std::fmt::Display;
 
-use anyhow::Result;
-use chrono::{DateTime, FixedOffset, NaiveDateTime, Utc};
-use tracing::{debug, info};
+use chrono::{FixedOffset, NaiveDateTime};
 use url::Url;
-
-use crate::parser;
-use crate::utils;
-use crate::utils::head;
-use crate::AsyncContext;
 
 #[derive(Debug, PartialEq, Clone, Copy)]
 pub enum FileType {
@@ -175,59 +168,4 @@ impl Display for ListItem {
             self.url, self.type_, size_str, mtime_str, timezone, self.name
         )
     }
-}
-
-pub fn guess_remote_timezone(
-    parser: &dyn parser::Parser,
-    async_context: &AsyncContext,
-    base_url: Option<Url>,
-    file_url: Url,
-) -> Result<FixedOffset> {
-    assert!(!file_url.as_str().ends_with('/'));
-    // trim after the latest '/'
-    // TODO: improve this
-
-    let file_url_str = file_url.as_str();
-    let base_url = match base_url {
-        Some(b) => b,
-        None => Url::parse(&file_url_str[..=file_url_str.rfind('/').unwrap()]).unwrap(),
-    };
-
-    info!("base: {:?}", base_url);
-    info!("file: {:?}", file_url);
-
-    let list = parser.get_list(async_context, &base_url)?;
-    let list = match list {
-        parser::ListResult::Redirect(_) => {
-            anyhow::bail!("Redirection not supported");
-        }
-        parser::ListResult::List(list) => list,
-    };
-    debug!("{:?}", list);
-    for item in list {
-        if item.url == file_url {
-            // access file_url with HEAD
-            let resp = head(
-                &async_context.runtime,
-                &async_context.download_client,
-                file_url,
-            )?;
-            let mtime = utils::get_response_mtime(&resp)?;
-
-            // compare how many hours are there between mtime (FixedOffset) and item.mtime (Naive)
-            // assuming that Naive one is UTC
-            let unknown_mtime = DateTime::<Utc>::from_naive_utc_and_offset(item.mtime, Utc);
-            let offset = unknown_mtime - mtime;
-            let hrs = (offset.num_minutes() as f64 / 60.0).round() as i32;
-
-            // Construct timezone by hrs
-            let timezone = FixedOffset::east_opt(hrs * 3600).unwrap();
-            info!(
-                "html time: {:?}, head time: {:?}, timezone: {:?}",
-                item.mtime, mtime, timezone
-            );
-            return Ok(timezone);
-        }
-    }
-    anyhow::bail!("File not found")
 }
