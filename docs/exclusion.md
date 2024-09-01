@@ -46,12 +46,14 @@ let relative_filepath = relative_filepath.to_string_lossy();
 
 As a result, the path (file & dir) given for filtering **DOES NOT have '/' at front or back**.
 
-However, currently tsumugu could automatically handle `/` at the beginning:
+However, currently tsumugu could automatically handle `/` at the beginning, for compatibilities considerations:
 
-1. User regex which starts with `^` and not `^/`, would be replaced: `^` -> `^/`.
+1. User regex which starts with `^` and not `^/`, would be replaced: `^` -> `^/` (this might break some very rare regexes).
 2. All inputs given to regex comparison are automatically prepended with `/`.
 
 So you could **write `/something$` to exclude ALL files and directories with name `something`**, instead of using 2 regexes (`^something$` and `/something$`, to match `something` at root and others not in root).
+
+And also, `upstream` itself is NOT included when comparing. So if your upstream is set to `https://some.example.com/dir/`, you need to exclude `^something` to exclude `https://some.example.com/dir/something/` instead of `^dir/something`.
 
 You might see arguments like `--exclude debian/ --include debian/dists/${DEBIAN_CURRENT}`, with trailing slash exclusion in examples. This is just because we don't need to exclude directory listing of `debian` folder out.
 
