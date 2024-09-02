@@ -1,7 +1,7 @@
 envs:
   UPSTREAM: https://download.zerotier.com/
   TSUMUGU_EXCLUDE: >
-    --exclude /1.8.[123]/dist/wd/$
+    --exclude /1.8.[123]/dist/wd$
     --exclude /1.8.[123]/dist/ubiquiti/zerotier-one_latest_mips.deb$
     --exclude /dist/dist/
   # looks like that zerotier server does not report correct mtime
