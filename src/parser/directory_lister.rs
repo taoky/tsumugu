@@ -16,6 +16,25 @@ impl Parser for DirectoryListerListingParser {
         "Directory Lister"
     }
 
+    fn get_path(&self, url: &Url) -> PathBuf {
+        // Extract things after ?dir
+        let dir = url
+            .query_pairs()
+            .find(|(key, _value)| key == "dir")
+            .map(|(_key, value)| value.to_string());
+        let mut dir = match dir {
+            Some(d) => d,
+            None => return PathBuf::from(url.path()),
+        };
+        if !dir.starts_with('/') {
+            dir.insert(0, '/');
+        }
+        if !dir.ends_with('/') {
+            dir.push('/');
+        }
+        PathBuf::from(dir)
+    }
+
     fn get_list(
         &self,
         async_context: &AsyncContext,

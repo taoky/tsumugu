@@ -1,3 +1,4 @@
+use std::path::PathBuf;
 use std::str::FromStr;
 
 use anyhow::{anyhow, bail, Result};
@@ -59,6 +60,11 @@ pub trait Parser: Sync {
         true
     }
     fn name(&self) -> &'static str;
+
+    /// Used for list command only
+    fn get_path(&self, url: &Url) -> PathBuf {
+        PathBuf::from(url.path())
+    }
 }
 
 #[derive(ValueEnum, Clone, Debug, PartialEq)]

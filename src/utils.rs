@@ -191,8 +191,8 @@ pub fn naive_to_utc(naive: &chrono::NaiveDateTime, timezone: Option<FixedOffset>
     }
 }
 
-pub fn relative_to_str(relative: &[String], filename: Option<&str>) -> String {
-    let mut r = relative.join("/");
+pub fn relative_str_process(relative: &str) -> String {
+    let mut r = relative.to_string();
     if r.starts_with('/') {
         warn!("unexpected / at the beginning of relative ({r})");
     } else {
@@ -205,6 +205,12 @@ pub fn relative_to_str(relative: &[String], filename: Option<&str>) -> String {
             r.push('/')
         }
     }
+    r
+}
+
+pub fn relative_to_str(relative: &[String], filename: Option<&str>) -> String {
+    let r = relative.join("/");
+    let r = relative_str_process(&r);
 
     // here r already has / at the end
     match filename {

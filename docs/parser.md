@@ -51,8 +51,8 @@ For `--upstream-base`, if your upstream is like `https://some.example.com/`, it 
 Example 1:
 
 ```console
-$ ./tsumugu list --parser lighttpd --exclude edk2/git/MdeModulePkg/Universal/RegularExpressionDxe/oniguruma --upstream-base / https://sources.buildroot.net/edk2/git/MdeModulePkg/Universal/RegularExpressionDxe/
-Relative: edk2/git/MdeModulePkg/Universal/RegularExpressionDxe
+$ ./tsumugu list --parser lighttpd --exclude /edk2/git/MdeModulePkg/Universal/RegularExpressionDxe/oniguruma/ --upstream-base / https://sources.buildroot.net/edk2/git/MdeModulePkg/Universal/RegularExpressionDxe/
+Relative: /edk2/git/MdeModulePkg/Universal/RegularExpressionDxe/
 Exclusion: Ok
 https://sources.buildroot.net/edk2/git/MdeModulePkg/Universal/RegularExpressionDxe/oniguruma/ Directory (none) 2023-09-07 20:21:46 oniguruma (stop)
 https://sources.buildroot.net/edk2/git/MdeModulePkg/Universal/RegularExpressionDxe/OnigurumaUefiPort.c File 2.9 K 2023-09-07 20:21:19 OnigurumaUefiPort.c
@@ -63,7 +63,7 @@ Example 2:
 
 ```console
 $ ./tsumugu list --parser apache-f2 --exclude ^fedora --upstream-base /wine-builds/ https://dl.winehq.org/wine-builds/fedora/
-Relative: fedora
+Relative: /fedora/
 Exclusion: Stop
 2024-09-01T18:47:29.966453Z  WARN ThreadId(01) tsumugu::cli::list: This listing would NOT be accessed at all.
 https://dl.winehq.org/wine-builds/fedora/24/ Directory (none) 2018-12-16 15:16:00 24 (stop)
@@ -84,7 +84,7 @@ https://dl.winehq.org/wine-builds/fedora/38/ Directory (none) 2024-05-04 12:55:0
 https://dl.winehq.org/wine-builds/fedora/39/ Directory (none) 2024-07-29 03:48:00 39 (stop)
 https://dl.winehq.org/wine-builds/fedora/40/ Directory (none) 2024-07-29 03:49:00 40 (stop)
 $ ./tsumugu list --parser apache-f2 --exclude ^fedora --include '^fedora/${FEDORA_CURRENT}' --upstream-base /wine-builds/ https://dl.winehq.org/wine-builds/fedora/
-Relative: fedora
+Relative: /fedora/
 Exclusion: ListOnly
 https://dl.winehq.org/wine-builds/fedora/24/ Directory (none) 2018-12-16 15:16:00 24 (stop)
 https://dl.winehq.org/wine-builds/fedora/25/ Directory (none) 2018-12-16 15:18:00 25 (stop)

@@ -1,9 +1,7 @@
-use std::path::PathBuf;
-
 use crate::{
     parser::ListResult,
     regex_process::{Comparison, ExclusionManager},
-    utils::build_client,
+    utils::{build_client, relative_str_process},
     AsyncContext, ListArgs,
 };
 
@@ -19,13 +17,15 @@ pub fn list(args: &ListArgs, bind_address: Option<String>) -> ! {
     let exclusion_manager = ExclusionManager::new(&args.exclude, &args.include);
     // get relative
     let upstream = &args.upstream;
-    let upstream_path = PathBuf::from(upstream.path());
+    let upstream_path = parser.get_path(upstream);
     let relative = upstream_path
         .strip_prefix(&args.upstream_base)
         .unwrap()
         .to_str()
         .unwrap()
         .to_owned();
+    let relative = relative_str_process(&relative);
+    assert!(relative.starts_with('/') && relative.ends_with('/'));
     let list = parser.get_list(&async_context, upstream).unwrap();
     let match_cmp = exclusion_manager.match_str(&relative);
 
@@ -41,7 +41,7 @@ pub fn list(args: &ListArgs, bind_address: Option<String>) -> ! {
         ListResult::List(list) => {
             for item in list {
                 print!("{item}");
-                let new_relative = format!("{}/{}", relative, item.name);
+                let new_relative = format!("{}{}", relative, item.name);
                 tracing::debug!("new_relative: {new_relative}");
                 println!(
                     "{}",
