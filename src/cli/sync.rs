@@ -501,7 +501,8 @@ fn sync_threads(args: &SyncArgs, parser: &ParserMux, thr_context: &ThreadsContex
                         .and_then(|s| s.success())
                     }) {
                         let relative = relative_to_str(&task.relative, None);
-                        let cwd = thr_context.download_dir.join(&relative);
+                        // When relative is used to join with cwd, the heading `/` shall be removed.
+                        let cwd = thr_context.download_dir.join(&relative[1..]);
                         debug!("cwd: {:?}, relative: {:?}", cwd, relative);
                         // exclude this?
                         // note that it only checks the relative folder!
