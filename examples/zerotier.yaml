@@ -1,6 +1,9 @@
 envs:
   UPSTREAM: https://download.zerotier.com/
-  TSUMUGU_EXCLUDE: --exclude 1.8.[123]/dist/wd$ --exclude 1.8.[123]/dist/ubiquiti/zerotier-one_latest_mips.deb$ --exclude dist/dist/
+  TSUMUGU_EXCLUDE: >
+    --exclude 1.8.[123]/dist/wd$
+    --exclude 1.8.[123]/dist/ubiquiti/zerotier-one_latest_mips.deb$
+    --exclude dist/dist/
 image: ustcmirror/tsumugu:latest
 cron: 33 2 * * *
 logRotCycle: 10
