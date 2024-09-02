@@ -34,27 +34,50 @@ Currently tsumugu follows a simple algorithm to determine whether a path should 
 
 In this process some paths, which would be unnecessary, will still be listed. However, this logic suits needs of filtering OS versions well.
 
-Also note that logic like this is used when generating relative path for comparison:
+Also note that currently, this is used when generating relative path for comparison:
 
 ```rust
-// Before working on one task:
-let relative = task.relative.join("/");  // -> task_context.relative
-// Before downloading a file:
-let relative_filepath = PathBuf::from(&task_context.relative).join(&item.name);
-let relative_filepath = relative_filepath.to_string_lossy();
+pub fn relative_to_str(relative: &[String], filename: Option<&str>) -> String {
+    let mut r = relative.join("/");
+    if r.starts_with('/') {
+        warn!("unexpected / at the beginning of relative ({r})");
+    } else {
+        r.insert(0, '/');
+    }
+    if r.len() != 1 {
+        if r.ends_with('/') {
+            warn!("unexpected / at the end of relative ({r})")
+        } else {
+            r.push('/')
+        }
+    }
+
+    // here r already has / at the end
+    match filename {
+        None => r,
+        Some(filename) => {
+            assert!(!filename.starts_with('/') && !filename.ends_with('/'));
+            format!("{}{}", r, filename)
+        }
+    }
+}
 ```
 
-As a result, the path (file & dir) given for filtering **DOES NOT have '/' at front or back**.
+As a result:
 
-However, currently tsumugu could automatically handle `/` at the beginning, for compatibilities considerations:
+1. All relative paths for comparison have "/" at front.
+2. Directory paths have "/" at back, and files don't.
 
-1. User regex which starts with `^` and not `^/`, would be replaced: `^` -> `^/` (this might break some very rare regexes).
-2. All inputs given to regex comparison are automatically prepended with `/`.
+Examples:
+
+1. `http://example.com/file` => `/file`
+2. `http://example.com/dir` => `/dir/`
+3. `http://example.com/dir/file` => `/dir/file`
+
+Not that for compatibilities considerations, this trick is done: User regex which starts with `^` and not `^/`, would be replaced: `^` -> `^/` (this might break some very rare regexes).
 
 So you could **write `/something$` to exclude ALL files and directories with name `something`**, instead of using 2 regexes (`^something$` and `/something$`, to match `something` at root and others not in root).
 
-And also, `upstream` itself is NOT included when comparing. So if your upstream is set to `https://some.example.com/dir/`, you need to exclude `^something` to exclude `https://some.example.com/dir/something/` instead of `^dir/something`.
-
-You might see arguments like `--exclude debian/ --include debian/dists/${DEBIAN_CURRENT}`, with trailing slash exclusion in examples. This is just because we don't need to exclude directory listing of `debian` folder out.
+And also, `upstream` itself is NOT included when comparing. So if your upstream is set to `https://some.example.com/dir/`, you need to exclude `^something/` to exclude `https://some.example.com/dir/something/` instead of `^dir/something/`.
 
 Test with [tsumugu list](./parser.md#debugging), if in doubt.

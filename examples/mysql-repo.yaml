@@ -1,16 +1,16 @@
 envs:
   TSUMUGU_EXCLUDE: >
-    --exclude apt/dists/
-    --exclude apt/pool/
-    --exclude ubuntu/dists/
-    --include ubuntu/dists/${UBUNTU_LTS}
-    --exclude debian/dists/
-    --include debian/dists/${DEBIAN_CURRENT}
+    --exclude /apt/dists/
+    --exclude /apt/pool/
+    --exclude /ubuntu/dists/
+    --include /ubuntu/dists/${UBUNTU_LTS}/
+    --exclude /debian/dists/
+    --include /debian/dists/${DEBIAN_CURRENT}/
     --exclude /fc/
-    --include /fc/${FEDORA_CURRENT}
+    --include /fc/${FEDORA_CURRENT}/
     --exclude /el/
-    --include /el/${RHEL_CURRENT}
-    --exclude yum/mysql-tools-preview/
+    --include /el/${RHEL_CURRENT}/
+    --exclude /yum/mysql-tools-preview/
     --exclude dbgsym
     --exclude debuginfo
   UPSTREAM: https://repo.mysql.com/

@@ -127,6 +127,8 @@ Unfortunately, this requires openssl-sys, which is not included in cross's prebu
 
 Default concurrency is 2 threads.
 
+(Note: Please see [examples](./examples/) for latest commands to sync.)
+
 ### http://download.proxmox.com/
 
 Proxmox uses a self-hosted CDN server architecture, and unfortunately its server limits concurrency to only 1 (as far as I could test). With traditional lftp/rclone it could take > 10 hours to sync once (even when your local files are identical with remote ones).
@@ -198,6 +200,8 @@ More examples in [examples/](./examples/).
 See [./src/regex_process.rs](./src/regex_process.rs).
 
 ### Exclusion and inclusion
+
+**There's a breaking change since 20240902. User regexes with `^` and `$` would be affected.**
 
 See [./docs/exclusion.md](./docs/exclusion.md).
 

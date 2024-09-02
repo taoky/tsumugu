@@ -1,7 +1,7 @@
 use crate::listing::FileType;
 use crate::parser::{ListResult, ParserMux};
-use crate::utils::head;
 use crate::utils::{self, again};
+use crate::utils::{head, relative_to_str};
 use crate::AsyncContext;
 use crate::{parser, SyncArgs};
 
@@ -45,7 +45,7 @@ pub fn determinate_timezone(
                         relative: Vec<String>,
                     ) -> Option<(Option<Url>, Url)> {
                         info!("Try finding first File in {}", url);
-                        let relative_str = relative.join("/");
+                        let relative_str = relative_to_str(&relative, None);
                         let list = again(|| Ok(parser.get_list_with_filter(async_context, url, &relative_str)?), args.retry)
                             .unwrap_or_else(|_| panic!("Failed to get list for {}. Maybe you shall disable timezone guessing?", url));
                         match list {

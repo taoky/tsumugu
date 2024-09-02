@@ -1,6 +1,10 @@
 envs:
   UPSTREAM: https://dev.packages.vyos.net/
-  TSUMUGU_EXCLUDE: --exclude [=/]tmp --exclude /legacy --exclude /sagitta --exclude /equuleus
+  TSUMUGU_EXCLUDE: >
+    --exclude [=/]tmp
+    --exclude /legacy/
+    --exclude /sagitta/
+    --exclude /equuleus/
   TSUMUGU_PARSER: directory-lister
   TSUMUGU_EXTRA: --allow-mtime-from-parser
 image: ustcmirror/tsumugu:latest

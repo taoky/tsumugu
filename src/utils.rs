@@ -191,9 +191,35 @@ pub fn naive_to_utc(naive: &chrono::NaiveDateTime, timezone: Option<FixedOffset>
     }
 }
 
+pub fn relative_to_str(relative: &[String], filename: Option<&str>) -> String {
+    let mut r = relative.join("/");
+    if r.starts_with('/') {
+        warn!("unexpected / at the beginning of relative ({r})");
+    } else {
+        r.insert(0, '/');
+    }
+    if r.len() != 1 {
+        if r.ends_with('/') {
+            warn!("unexpected / at the end of relative ({r})")
+        } else {
+            r.push('/')
+        }
+    }
+
+    // here r already has / at the end
+    match filename {
+        None => r,
+        Some(filename) => {
+            assert!(!filename.starts_with('/') && !filename.ends_with('/'));
+            format!("{}{}", r, filename)
+        }
+    }
+}
+
 #[cfg(test)]
 mod tests {
     use super::*;
+    use test_log::test;
 
     #[test]
     fn test_naive_to_utc() {
@@ -205,5 +231,21 @@ mod tests {
         assert_eq!(utc.to_string(), "2020-12-31 16:00:00 UTC");
         let utc = naive_to_utc(&naive, None);
         assert_eq!(utc.to_string(), "2021-01-01 00:00:00 UTC");
+    }
+
+    #[test]
+    fn test_relative() {
+        let mut relative: Vec<String> = vec![];
+        assert_eq!(relative_to_str(&relative, None), "/");
+        relative.push("debian".to_string());
+        assert_eq!(relative_to_str(&relative, None), "/debian/");
+        relative.push("dists".to_string());
+        assert_eq!(relative_to_str(&relative, None), "/debian/dists/");
+        relative.push("bookworm".to_string());
+        assert_eq!(relative_to_str(&relative, None), "/debian/dists/bookworm/");
+        assert_eq!(
+            relative_to_str(&relative, Some("Release")),
+            "/debian/dists/bookworm/Release"
+        );
     }
 }

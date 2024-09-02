@@ -27,7 +27,10 @@ use crate::{
     regex_process::{self, ExclusionManager},
     term::AlternativeTerm,
     timezone::determinate_timezone,
-    utils::{self, again, again_async, build_client, get_async, head, is_symlink, naive_to_utc},
+    utils::{
+        self, again, again_async, build_client, get_async, head, is_symlink, naive_to_utc,
+        relative_to_str,
+    },
     AsyncContext, SyncArgs,
 };
 
@@ -177,7 +180,8 @@ struct ThreadsContext<'a> {
 struct TaskContext<'a> {
     task: &'a Task,
     cwd: &'a Path,
-    relative: &'a str,
+    /// current dir, or dir of current file
+    relative: &'a Vec<String>,
     worker: &'a Worker<Task>,
     wake: &'a AtomicUsize,
     exclusion_result: regex_process::Comparison,
@@ -208,14 +212,9 @@ fn list_handler(
         return;
     }
 
+    let relative = &relative_to_str(task_context.relative, None);
     let items = match again(
-        || {
-            Ok(parser.get_list_with_filter(
-                task_context.async_context,
-                &task.url,
-                task_context.relative,
-            )?)
-        },
+        || Ok(parser.get_list_with_filter(task_context.async_context, &task.url, relative)?),
         args.retry,
     ) {
         Ok(items) => items,
@@ -310,8 +309,7 @@ fn download_handler(
     // Absolute filesystem path of expected file
     let expected_path = cwd.join(&item.name);
     // Here relative filepath is only used to check exclusion
-    let relative_filepath = PathBuf::from(&task_context.relative).join(&item.name);
-    let relative_filepath = relative_filepath.to_string_lossy();
+    let relative_filepath = relative_to_str(task_context.relative, Some(&item.name));
     debug!(
         "expected_path: {:?}, relative: {:?}",
         expected_path, relative_filepath
@@ -502,7 +500,7 @@ fn sync_threads(args: &SyncArgs, parser: &ParserMux, thr_context: &ThreadsContex
                         .find(|s| !s.is_retry())
                         .and_then(|s| s.success())
                     }) {
-                        let relative = task.relative.join("/");
+                        let relative = relative_to_str(&task.relative, None);
                         let cwd = thr_context.download_dir.join(&relative);
                         debug!("cwd: {:?}, relative: {:?}", cwd, relative);
                         // exclude this?
@@ -518,7 +516,7 @@ fn sync_threads(args: &SyncArgs, parser: &ParserMux, thr_context: &ThreadsContex
                         let task_context = TaskContext {
                             task: &task,
                             cwd: &cwd,
-                            relative: &relative,
+                            relative: &task.relative,
                             worker: &worker,
                             wake: &wake,
                             exclusion_result,
@@ -683,19 +681,4 @@ pub fn sync(args: &SyncArgs, bind_address: Option<String>) -> ! {
     );
 
     std::process::exit(exit_code);
-}
-
-#[cfg(test)]
-mod tests {
-    // use super::*;
-
-    #[test]
-    fn test_relative() {
-        let mut relative: Vec<String> = vec![];
-        assert_eq!(relative.join("/"), "");
-        relative.push("debian".to_string());
-        assert_eq!(relative.join("/"), "debian");
-        relative.push("dists".to_string());
-        assert_eq!(relative.join("/"), "debian/dists");
-    }
 }

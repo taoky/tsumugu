@@ -61,11 +61,11 @@ impl FromStr for ExpandedRegex {
 // Delegate to inner
 impl ExpandedRegex {
     fn text_transform(text: &str) -> String {
-        if text.starts_with('/') {
-            tracing::warn!("(unexpected internal input: string given to match_str shall not start with /, anything wrong?)");
-            text.to_string()
-        } else {
+        if !text.starts_with('/') {
+            tracing::warn!("(unexpected internal input: string given to match_str shall start with /, anything wrong?)");
             format!("/{}", text)
+        } else {
+            text.to_string()
         }
     }
 
@@ -169,7 +169,7 @@ mod tests {
     #[test]
     fn test_exclusion() {
         let target =
-            "debian/pmg/dists/stretch/pmgtest/binary-amd64/grub-efi-amd64-bin_2.02-pve6.changelog";
+            "/debian/pmg/dists/stretch/pmgtest/binary-amd64/grub-efi-amd64-bin_2.02-pve6.changelog";
         let exclusions =
             vec![ExpandedRegex::from_str("pmg/dists/.+/pmgtest/.+changelog$").unwrap()];
         let inclusions = vec![];
@@ -179,11 +179,11 @@ mod tests {
 
     #[test]
     fn test_partial() {
-        let target1 = "yum/mysql-tools-community/fc/24/x86_64";
-        let target2 = "yum/mysql-tools-community/fc/40/x86_64";
-        let target3 = "yum/mysql-tools-community/fc/";
-        let target4 = "yum/mysql-tools-community/fc/24/";
-        let target5 = "yum/mysql-tools-community/fc/40/";
+        let target1 = "/yum/mysql-tools-community/fc/24/x86_64";
+        let target2 = "/yum/mysql-tools-community/fc/40/x86_64";
+        let target3 = "/yum/mysql-tools-community/fc/";
+        let target4 = "/yum/mysql-tools-community/fc/24/";
+        let target5 = "/yum/mysql-tools-community/fc/40/";
         let exclusions = vec![ExpandedRegex::from_str("/fc/").unwrap()];
         let inclusions = vec![ExpandedRegex::from_str("/fc/${FEDORA_CURRENT}").unwrap()];
         debug!("exclusions: {:?}", exclusions);
@@ -198,8 +198,8 @@ mod tests {
 
     #[test]
     fn test_exclude_dbg() {
-        let target1 = "yum/mysql-8.0-community/docker/el/8/aarch64/mysql-community-server-minimal-8.0.33-1.el8.aarch64.rpm";
-        let target2 = "yum/mysql-8.0-community/docker/el/8/debuginfo/x86_64/mysql-community-server-minimal-debuginfo-8.0.24-1.el8.x86_64.rpm";
+        let target1 = "/yum/mysql-8.0-community/docker/el/8/aarch64/mysql-community-server-minimal-8.0.33-1.el8.aarch64.rpm";
+        let target2 = "/yum/mysql-8.0-community/docker/el/8/debuginfo/x86_64/mysql-community-server-minimal-debuginfo-8.0.24-1.el8.x86_64.rpm";
         let exclusions = vec![
             ExpandedRegex::from_str("/el/").unwrap(),
             ExpandedRegex::from_str("debuginfo").unwrap(),
