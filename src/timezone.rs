@@ -5,7 +5,7 @@ use crate::utils::{head, relative_to_str};
 use crate::AsyncContext;
 use crate::{parser, SyncArgs};
 
-use anyhow::Result;
+use anyhow::{bail, Result};
 use chrono::{DateTime, FixedOffset, Utc};
 use tracing::{debug, info};
 use url::Url;
@@ -50,25 +50,22 @@ pub fn determinate_timezone(
                             .unwrap_or_else(|_| panic!("Failed to get list for {}. Maybe you shall disable timezone guessing?", url));
                         match list {
                             ListResult::List(list) => {
-                                for item in list {
-                                    match item.type_ {
-                                        FileType::File => {
-                                            info!("Find a file! URL: {}", item.url);
-                                            return Some((Some(url.clone()), item.url));
-                                        }
-                                        FileType::Directory => {
-                                            let mut relative = relative.clone();
-                                            relative.push(item.name);
-                                            if let Some(res) = find_first_file(
-                                                args,
-                                                parser,
-                                                async_context,
-                                                &item.url,
-                                                relative,
-                                            ) {
-                                                return Some(res);
-                                            }
-                                        }
+                                if let Some(item) = list.iter().find(|x| x.type_ == FileType::File)
+                                {
+                                    info!("Find a file! URL: {}", item.url);
+                                    return Some((Some(url.clone()), item.url.clone()));
+                                }
+                                for item in list.iter().filter(|x| x.type_ == FileType::Directory) {
+                                    let mut relative = relative.clone();
+                                    relative.push(item.name.clone());
+                                    if let Some(res) = find_first_file(
+                                        args,
+                                        parser,
+                                        async_context,
+                                        &item.url,
+                                        relative,
+                                    ) {
+                                        return Some(res);
                                     }
                                 }
                                 None
@@ -149,10 +146,18 @@ fn guess_remote_timezone(
             // assuming that Naive one is UTC
             let unknown_mtime = DateTime::<Utc>::from_naive_utc_and_offset(item.mtime, Utc);
             let offset = unknown_mtime - mtime;
-            let hrs = (offset.num_minutes() as f64 / 60.0).round() as i32;
+            let offset_minutes = offset.num_minutes();
+            let hrs = (offset_minutes as f64 / 60.0).round() as i32;
+
+            let minute_delta = (hrs as i64 * 60 - offset_minutes).abs();
+            if minute_delta > 20 {
+                bail!("File mtime got from parser and response does not match.");
+            }
 
             // Construct timezone by hrs
-            let timezone = FixedOffset::east_opt(hrs * 3600).unwrap();
+            let timezone = FixedOffset::east_opt(hrs * 3600).ok_or(anyhow::anyhow!(
+                "Cannot convert to timezone (offset hour = {hrs})."
+            ))?;
             info!(
                 "html time: {:?}, head time: {:?}, timezone: {:?}",
                 item.mtime, mtime, timezone

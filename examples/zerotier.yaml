@@ -4,6 +4,10 @@ envs:
     --exclude /1.8.[123]/dist/wd/$
     --exclude /1.8.[123]/dist/ubiquiti/zerotier-one_latest_mips.deb$
     --exclude /dist/dist/
+  # looks like that zerotier server does not report correct mtime
+  TSUMUGU_EXTRA: >
+    --allow-mtime-from-parser
+    --timezone 0
 image: ustcmirror/tsumugu:latest
 cron: 33 2 * * *
 logRotCycle: 10
