@@ -11,12 +11,22 @@ envs:
   TSUMUGU_EXCLUDE: >
     --exclude /debian/
     --include /debian/dists/${DEBIAN_CURRENT}
+    --include /debian/dists/gpg
     --exclude /fedora/
     --include /fedora/docker-ce.+
     --include /fedora/${FEDORA_CURRENT}/
     --exclude /ubuntu/
     --include /ubuntu/dists/${UBUNTU_LTS}/
     --include /ubuntu/dists/${UBUNTU_NONLTS}/
+    --include /ubuntu/dists/gpg
+    --exclude /centos/
+    --include /centos/${RHEL_CURRENT}.*/
+    --include /centos/docker-ce.+
+    --include /centos/gpg
+    --exclude /rhel/
+    --include /rhel/${RHEL_CURRENT}.*/
+    --include /rhel/docker-ce.+
+    --include /rhel/gpg
 image: ustcmirror/tsumugu:latest
 cron: 10 4 * * *
 logRotCycle: 10
