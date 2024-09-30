@@ -438,7 +438,7 @@ fn sync_threads(args: &SyncArgs, parser: &ParserMux, thr_context: &ThreadsContex
         args,
         parser.is_auto_redirect(),
         thr_context.bind_address.as_ref(),
-        // some servers (such as download.zerotier.com) would give you gziped list even if you don't ask for that,
+        // some servers (such as download.zerotier.com) would give you gzipped list even if you don't ask for that,
         // so just enable auto compression when requesting listing
         true,
     );

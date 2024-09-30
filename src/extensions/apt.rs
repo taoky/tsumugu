@@ -112,9 +112,9 @@ pub fn parse_package(
         let size = package.size;
         let url = debian_root_url.join(&pool_url)?;
 
-        let mut pool_splited: Vec<String> = pool_url.split('/').map(|s| s.to_string()).collect();
+        let mut pool_split: Vec<String> = pool_url.split('/').map(|s| s.to_string()).collect();
         let mut relative = root_relative.clone();
-        relative.append(&mut pool_splited);
+        relative.append(&mut pool_split);
 
         let basename = relative.pop().unwrap();
 

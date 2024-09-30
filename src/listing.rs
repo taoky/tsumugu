@@ -70,7 +70,7 @@ impl Display for FileSize {
 
 impl FileSize {
     pub fn get_humanized(s: &str) -> (f64, SizeUnit) {
-        // seperate numeric and unit
+        // separate numeric and unit
         let mut numeric = String::new();
         let mut unit = String::new();
         for c in s.chars() {

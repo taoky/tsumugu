@@ -77,9 +77,9 @@ pub fn parse_package(
     let mut res = vec![];
     for package in packages {
         let url = base_url.join(&package)?;
-        let splited: Vec<String> = package.split('/').map(|s| s.to_string()).collect();
+        let split: Vec<String> = package.split('/').map(|s| s.to_string()).collect();
         let mut relative = relative.clone();
-        relative.append(&mut splited.clone());
+        relative.append(&mut split.clone());
 
         let basename = relative.pop().unwrap();
         res.push(YumPackage {

@@ -94,7 +94,7 @@ pub struct SyncArgs {
     local: PathBuf,
 
     /// You can set a valid URL for guessing. Set it to "no" to disable this behavior.
-    /// By default it would recursivelly find the first file to HEAD for guessing
+    /// By default it would recursively find the first file to HEAD for guessing
     #[clap(long)]
     timezone_file: Option<String>,
 

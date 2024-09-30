@@ -57,7 +57,7 @@ Options:
       --max-delete <MAX_DELETE>
           Set max delete count [default: 100]
       --timezone-file <TIMEZONE_FILE>
-          You can set a valid URL for guessing. Set it to "no" to disable this behavior. By default it would recursivelly find the first file to HEAD for guessing
+          You can set a valid URL for guessing. Set it to "no" to disable this behavior. By default it would recursively find the first file to HEAD for guessing
       --timezone <TIMEZONE>
           Manually set timezone (+- hrs). This overrides timezone_file
       --retry <RETRY>

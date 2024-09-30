@@ -40,7 +40,7 @@ fn proxy_precheck() {
             && !s.starts_with("socks5://")
             && !s.starts_with("socks5h://")
         {
-            warn!("Unknown protcol in proxy env, this might be silently ignored by reqwest.");
+            warn!("Unknown protocol in proxy env, this might be silently ignored by reqwest.");
             return;
         }
         let url = match Url::parse(s) {
