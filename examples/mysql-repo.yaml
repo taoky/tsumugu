@@ -14,7 +14,7 @@ envs:
     --exclude dbgsym
     --exclude debuginfo
   UPSTREAM: https://repo.mysql.com/
-  TSUMUGU_EXTRA: --apt-packages --yum-packages
+  TSUMUGU_EXTRA: --apt-packages --yum-packages --ignore-nonexist
 image: ustcmirror/tsumugu:latest
 cron: 15 5 * * *
 logRotCycle: 10
