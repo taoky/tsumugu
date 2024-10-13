@@ -241,8 +241,13 @@ fn list_handler(
                     );
                 } else {
                     if task_context.exclusion_result == regex_process::Comparison::ListOnly {
-                        info!("Skipping (by list only) {}", item.url);
-                        continue;
+                        // Even though the dir is ListOnly, it could be possible that the file itself under dir is "included".
+                        // So we need to check again...
+                        let relative_filepath = relative_to_str(task_context.relative, Some(&item.name));
+                        if !(task_context.exclusion_manager.match_str(&relative_filepath) == regex_process::Comparison::Ok) {
+                            info!("Skipping (by list only) {}", item.url);
+                            continue;
+                        }
                     }
                     worker_add_task(
                         task_context.worker,

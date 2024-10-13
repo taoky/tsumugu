@@ -30,7 +30,7 @@ Currently tsumugu follows a simple algorithm to determine whether a path should 
     2. Then, the path will be checked with `rev_inner` regex by `is_others_match()`, and also completely excluded if matches (a fast shortcut).
 
        This is used for cases like Fedora -- it has many versions (currently from 1 to 40). Listing other version folders not in `${FEDORA_CURRENT}` is a waste of time and network. With this trick we could skip these unmatched versions.
-    3. Finally, if the path matches `list_only_regexes`, files under this directory will be ignored, but subdirectories will still be listed. Paths that are not matched by any regexes will be included as usual.
+    3. Finally, if the path matches `list_only_regexes`, files under this directory will be ignored (unless they are matched by `include_regexes`), but subdirectories will still be listed. Paths that are not matched by any regexes will be included as usual.
 
 In this process some paths, which would be unnecessary, will still be listed. However, this logic suits needs of filtering OS versions well.
 
