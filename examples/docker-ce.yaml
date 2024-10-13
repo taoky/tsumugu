@@ -11,14 +11,14 @@ envs:
   TSUMUGU_EXCLUDE: >
     --exclude /debian/
     --include /debian/dists/${DEBIAN_CURRENT}
-    --include /debian/dists/gpg
+    --include /debian/gpg
     --exclude /fedora/
     --include /fedora/docker-ce.+
     --include /fedora/${FEDORA_CURRENT}/
     --exclude /ubuntu/
     --include /ubuntu/dists/${UBUNTU_LTS}/
     --include /ubuntu/dists/${UBUNTU_NONLTS}/
-    --include /ubuntu/dists/gpg
+    --include /ubuntu/gpg
     --exclude /centos/
     --include /centos/${RHEL_CURRENT}.*/
     --include /centos/docker-ce.+
