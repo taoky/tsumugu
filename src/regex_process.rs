@@ -9,9 +9,9 @@ const REGEX_REPLACEMENTS: &[(&str, &str)] = &[
     ("${DEBIAN_CURRENT}", "(?<distro_ver>bullseye|bookworm)"),
     // https://endoflife.date/ubuntu (excluding ESM)
     ("${UBUNTU_LTS}", "(?<distro_ver>focal|jammy|noble)"),
-    ("${UBUNTU_NONLTS}", "(?<distro_ver>mantic)"),
+    ("${UBUNTU_NONLTS}", "(?<distro_ver>oracular)"),
     // https://endoflife.date/fedora
-    ("${FEDORA_CURRENT}", "(?<distro_ver>39|40)"),
+    ("${FEDORA_CURRENT}", "(?<distro_ver>39|40|41)"),
     // CentOS is no longer supported -- this regex is replaced to something that could match nothing
     (
         "${CENTOS_CURRENT}",
