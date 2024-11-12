@@ -1,0 +1,10 @@
+envs:
+  UPSTREAM: http://nodejs.org/dist/
+  TSUMUGU_EXCLUDE: >
+    --exclude /docs/
+    --exclude /old-docs/
+image: ustcmirror/tsumugu:latest
+cron: 7 7 * * *
+logRotCycle: 10
+name: node
+storageDir: /srv/repo/node/
