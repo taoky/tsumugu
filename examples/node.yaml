@@ -3,8 +3,10 @@ envs:
   TSUMUGU_EXCLUDE: >
     --exclude /docs/
     --exclude /old-docs/
+  # nodejs page mtime and actual mtime always does not match
+  # only consider size for packages
   TSUMUGU_EXTRA: >
-    --head-before-get
+    --compare-size-only /node[^/]+$
 image: ustcmirror/tsumugu:latest
 cron: 7 7 * * *
 logRotCycle: 10

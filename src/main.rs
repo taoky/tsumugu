@@ -134,7 +134,7 @@ pub struct SyncArgs {
     #[clap(long, value_parser)]
     skip_if_exists: Vec<ExpandedRegex>,
 
-    /// Relative path regex for those compare size only in HEAD requests. This only works with head_before_get.
+    /// Relative path regex for those compare size only in HEAD (head_before_get on) or GET (head_before_get off)
     #[clap(long, value_parser)]
     compare_size_only: Vec<ExpandedRegex>,
 

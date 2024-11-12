@@ -81,6 +81,7 @@ fn download_file(
     mprogress: &MultiProgress,
     cwd: &Path,
     check_header: bool,
+    compare_size_only: bool,
 ) -> Result<()> {
     let async_context = task_context.async_context;
     let timezone = task_context.timezone;
@@ -98,7 +99,7 @@ fn download_file(
                     return Err(e.into());
                 }
             };
-            if check_header && !should_download_by_header(path, &resp, false) {
+            if check_header && !should_download_by_header(path, &resp, compare_size_only) {
                 warn!("Skipping {} (GET header matches local file)", url);
                 return Ok(());
             }
@@ -243,8 +244,11 @@ fn list_handler(
                     if task_context.exclusion_result == regex_process::Comparison::ListOnly {
                         // Even though the dir is ListOnly, it could be possible that the file itself under dir is "included".
                         // So we need to check again...
-                        let relative_filepath = relative_to_str(task_context.relative, Some(&item.name));
-                        if !(task_context.exclusion_manager.match_str(&relative_filepath) == regex_process::Comparison::Ok) {
+                        let relative_filepath =
+                            relative_to_str(task_context.relative, Some(&item.name));
+                        if !(task_context.exclusion_manager.match_str(&relative_filepath)
+                            == regex_process::Comparison::Ok)
+                        {
                             info!("Skipping (by list only) {}", item.url);
                             continue;
                         }
@@ -411,6 +415,8 @@ fn download_handler(
             cwd,
             // If no sending HEAD before GET, and don't take mtime from parser, check header here
             !args.head_before_get && !args.allow_mtime_from_parser,
+            // compare_size_only to give to should_download_by_header() inside (when check_header is true)
+            compare_size_only,
         ) {
             let mut set_error = true;
             if args.ignore_nonexist {

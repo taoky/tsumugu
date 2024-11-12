@@ -217,9 +217,7 @@ fn get_last_part_from_href(href: &str) -> &str {
 
     // Find the position of the last '/' and take the substring after it.
     let last_slash_pos = trimmed.rfind('/').map(|pos| pos + 1).unwrap_or(0);
-    let after_last_slash = &trimmed[last_slash_pos..];
-
-    return after_last_slash;
+    &trimmed[last_slash_pos..]
 }
 
 fn get_real_name_from_href(href: &str) -> String {

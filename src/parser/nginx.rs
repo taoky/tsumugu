@@ -145,7 +145,7 @@ impl Parser for NginxListingParser {
                         if unit != SizeUnit::B {
                             Some(FileSize::HumanizedBinary(n_size, unit))
                         } else {
-                            Some(FileSize::Precise(n_size as u64))  // workaround
+                            Some(FileSize::Precise(n_size as u64)) // workaround
                         }
                     } else {
                         let n_size = size.parse::<u64>().unwrap();
@@ -369,11 +369,14 @@ mod tests {
                 assert_eq!(items[0].size, None);
                 assert_eq!(
                     items[0].mtime,
-                    NaiveDateTime::UNIX_EPOCH,  // No mtime
+                    NaiveDateTime::UNIX_EPOCH, // No mtime
                 );
                 assert_eq!(items[3].name, "SHASUMS256.txt.asc");
                 assert_eq!(items[3].type_, FileType::File);
-                assert_eq!(items[3].size, Some(FileSize::HumanizedBinary(4.1, SizeUnit::K)));
+                assert_eq!(
+                    items[3].size,
+                    Some(FileSize::HumanizedBinary(4.1, SizeUnit::K))
+                );
                 assert_eq!(
                     items[3].mtime,
                     NaiveDateTime::parse_from_str("2024-11-04 17:40", "%Y-%m-%d %H:%M").unwrap()
