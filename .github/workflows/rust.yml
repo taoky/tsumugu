@@ -17,7 +17,7 @@ jobs:
     - name: Generate Cargo.toml.cache (Ignore version=)
       run: |
         sed '/^version = /d' Cargo.toml > Cargo.toml.cache
-    - uses: actions/cache@v3
+    - uses: actions/cache@v4
       with:
         path: |
           ~/.cargo/registry/index
