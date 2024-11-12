@@ -3,10 +3,14 @@ envs:
   TSUMUGU_EXCLUDE: >
     --exclude /docs/
     --exclude /old-docs/
+    --exclude SHASUMS$
   # nodejs page mtime and actual mtime always does not match
-  # only consider size for packages
+  # so we ignore package changes (assuming that this would not happen)
+  # we need to keep index.{json,tab} to be latest and regex crate does not support look-around
+  # so let's just skip-if-exists for node* and npm* files
   TSUMUGU_EXTRA: >
-    --compare-size-only /node[^/]+$
+    --skip-if-exists /node[^/]+$
+    --skip-if-exists /npm[^/]+$
 image: ustcmirror/tsumugu:latest
 cron: 7 7 * * *
 logRotCycle: 10
