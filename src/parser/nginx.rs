@@ -1,5 +1,5 @@
 /// A parser both suitable for default nginx autoindex and apache f1 format.
-use crate::listing::{FileSize, FileType, ListItem};
+use crate::listing::{FileSize, FileType, ListItem, SizeUnit};
 use chrono::NaiveDateTime;
 use scraper::{Html, Selector};
 use tracing::debug;
@@ -56,7 +56,8 @@ impl Parser for NginxListingParser {
                 get_real_name_from_href(href)
             } else {
                 // A compromise for apache server (they will NOT url-encode the filename)
-                href.to_string()
+                // Just find the last '/' (if exists), and take substring after that
+                get_last_part_from_href(href).to_string()
             };
             let href = url.join(href)?;
 
@@ -83,26 +84,49 @@ impl Parser for NginxListingParser {
                 .to_string();
             let metadata_raw = metadata_raw.trim();
             debug!("{:?}", metadata_raw);
-            // guess date format...
-            if date_fmt.is_none() {
-                let (f, r) = guess_date_fmt(metadata_raw);
-                date_fmt = Some(f);
-                date_regex = Some(Regex::new(&format!(r"({})\s+([\d\.\-]+ ?[kKMGB]*)$", r))?);
-                debug!("date_fmt: {:?} date_regex: {:?}", date_fmt, date_regex)
+            // if it's a directory, and metadata are "- -", do some special handling for the date fmt...
+            // as directory mtime is useless, and nodejs gives us something like this...
+            let mut skip_date = false;
+            if type_ == FileType::Directory
+                && metadata_raw
+                    .chars()
+                    .filter(|c| !c.is_whitespace())
+                    .collect::<String>()
+                    == "--"
+            {
+                skip_date = true;
             }
-            let metadata = date_regex
-                .clone()
-                .unwrap()
-                .captures(metadata_raw)
-                .ok_or(anyhow!(
-                    "Get '{}' for {} ({}) metadata, is this a nginx page?",
-                    metadata_raw,
-                    name,
-                    href
-                ))?;
-            let date = metadata.get(1).unwrap().as_str();
-            let date = NaiveDateTime::parse_from_str(date, &date_fmt.clone().unwrap())?;
-            let size = metadata.get(2).unwrap().as_str();
+            // guess date format...
+            let date;
+            let size;
+            if !skip_date {
+                if date_fmt.is_none() {
+                    let (f, r) = guess_date_fmt(metadata_raw);
+                    date_fmt = Some(f);
+                    date_regex = Some(Regex::new(&format!(r"({})\s+([\d\.\-]+ ?[kKMGB]*)$", r))?);
+                    debug!("date_fmt: {:?} date_regex: {:?}", date_fmt, date_regex)
+                }
+                let metadata =
+                    date_regex
+                        .clone()
+                        .unwrap()
+                        .captures(metadata_raw)
+                        .ok_or(anyhow!(
+                            "Get '{}' for {} ({}) metadata, is this a nginx page?",
+                            metadata_raw,
+                            name,
+                            href
+                        ))?;
+                date = NaiveDateTime::parse_from_str(
+                    metadata.get(1).unwrap().as_str(),
+                    &date_fmt.clone().unwrap(),
+                )?;
+                size = metadata.get(2).unwrap().as_str();
+            } else {
+                date = NaiveDateTime::UNIX_EPOCH;
+                size = "-";
+            }
+
             debug!("{} {} {:?} {} {:?}", href, name, type_, date, size);
             items.push(ListItem::new(
                 href,
@@ -115,9 +139,14 @@ impl Parser for NginxListingParser {
                         || size.contains('K')
                         || size.contains('M')
                         || size.contains('G')
+                        || size.contains('B')
                     {
                         let (n_size, unit) = FileSize::get_humanized(size);
-                        Some(FileSize::HumanizedBinary(n_size, unit))
+                        if unit != SizeUnit::B {
+                            Some(FileSize::HumanizedBinary(n_size, unit))
+                        } else {
+                            Some(FileSize::Precise(n_size as u64))  // workaround
+                        }
                     } else {
                         let n_size = size.parse::<u64>().unwrap();
                         Some(FileSize::Precise(n_size))
@@ -317,6 +346,37 @@ mod tests {
                 assert_eq!(
                     items[0].mtime,
                     NaiveDateTime::parse_from_str("2020-07-27 11:06", "%Y-%m-%d %H:%M").unwrap()
+                );
+            }
+            _ => unreachable!(),
+        }
+    }
+
+    #[test]
+    fn test_nodejs() {
+        let context = init_async_context();
+        let items = NginxListingParser::default()
+            .get_list(
+                &context,
+                &url::Url::parse("http://localhost:1921/nodejs/v4.9.1/").unwrap(),
+            )
+            .unwrap();
+        match items {
+            ListResult::List(items) => {
+                assert_eq!(items.len(), 37);
+                assert_eq!(items[0].name, "docs");
+                assert_eq!(items[0].type_, FileType::Directory);
+                assert_eq!(items[0].size, None);
+                assert_eq!(
+                    items[0].mtime,
+                    NaiveDateTime::UNIX_EPOCH,  // No mtime
+                );
+                assert_eq!(items[3].name, "SHASUMS256.txt.asc");
+                assert_eq!(items[3].type_, FileType::File);
+                assert_eq!(items[3].size, Some(FileSize::HumanizedBinary(4.1, SizeUnit::K)));
+                assert_eq!(
+                    items[3].mtime,
+                    NaiveDateTime::parse_from_str("2024-11-04 17:40", "%Y-%m-%d %H:%M").unwrap()
                 );
             }
             _ => unreachable!(),
