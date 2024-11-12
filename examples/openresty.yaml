@@ -18,6 +18,7 @@ envs:
     --exclude ^/rhel/8.*/3$
     --exclude ^/rocky/8.*/3$
     --exclude ^/centos/8.*/3$
+    --exclude ^/kylin/10/3$
 image: ustcmirror/tsumugu:latest
 cron: 13 5 * * *
 logRotCycle: 10
