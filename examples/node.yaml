@@ -3,6 +3,8 @@ envs:
   TSUMUGU_EXCLUDE: >
     --exclude /docs/
     --exclude /old-docs/
+  TSUMUGU_EXTRA: >
+    --head-before-get
 image: ustcmirror/tsumugu:latest
 cron: 7 7 * * *
 logRotCycle: 10
