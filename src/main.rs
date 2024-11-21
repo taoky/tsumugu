@@ -8,6 +8,7 @@ use tracing_subscriber::EnvFilter;
 use url::Url;
 
 use shadow_rs::shadow;
+use utils::{headers_to_headermap, Header};
 shadow!(build);
 
 mod cli;
@@ -61,6 +62,7 @@ enum Commands {
 
 trait SharedArgs {
     fn user_agent(&self) -> &str;
+    fn headers(&self) -> reqwest::header::HeaderMap;
 }
 
 #[derive(Parser, Debug)]
@@ -157,11 +159,19 @@ pub struct SyncArgs {
     /// Allow automatically choose fallback parser when ParseError occurred.
     #[clap(long)]
     auto_fallback: bool,
+
+    /// Custom header for HTTP(S) requests in format "Headerkey: headervalue". Supports multiple.
+    #[clap(long, value_parser)]
+    header: Vec<Header>,
 }
 
 impl SharedArgs for &SyncArgs {
     fn user_agent(&self) -> &str {
         &self.user_agent
+    }
+
+    fn headers(&self) -> reqwest::header::HeaderMap {
+        headers_to_headermap(&self.header)
     }
 }
 
@@ -190,11 +200,19 @@ pub struct ListArgs {
     /// The upstream base starting with "/".
     #[clap(long, default_value = "/")]
     upstream_base: String,
+
+    /// Custom header for HTTP(S) requests in format "Headerkey: headervalue". Supports multiple.
+    #[clap(long, value_parser)]
+    header: Vec<Header>,
 }
 
 impl SharedArgs for &ListArgs {
     fn user_agent(&self) -> &str {
         &self.user_agent
+    }
+
+    fn headers(&self) -> reqwest::header::HeaderMap {
+        headers_to_headermap(&self.header)
     }
 }
 

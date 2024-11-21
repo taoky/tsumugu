@@ -71,6 +71,57 @@ fn proxy_precheck() {
     }
 }
 
+// Helper structs for custom header support
+#[derive(Debug, Clone)]
+pub struct Header {
+    pub name: reqwest::header::HeaderName,
+    pub value: reqwest::header::HeaderValue,
+}
+
+pub fn headers_to_headermap(value: &[Header]) -> reqwest::header::HeaderMap {
+    let mut headers = reqwest::header::HeaderMap::new();
+    for header in value.iter() {
+        headers.insert(header.name.clone(), header.value.clone());
+    }
+    headers
+}
+
+#[derive(Debug)]
+pub struct HeaderParseError;
+
+impl std::fmt::Display for HeaderParseError {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        write!(f, "Failed to parse header")
+    }
+}
+
+impl std::error::Error for HeaderParseError {}
+
+impl std::str::FromStr for Header {
+    type Err = HeaderParseError;
+
+    fn from_str(s: &str) -> std::result::Result<Self, Self::Err> {
+        let parts: Vec<&str> = s.splitn(2, ':').collect();
+
+        let name = parts[0].trim();
+        let value = parts[1].trim();
+
+        if parts.len() != 2 {
+            return Err(HeaderParseError);
+        }
+
+        let header_name =
+            reqwest::header::HeaderName::from_str(name).map_err(|_| HeaderParseError)?;
+        let header_value =
+            reqwest::header::HeaderValue::from_str(value).map_err(|_| HeaderParseError)?;
+
+        Ok(Header {
+            name: header_name,
+            value: header_value,
+        })
+    }
+}
+
 pub fn build_client(
     args: impl SharedArgs,
     redirect: bool,
@@ -82,6 +133,7 @@ pub fn build_client(
     let mut builder = reqwest::Client::builder()
         .user_agent(args.user_agent())
         .local_address(bind_address.map(|x| x.parse::<std::net::IpAddr>().unwrap()))
+        .default_headers(args.headers())
         // hard code 1min connect/read timeout currently
         .connect_timeout(minute)
         .read_timeout(minute)

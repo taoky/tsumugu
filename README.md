@@ -86,6 +86,8 @@ Options:
           Ignore 404 NOT FOUND as error when downloading files
       --auto-fallback
           Allow automatically choose fallback parser when ParseError occurred
+      --header <HEADER>
+          Custom header for HTTP(S) requests in format "Headerkey: headervalue". Supports multiple
   -h, --help
           Print help
   -V, --version
@@ -104,6 +106,7 @@ Options:
       --exclude <EXCLUDE>              Excluded relative path regex. Supports multiple
       --include <INCLUDE>              Included relative path regex (even if excluded). Supports multiple
       --upstream-base <UPSTREAM_BASE>  The upstream base starting with "/" [default: /]
+      --header <HEADER>                Custom header for HTTP(S) requests in format "Headerkey: headervalue". Supports multiple
   -h, --help                           Print help
   -V, --version                        Print version
 ```
