@@ -14,7 +14,6 @@ use anyhow::Result;
 use chrono::{FixedOffset, NaiveDateTime};
 use crossbeam_deque::{Injector, Worker};
 use futures_util::StreamExt;
-use indicatif::{MultiProgress, ProgressDrawTarget};
 use reqwest::StatusCode;
 use tracing::{debug, error, info, warn};
 use url::Url;
@@ -25,7 +24,7 @@ use crate::{
     listing::{self, ListItem},
     parser::{ListResult, ParserMux},
     regex_process::{self, ExclusionManager},
-    term::{get_progress_bar, AlternativeTerm, TEMPLATE_DEFAULT},
+    bar::{get_progress_bar, TEMPLATE_DEFAULT},
     timezone::determinate_timezone,
     utils::{
         self, again, again_async, build_client, get_async, head, is_symlink, naive_to_utc,
@@ -78,7 +77,7 @@ fn download_file(
     item: &ListItem,
     path: &Path,
     args: &SyncArgs,
-    mprogress: &MultiProgress,
+    progressbar_manager: &kyuri::Manager,
     cwd: &Path,
     check_header: bool,
     compare_size_only: bool,
@@ -111,7 +110,7 @@ fn download_file(
                     0
                 }
             };
-            let pb = mprogress.add(get_progress_bar(total_size, TEMPLATE_DEFAULT, &url));
+            let pb = get_progress_bar(progressbar_manager, total_size, TEMPLATE_DEFAULT, &url);
 
             let mtime = match utils::get_response_mtime(&resp) {
                 Ok(mtime) => mtime,
@@ -140,8 +139,8 @@ fn download_file(
                         }
                     };
                     dest_file.write_all(&chunk).unwrap();
-                    let new = std::cmp::min(pb.position() + (chunk.len() as u64), total_size);
-                    pb.set_position(new);
+                    let new = std::cmp::min(pb.get_pos() + (chunk.len() as u64), total_size);
+                    pb.set_pos(new);
                 }
                 filetime::set_file_handle_times(
                     &dest_file,
@@ -298,7 +297,7 @@ fn download_handler(
     args: &SyncArgs,
     thr_context: &ThreadsContext,
     task_context: &TaskContext,
-    mprogress: &MultiProgress,
+    progressbar_manager: &kyuri::Manager,
 ) {
     let task = task_context.task;
     let cwd = task_context.cwd;
@@ -402,7 +401,7 @@ fn download_handler(
             item,
             &expected_path,
             args,
-            mprogress,
+            progressbar_manager,
             cwd,
             // If no sending HEAD before GET, and don't take mtime from parser, check header here
             !args.head_before_get && !args.allow_mtime_from_parser,
@@ -462,10 +461,7 @@ fn sync_threads(args: &SyncArgs, parser: &ParserMux, thr_context: &ThreadsContex
         runtime,
     };
 
-    let mprogress = MultiProgress::with_draw_target(ProgressDrawTarget::term_like_with_hz(
-        Box::new(AlternativeTerm::buffered_stdout()),
-        1,
-    ));
+    let progressbar_manager = kyuri::Manager::new(std::time::Duration::from_secs(1));
 
     let timezone = determinate_timezone(args, parser, &async_context);
 
@@ -537,7 +533,7 @@ fn sync_threads(args: &SyncArgs, parser: &ParserMux, thr_context: &ThreadsContex
                                     args,
                                     thr_context,
                                     &task_context,
-                                    &mprogress,
+                                    &progressbar_manager,
                                 );
                             }
                         }

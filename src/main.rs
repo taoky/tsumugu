@@ -16,7 +16,7 @@ mod compare;
 mod listing;
 mod parser;
 mod regex_process;
-mod term;
+mod bar;
 mod timezone;
 mod utils;
 
