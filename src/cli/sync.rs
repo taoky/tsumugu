@@ -14,7 +14,7 @@ use anyhow::Result;
 use chrono::{FixedOffset, NaiveDateTime};
 use crossbeam_deque::{Injector, Worker};
 use futures_util::StreamExt;
-use indicatif::{MultiProgress, ProgressBar, ProgressDrawTarget};
+use indicatif::{MultiProgress, ProgressDrawTarget};
 use reqwest::StatusCode;
 use tracing::{debug, error, info, warn};
 use url::Url;
@@ -25,7 +25,7 @@ use crate::{
     listing::{self, ListItem},
     parser::{ListResult, ParserMux},
     regex_process::{self, ExclusionManager},
-    term::{set_download_progress_bar, AlternativeTerm, TEMPLATE_DEFAULT},
+    term::{get_progress_bar, AlternativeTerm, TEMPLATE_DEFAULT},
     timezone::determinate_timezone,
     utils::{
         self, again, again_async, build_client, get_async, head, is_symlink, naive_to_utc,
@@ -111,8 +111,7 @@ fn download_file(
                     0
                 }
             };
-            let pb = mprogress.add(ProgressBar::new(total_size));
-            set_download_progress_bar(&pb, TEMPLATE_DEFAULT, &url);
+            let pb = mprogress.add(get_progress_bar(total_size, TEMPLATE_DEFAULT, &url));
 
             let mtime = match utils::get_response_mtime(&resp) {
                 Ok(mtime) => mtime,

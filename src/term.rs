@@ -83,22 +83,23 @@ impl AlternativeTerm {
 }
 
 // For testing convenience
-pub const TEMPLATE_DEFAULT: &str = "{msg}\n[{elapsed_precise}] {bytes}/{total_bytes} ({bytes_per_sec}, {eta})";
-pub fn set_download_progress_bar(pb: &indicatif::ProgressBar, template: &str, url: &url::Url) {
-    pb.set_style(
-        indicatif::ProgressStyle::default_bar()
-            .template(template)
-            .unwrap()
-            .progress_chars("#>-"),
-    );
-    pb.set_message(format!("Downloading {}", url));
+pub const TEMPLATE_DEFAULT: &str =
+    "{msg}\n[{elapsed_precise}] {bytes}/{total_bytes} ({bytes_per_sec}, {eta})";
+pub fn get_progress_bar(len: u64, template: &str, url: &url::Url) -> indicatif::ProgressBar {
+    indicatif::ProgressBar::new(len)
+        .with_message(format!("Downloading {}", url))
+        .with_style(
+            indicatif::ProgressStyle::default_bar()
+                .template(template)
+                .unwrap(),
+        )
 }
 
 #[cfg(test)]
 mod tests {
     pub const TEMPLATE_SIMPLE: &str = "{msg}\n{bytes}/{total_bytes}";
-    use std::io::{Read, Seek};
     use super::*;
+    use std::io::{Read, Seek};
     use test_log::test;
 
     #[test]
@@ -116,34 +117,32 @@ mod tests {
         let mprogress = indicatif::MultiProgress::with_draw_target(
             indicatif::ProgressDrawTarget::term_like_with_hz(Box::new(term), 1),
         );
-        let pb1 = mprogress.add(indicatif::ProgressBar::new(10));
-        set_download_progress_bar(&pb1, TEMPLATE_SIMPLE, &url::Url::parse("http://d1.example.com").unwrap());
-        let pb2 = mprogress.add(indicatif::ProgressBar::new(10));
-        set_download_progress_bar(&pb2, TEMPLATE_SIMPLE, &url::Url::parse("http://d2.example.com").unwrap());
+        let pb1 = mprogress.add(get_progress_bar(
+            10,
+            TEMPLATE_SIMPLE,
+            &url::Url::parse("http://d1.example.com").unwrap(),
+        ));
+        let pb2 = mprogress.add(get_progress_bar(
+            10,
+            TEMPLATE_SIMPLE,
+            &url::Url::parse("http://d2.example.com").unwrap(),
+        ));
 
         pb1.set_position(2);
         pb2.set_position(3);
         pb1.set_position(5);
         pb2.set_position(7);
-        
+
         std::mem::drop(mprogress);
-        memfd_writer_clone.seek(std::io::SeekFrom::Start(0)).unwrap();
+        memfd_writer_clone
+            .seek(std::io::SeekFrom::Start(0))
+            .unwrap();
         let mut output = String::new();
         memfd_writer_clone.read_to_string(&mut output).unwrap();
-        assert_eq!(output, r#"Downloading http://d1.example.com/
-0 B/10 B                                                                        
-Downloading http://d1.example.com/
-0 B/10 B
-Downloading http://d2.example.com/
-0 B/10 B                                                                        
-
-
-Downloading http://d1.example.com/
-2 B/10 B
-Downloading http://d2.example.com/
-0 B/10 B                                                                        
-
-
+        assert_eq!(
+            output,
+            r#"Downloading http://d1.example.com/
+2 B/10 B                                                                        
 Downloading http://d1.example.com/
 2 B/10 B
 Downloading http://d2.example.com/
@@ -159,6 +158,7 @@ Downloading http://d2.example.com/
 Downloading http://d1.example.com/
 5 B/10 B
 Downloading http://d2.example.com/
-7 B/10 B                                                                        "#);
+7 B/10 B                                                                        "#
+        );
     }
 }
