@@ -66,7 +66,8 @@ Downloading http://d2.example.com/
 Downloading http://d1.example.com/
 5 B/10 B
 Downloading http://d2.example.com/
-7 B/10 B"#
+7 B/10 B
+"#
         );
     }
 }
