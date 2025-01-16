@@ -81,3 +81,84 @@ impl AlternativeTerm {
         }
     }
 }
+
+// For testing convenience
+pub const TEMPLATE_DEFAULT: &str = "{msg}\n[{elapsed_precise}] {bytes}/{total_bytes} ({bytes_per_sec}, {eta})";
+pub fn set_download_progress_bar(pb: &indicatif::ProgressBar, template: &str, url: &url::Url) {
+    pb.set_style(
+        indicatif::ProgressStyle::default_bar()
+            .template(template)
+            .unwrap()
+            .progress_chars("#>-"),
+    );
+    pb.set_message(format!("Downloading {}", url));
+}
+
+#[cfg(test)]
+mod tests {
+    pub const TEMPLATE_SIMPLE: &str = "{msg}\n{bytes}/{total_bytes}";
+    use std::io::{Read, Seek};
+    use super::*;
+    use test_log::test;
+
+    #[test]
+    fn test_pb_to_file() {
+        let devnull_reader = std::fs::File::open("/dev/null").unwrap();
+        let memfd_name = std::ffi::CString::new("test_pb_to_file").unwrap();
+        let memfd_fd =
+            nix::sys::memfd::memfd_create(&memfd_name, nix::sys::memfd::MemFdCreateFlag::empty())
+                .unwrap();
+        let memfd_writer: std::fs::File = memfd_fd.into();
+        let mut memfd_writer_clone = memfd_writer.try_clone().unwrap();
+        let term = Term::read_write_pair(devnull_reader, memfd_writer);
+        assert!(term.is_term() == false);
+        let term = AlternativeTerm { inner: term };
+        let mprogress = indicatif::MultiProgress::with_draw_target(
+            indicatif::ProgressDrawTarget::term_like_with_hz(Box::new(term), 1),
+        );
+        let pb1 = mprogress.add(indicatif::ProgressBar::new(10));
+        set_download_progress_bar(&pb1, TEMPLATE_SIMPLE, &url::Url::parse("http://d1.example.com").unwrap());
+        let pb2 = mprogress.add(indicatif::ProgressBar::new(10));
+        set_download_progress_bar(&pb2, TEMPLATE_SIMPLE, &url::Url::parse("http://d2.example.com").unwrap());
+
+        pb1.set_position(2);
+        pb2.set_position(3);
+        pb1.set_position(5);
+        pb2.set_position(7);
+        
+        std::mem::drop(mprogress);
+        memfd_writer_clone.seek(std::io::SeekFrom::Start(0)).unwrap();
+        let mut output = String::new();
+        memfd_writer_clone.read_to_string(&mut output).unwrap();
+        assert_eq!(output, r#"Downloading http://d1.example.com/
+0 B/10 B                                                                        
+Downloading http://d1.example.com/
+0 B/10 B
+Downloading http://d2.example.com/
+0 B/10 B                                                                        
+
+
+Downloading http://d1.example.com/
+2 B/10 B
+Downloading http://d2.example.com/
+0 B/10 B                                                                        
+
+
+Downloading http://d1.example.com/
+2 B/10 B
+Downloading http://d2.example.com/
+3 B/10 B                                                                        
+
+
+Downloading http://d1.example.com/
+5 B/10 B
+Downloading http://d2.example.com/
+3 B/10 B                                                                        
+
+
+Downloading http://d1.example.com/
+5 B/10 B
+Downloading http://d2.example.com/
+7 B/10 B                                                                        "#);
+    }
+}
