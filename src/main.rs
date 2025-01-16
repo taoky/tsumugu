@@ -11,12 +11,12 @@ use shadow_rs::shadow;
 use utils::{headers_to_headermap, Header};
 shadow!(build);
 
+mod bar;
 mod cli;
 mod compare;
 mod listing;
 mod parser;
 mod regex_process;
-mod bar;
 mod timezone;
 mod utils;
 

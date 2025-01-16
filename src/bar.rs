@@ -24,7 +24,8 @@ mod tests {
                 .unwrap();
         let memfd_writer: std::fs::File = memfd_fd.into();
         let mut memfd_writer_clone = memfd_writer.try_clone().unwrap();
-        let progressbar_manager = kyuri::Manager::new(std::time::Duration::from_secs(1)).with_file(memfd_writer);
+        let progressbar_manager =
+            kyuri::Manager::new(std::time::Duration::from_secs(1)).with_file(memfd_writer);
         let pb1 = get_progress_bar(
             &progressbar_manager,
             10,

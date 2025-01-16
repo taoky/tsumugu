@@ -19,12 +19,12 @@ use tracing::{debug, error, info, warn};
 use url::Url;
 
 use crate::{
+    bar::{get_progress_bar, TEMPLATE_DEFAULT},
     compare::{should_download_by_header, should_download_by_list},
     extensions::{extension_handler, ExtensionPackage},
     listing::{self, ListItem},
     parser::{ListResult, ParserMux},
     regex_process::{self, ExclusionManager},
-    bar::{get_progress_bar, TEMPLATE_DEFAULT},
     timezone::determinate_timezone,
     utils::{
         self, again, again_async, build_client, get_async, head, is_symlink, naive_to_utc,
