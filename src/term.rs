@@ -16,7 +16,7 @@ impl TermLike for AlternativeTerm {
         if self.inner.is_term() {
             self.inner.clear_line()
         } else {
-            self.inner.write_line("")?;
+            // self.inner.write_line("")?;
             Ok(())
         }
     }
@@ -29,6 +29,10 @@ impl TermLike for AlternativeTerm {
         if self.inner.is_term() {
             self.inner.move_cursor_down(n)
         } else {
+            // Here is a very dirty hack to make the output compat when redirecting to a file:
+            // the progress bar would trigger "cursor down" only once for each print,
+            // so just print an empty line when cursor is down, and ignore clearing line request.
+            self.inner.write_line("")?;
             Ok(())
         }
     }
