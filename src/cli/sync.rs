@@ -168,6 +168,7 @@ struct ThreadsContext<'a> {
     stat_size: &'a AtomicU64,
     failure_listing: &'a AtomicBool,
     failure_downloading: &'a AtomicBool,
+    pb_manager: &'a kyuri::Manager,
 }
 
 struct TaskContext<'a> {
@@ -463,9 +464,6 @@ fn sync_threads(args: &SyncArgs, parser: &ParserMux, thr_context: &ThreadsContex
         runtime,
     };
 
-    let progressbar_manager = kyuri::Manager::new(std::time::Duration::from_secs(1));
-    progressbar_manager.set_ticker(true);
-
     let timezone = determinate_timezone(args, parser, &async_context);
 
     if !args.dry_run {
@@ -490,7 +488,7 @@ fn sync_threads(args: &SyncArgs, parser: &ParserMux, thr_context: &ThreadsContex
     std::thread::scope(|scope| {
         for worker in workers {
             scope.spawn(|| {
-                let bar = progressbar_manager.create_bar(0, "", "", false);
+                let bar = thr_context.pb_manager.create_bar(0, "", "", false);
                 loop {
                     active_cnt.fetch_add(1, Ordering::SeqCst);
                     while let Some(task) = worker.pop().or_else(|| {
@@ -577,7 +575,7 @@ fn sync_threads(args: &SyncArgs, parser: &ParserMux, thr_context: &ThreadsContex
     });
 }
 
-pub fn sync(args: &SyncArgs, bind_address: Option<String>) -> ! {
+pub fn sync(args: &SyncArgs, bind_address: Option<String>, pb_manager: kyuri::Manager) -> ! {
     debug!("{:?}", args);
     let parser = ParserMux::new(
         args.parser.clone(),
@@ -606,6 +604,7 @@ pub fn sync(args: &SyncArgs, bind_address: Option<String>) -> ! {
             stat_size: &stat_size,
             failure_listing: &failure_listing,
             failure_downloading: &failure_downloading,
+            pb_manager: &pb_manager,
         },
     );
 

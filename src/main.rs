@@ -1,5 +1,5 @@
 #![warn(clippy::cognitive_complexity)]
-use std::path::PathBuf;
+use std::{path::PathBuf, sync::Mutex};
 
 use clap::{Parser, Subcommand};
 
@@ -229,10 +229,14 @@ fn main() {
         format!("info,{}", std::env::var("RUST_LOG").unwrap_or_default()),
     );
     let enable_color = std::env::var("NO_COLOR").is_err();
+    let pb_manager = kyuri::Manager::new(std::time::Duration::from_secs(1));
+    pb_manager.set_ticker(true);
+    let pb_writer = pb_manager.create_writer();
     tracing_subscriber::fmt()
         .with_thread_ids(true)
         .with_env_filter(EnvFilter::from_default_env())
         .with_ansi(enable_color)
+        .with_writer(Mutex::new(pb_writer))
         .init();
 
     // Print version info in debug mode
@@ -263,7 +267,7 @@ fn main() {
             if !args.upstream.path().ends_with('/') {
                 tracing::warn!("It's suggested to append backslash to upstream, though this also works in most cases (most web servers redirects this to URL with backslash at end).")
             }
-            cli::sync(&args, bind_address);
+            cli::sync(&args, bind_address, pb_manager);
         }
         Commands::List(args) => {
             // extra arg check

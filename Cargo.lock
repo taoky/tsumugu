@@ -1057,9 +1057,9 @@ dependencies = [
 
 [[package]]
 name = "kyuri"
-version = "0.1.6"
+version = "0.1.7"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "4d6e64f5f3028c252ce0135e50478a922d23e2aa5eef60b8f8065a65750a1e34"
+checksum = "a923f395f82efd84a5fc0f0d8d16348c50629202fb734098d3ceb59f4ba17a9b"
 
 [[package]]
 name = "lazy_static"
