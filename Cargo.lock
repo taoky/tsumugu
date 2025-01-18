@@ -310,18 +310,6 @@ source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "d3fd119d74b830634cea2a0f58bbd0d54540518a14397557951e79340abc28c0"
 
 [[package]]
-name = "console"
-version = "0.15.8"
-source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "0e1f83fc076bd6dd27517eacdf25fef6c4dfe5f1d7448bafaaf3a26f13b5e4eb"
-dependencies = [
- "encode_unicode",
- "lazy_static",
- "libc",
- "windows-sys",
-]
-
-[[package]]
 name = "const_fn"
 version = "0.4.10"
 source = "registry+https://github.com/rust-lang/crates.io-index"
@@ -477,12 +465,6 @@ name = "either"
 version = "1.13.0"
 source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "60b1af1c220855b6ceac025d3f6ecdd2b7c4894bfe9cd9bda4fbb4bc7c0d4cf0"
-
-[[package]]
-name = "encode_unicode"
-version = "0.3.6"
-source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "a357d28ed41a50f9c765dbfe56cbc04a64e53e5fc58ba79fbc34c10ef3df831f"
 
 [[package]]
 name = "encoding_rs"
@@ -1075,9 +1057,9 @@ dependencies = [
 
 [[package]]
 name = "kyuri"
-version = "0.1.2"
+version = "0.1.6"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "44051e67a6e8d690ee3dc885a3721689f09fc0ab7b5c2d70e6a878ea9e8e0f48"
+checksum = "4d6e64f5f3028c252ce0135e50478a922d23e2aa5eef60b8f8065a65750a1e34"
 
 [[package]]
 name = "lazy_static"
@@ -2340,7 +2322,6 @@ dependencies = [
  "apt-parser",
  "chrono",
  "clap",
- "console",
  "crossbeam-deque",
  "filetime",
  "flate2",

@@ -19,7 +19,7 @@ use tracing::{debug, error, info, warn};
 use url::Url;
 
 use crate::{
-    bar::{get_progress_bar, TEMPLATE_DEFAULT},
+    bar::set_progress_bar,
     compare::{should_download_by_header, should_download_by_list},
     extensions::{extension_handler, ExtensionPackage},
     listing::{self, ListItem},
@@ -77,7 +77,7 @@ fn download_file(
     item: &ListItem,
     path: &Path,
     args: &SyncArgs,
-    progressbar_manager: &kyuri::Manager,
+    bar: &kyuri::Bar,
     cwd: &Path,
     check_header: bool,
     compare_size_only: bool,
@@ -110,7 +110,7 @@ fn download_file(
                     0
                 }
             };
-            let pb = get_progress_bar(progressbar_manager, total_size, TEMPLATE_DEFAULT, &url);
+            set_progress_bar(bar, total_size, &url);
 
             let mtime = match utils::get_response_mtime(&resp) {
                 Ok(mtime) => mtime,
@@ -139,8 +139,8 @@ fn download_file(
                         }
                     };
                     dest_file.write_all(&chunk).unwrap();
-                    let new = std::cmp::min(pb.get_pos() + (chunk.len() as u64), total_size);
-                    pb.set_pos(new);
+                    let new = std::cmp::min(bar.get_pos() + (chunk.len() as u64), total_size);
+                    bar.set_pos(new);
                 }
                 filetime::set_file_handle_times(
                     &dest_file,
@@ -151,6 +151,8 @@ fn download_file(
             }
             // move tmp file to expected path
             std::fs::rename(&tmp_path, path).unwrap();
+            bar.finish();
+            bar.set_visible(false);
             Ok(())
         },
         args.retry,
@@ -297,7 +299,7 @@ fn download_handler(
     args: &SyncArgs,
     thr_context: &ThreadsContext,
     task_context: &TaskContext,
-    progressbar_manager: &kyuri::Manager,
+    bar: &kyuri::Bar,
 ) {
     let task = task_context.task;
     let cwd = task_context.cwd;
@@ -401,7 +403,7 @@ fn download_handler(
             item,
             &expected_path,
             args,
-            progressbar_manager,
+            bar,
             cwd,
             // If no sending HEAD before GET, and don't take mtime from parser, check header here
             !args.head_before_get && !args.allow_mtime_from_parser,
@@ -462,6 +464,7 @@ fn sync_threads(args: &SyncArgs, parser: &ParserMux, thr_context: &ThreadsContex
     };
 
     let progressbar_manager = kyuri::Manager::new(std::time::Duration::from_secs(1));
+    progressbar_manager.set_ticker(true);
 
     let timezone = determinate_timezone(args, parser, &async_context);
 
@@ -487,6 +490,7 @@ fn sync_threads(args: &SyncArgs, parser: &ParserMux, thr_context: &ThreadsContex
     std::thread::scope(|scope| {
         for worker in workers {
             scope.spawn(|| {
+                let bar = progressbar_manager.create_bar(0, "", "", false);
                 loop {
                     active_cnt.fetch_add(1, Ordering::SeqCst);
                     while let Some(task) = worker.pop().or_else(|| {
@@ -528,13 +532,7 @@ fn sync_threads(args: &SyncArgs, parser: &ParserMux, thr_context: &ThreadsContex
                                 list_handler(args, parser, thr_context, &task_context);
                             }
                             TaskType::Download(item) => {
-                                download_handler(
-                                    item,
-                                    args,
-                                    thr_context,
-                                    &task_context,
-                                    &progressbar_manager,
-                                );
+                                download_handler(item, args, thr_context, &task_context, &bar);
                             }
                         }
                     }
