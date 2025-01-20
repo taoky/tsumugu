@@ -16,13 +16,13 @@ mod cli;
 mod compare;
 mod listing;
 mod parser;
-mod regex_process;
+mod regex_manager;
 mod timezone;
 mod utils;
 
 mod extensions;
 
-use crate::regex_process::ExpandedRegex;
+use crate::regex_manager::ExpandedRegex;
 
 #[allow(clippy::const_is_empty)]
 fn get_version() -> &'static str {
@@ -163,6 +163,10 @@ pub struct SyncArgs {
     /// Custom header for HTTP(S) requests in format "Headerkey: headervalue". Supports multiple.
     #[clap(long, value_parser)]
     header: Vec<Header>,
+
+    /// The exclusion v2 mode. To keep compatibility, this is off by default.
+    #[clap(long)]
+    exclusion_v2: bool,
 }
 
 impl SharedArgs for &SyncArgs {

@@ -24,7 +24,7 @@ use crate::{
     extensions::{extension_handler, ExtensionPackage},
     listing::{self, ListItem},
     parser::{ListResult, ParserMux},
-    regex_process::{self, ExclusionManager},
+    regex_manager::{self, v1::ExclusionManager, ExclusionManagerTrait},
     timezone::determinate_timezone,
     utils::{
         self, again, again_async, build_client, get_async, head, is_symlink, naive_to_utc,
@@ -179,7 +179,7 @@ struct TaskContext<'a> {
     relative: &'a Vec<String>,
     worker: &'a Worker<Task>,
     wake: &'a AtomicUsize,
-    exclusion_result: regex_process::Comparison,
+    exclusion_result: regex_manager::Comparison,
     exclusion_manager: &'a ExclusionManager,
     timezone: Option<FixedOffset>,
     async_context: &'a AsyncContext,
@@ -235,13 +235,13 @@ fn list_handler(
                         },
                     );
                 } else {
-                    if task_context.exclusion_result == regex_process::Comparison::ListOnly {
+                    if task_context.exclusion_result == regex_manager::Comparison::ListOnly {
                         // Even though the dir is ListOnly, it could be possible that the file itself under dir is "included".
                         // So we need to check again...
                         let relative_filepath =
                             relative_to_str(task_context.relative, Some(&item.name));
                         if !(task_context.exclusion_manager.match_str(&relative_filepath)
-                            == regex_process::Comparison::Ok)
+                            == regex_manager::Comparison::Ok)
                         {
                             info!("Skipping (by list only) {}", item.url);
                             continue;
@@ -320,7 +320,7 @@ fn download_handler(
 
     // We should put relative filepath into exclusion manager here
     if task_context.exclusion_manager.match_str(&relative_filepath)
-        == regex_process::Comparison::Stop
+        == regex_manager::Comparison::Stop
     {
         // This should be run before inserting remote_list.
         // Otherwise newly excluded files will not be deleted later.
@@ -509,10 +509,10 @@ fn sync_threads(args: &SyncArgs, parser: &ParserMux, thr_context: &ThreadsContex
                         // note that it only checks the relative folder!
                         // Downloading files will still be checked again.
                         let exclusion_result = exclusion_manager.match_str(&relative);
-                        if exclusion_result == regex_process::Comparison::Stop {
+                        if exclusion_result == regex_manager::Comparison::Stop {
                             info!("Skipping excluded {:?}", &relative);
                             continue;
-                        } else if exclusion_result == regex_process::Comparison::ListOnly {
+                        } else if exclusion_result == regex_manager::Comparison::ListOnly {
                             info!("List only in {:?}", &relative);
                         }
                         let task_context = TaskContext {

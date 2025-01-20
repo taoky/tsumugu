@@ -6,7 +6,7 @@ use clap::ValueEnum;
 use tracing::{info, warn};
 use url::Url;
 
-use crate::regex_process::ExpandedRegex;
+use crate::regex_manager::ExpandedRegex;
 use crate::utils::{get, get_text};
 
 use crate::{listing::ListItem, AsyncContext};

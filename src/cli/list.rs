@@ -1,6 +1,7 @@
 use crate::{
     parser::ListResult,
-    regex_process::{Comparison, ExclusionManager},
+    regex_manager::v1::ExclusionManager,
+    regex_manager::{Comparison, ExclusionManagerTrait},
     utils::{build_client, relative_str_process},
     AsyncContext, ListArgs,
 };
@@ -46,9 +47,9 @@ pub fn list(args: &ListArgs, bind_address: Option<String>) -> ! {
                 println!(
                     "{}",
                     match exclusion_manager.match_str(new_relative.as_str()) {
-                        crate::regex_process::Comparison::Stop => " (stop)",
-                        crate::regex_process::Comparison::ListOnly => " (list only)",
-                        crate::regex_process::Comparison::Ok => "",
+                        crate::regex_manager::Comparison::Stop => " (stop)",
+                        crate::regex_manager::Comparison::ListOnly => " (list only)",
+                        crate::regex_manager::Comparison::Ok => "",
                     }
                 );
             }
