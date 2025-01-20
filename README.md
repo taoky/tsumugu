@@ -88,6 +88,8 @@ Options:
           Allow automatically choose fallback parser when ParseError occurred
       --header <HEADER>
           Custom header for HTTP(S) requests in format "Headerkey: headervalue". Supports multiple
+      --exclusion-v2
+          The exclusion v2 mode. To keep compatibility, this is off by default
   -h, --help
           Print help
   -V, --version
@@ -107,6 +109,7 @@ Options:
       --include <INCLUDE>              Included relative path regex (even if excluded). Supports multiple
       --upstream-base <UPSTREAM_BASE>  The upstream base starting with "/" [default: /]
       --header <HEADER>                Custom header for HTTP(S) requests in format "Headerkey: headervalue". Supports multiple
+      --exclusion-v2                   The exclusion v2 mode. To keep compatibility, this is off by default
   -h, --help                           Print help
   -V, --version                        Print version
 ```
