@@ -118,7 +118,7 @@ impl Parser for ApacheF2ListingParser {
 
             // debug!("{} {} {} {}", href, name, lastmod, size);
 
-            let date = if lastmod.len() == 0 && type_ == FileType::Directory {
+            let date = if lastmod.is_empty() && type_ == FileType::Directory {
                 // if it's a directory, it's okay to have empty lastmod
                 NaiveDateTime::default()
             } else {
@@ -132,7 +132,7 @@ impl Parser for ApacheF2ListingParser {
                 name.to_string(),
                 type_,
                 {
-                    if size == "-" || size == "" {
+                    if size == "-" || size.is_empty() {
                         None
                     } else {
                         let (n_size, unit) = FileSize::get_humanized(size);
