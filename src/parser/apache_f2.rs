@@ -10,7 +10,7 @@ use super::*;
 use anyhow::{anyhow, Result};
 use chrono::NaiveDateTime;
 use scraper::{Html, Selector};
-// use tracing::debug;
+use tracing::debug;
 
 #[derive(Debug, Clone, Default)]
 pub struct ApacheF2ListingParser;
@@ -36,16 +36,16 @@ impl Parser for ApacheF2ListingParser {
         let document = Html::parse_document(&body);
         // find the indexlist which contains file index
         let selector = Selector::parse("table").unwrap();
+        let mut selector_iter = document.select(&selector);
         let indexlist;
         loop {
-            let t = document
-                .select(&selector)
+            let t = selector_iter
                 .next()
                 .ok_or(anyhow!("No more <table> matched"))?;
-            let t_html = t.html();
-            if t_html.contains("Name")
-                && t_html.contains("Last modified")
-                && t_html.contains("Size")
+            let t_html = t.html().to_lowercase();
+            if t_html.contains("name")
+                && t_html.contains("last modified")
+                && t_html.contains("size")
             {
                 indexlist = t;
                 break;
@@ -54,6 +54,8 @@ impl Parser for ApacheF2ListingParser {
         // find all <tr> inside -- there might have titlebar or <hr>, filter them later
         let selector = Selector::parse("tr").unwrap();
         let mut items = Vec::new();
+
+        let mut lastmod_before_size = true;
         for element in indexlist.select(&selector) {
             // skip divider
             let hr_selector = Selector::parse("hr").unwrap();
@@ -66,7 +68,13 @@ impl Parser for ApacheF2ListingParser {
                 .select(&a_selector)
                 .map(|a| a.value().attr("href").unwrap_or("?"))
                 .collect();
+            // Empty or all query string hrefs
             if hrefs.iter().all(|h| h.starts_with('?')) {
+                let lastmod_pos = element.inner_html().to_lowercase().find("last modified");
+                let size_pos = element.inner_html().to_lowercase().find("size");
+                if let (Some(lastmod_pos), Some(size_pos)) = (lastmod_pos, size_pos) {
+                    lastmod_before_size = lastmod_pos < size_pos;
+                }
                 continue;
             }
 
@@ -79,7 +87,7 @@ impl Parser for ApacheF2ListingParser {
                 .ok_or(anyhow!("no more td after first iterate"))?;
             let a = td.select(&a_selector).next().unwrap();
             let displayed_filename = a.inner_html();
-            if displayed_filename == "Parent Directory" {
+            if displayed_filename == "Parent Directory" || displayed_filename == ".." {
                 continue;
             }
 
@@ -91,29 +99,40 @@ impl Parser for ApacheF2ListingParser {
             } else {
                 FileType::File
             };
-            // lastmod
-            let lastmod = td_iterator
+            let col2 = td_iterator
                 .next()
                 .ok_or(anyhow!("no more td after second iterate"))?
                 .inner_html();
-            let lastmod = lastmod.trim();
-            // size
-            let size = td_iterator
+            let col2 = col2.trim();
+            let col3 = td_iterator
                 .next()
                 .ok_or(anyhow!("no more td after third iterate"))?
                 .inner_html();
-            let size = size.trim();
+            let col3 = col3.trim();
+
+            let (lastmod, size) = if lastmod_before_size {
+                (col2, col3)
+            } else {
+                (col3, col2)
+            };
 
             // debug!("{} {} {} {}", href, name, lastmod, size);
 
-            let date = NaiveDateTime::parse_from_str(lastmod, "%Y-%m-%d %H:%M")?;
+            let date = if lastmod.len() == 0 && type_ == FileType::Directory {
+                // if it's a directory, it's okay to have empty lastmod
+                NaiveDateTime::default()
+            } else {
+                debug!("lastmod: {}", lastmod);
+                let (date_fmt, _) = guess_date_fmt(lastmod);
+                NaiveDateTime::parse_from_str(lastmod, &date_fmt)?
+            };
 
             items.push(ListItem::new(
                 href,
                 name.to_string(),
                 type_,
                 {
-                    if size == "-" {
+                    if size == "-" || size == "" {
                         None
                     } else {
                         let (n_size, unit) = FileSize::get_humanized(size);
@@ -198,6 +217,64 @@ mod tests {
                 assert_eq!(
                     items[6].mtime,
                     NaiveDateTime::parse_from_str("2013-09-16 13:51", "%Y-%m-%d %H:%M").unwrap()
+                );
+            }
+            _ => unreachable!(),
+        }
+    }
+
+    #[test]
+    fn test_mozilla_root() {
+        let context = init_async_context();
+        let items = ApacheF2ListingParser
+            .get_list(
+                &context,
+                &url::Url::parse("http://localhost:1921/mozilla/").unwrap(),
+            )
+            .unwrap();
+        match items {
+            ListResult::List(items) => {
+                assert_eq!(items.len(), 46);
+                assert_eq!(items[0].name, "OJI");
+                assert_eq!(items[0].type_, FileType::Directory);
+                assert_eq!(items[0].size, None);
+                assert_eq!(
+                    items[0].mtime,
+                    NaiveDateTime::parse_from_str("1970-01-01 00:00", "%Y-%m-%d %H:%M").unwrap()
+                );
+            }
+            _ => unreachable!(),
+        }
+    }
+
+    #[test]
+    fn test_mozilla_oji() {
+        let context = init_async_context();
+        let items = ApacheF2ListingParser
+            .get_list(
+                &context,
+                &url::Url::parse("http://localhost:1921/mozilla/OJI/").unwrap(),
+            )
+            .unwrap();
+        match items {
+            ListResult::List(items) => {
+                assert_eq!(items.len(), 2);
+                assert_eq!(items[0].name, "MRJPlugin");
+                assert_eq!(items[0].type_, FileType::Directory);
+                assert_eq!(items[0].size, None);
+                assert_eq!(
+                    items[0].mtime,
+                    NaiveDateTime::parse_from_str("1970-01-01 00:00", "%Y-%m-%d %H:%M").unwrap()
+                );
+                assert_eq!(items[1].name, "MRJPlugin.sit.hqx");
+                assert_eq!(items[1].type_, FileType::File);
+                assert_eq!(
+                    items[1].size,
+                    Some(FileSize::HumanizedBinary(234.0, SizeUnit::K))
+                );
+                assert_eq!(
+                    items[1].mtime,
+                    NaiveDateTime::parse_from_str("2023-02-13 04:21", "%Y-%m-%d %H:%M").unwrap()
                 );
             }
             _ => unreachable!(),

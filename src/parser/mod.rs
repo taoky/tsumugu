@@ -327,6 +327,13 @@ mod tests {
                 r"\d{4}-\d{2}-\d{2} \d{2}:\d{2}:\d{2} [+-]\d{4}".to_owned()
             )
         );
+        assert_eq!(
+            guess_date_fmt("13-Feb-2023 04:21"),
+            (
+                "%d-%b-%Y %H:%M".to_owned(),
+                r"\d{2}-\w{3}-\d{4} \d{2}:\d{2}".to_owned()
+            )
+        )
     }
 
     #[test]
