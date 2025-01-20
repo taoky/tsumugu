@@ -4,6 +4,14 @@ envs:
     --exclude /1.8.[123]/dist/wd$
     --exclude /1.8.[123]/dist/ubiquiti/zerotier-one_latest_mips.deb$
     --exclude /dist/dist/
+    --exclude /fc/
+    --include /fc/${FEDORA_CURRENT}/
+    --exclude /el/
+    --include /el/${RHEL_CURRENT}/
+    --exclude /debian/
+    --include /debian/${UBUNTU_LTS}/
+    --include /debian/${UBUNTU_NONLTS}/
+    --include /debian/${DEBIAN_CURRENT}/
   # looks like that zerotier server does not report correct mtime
   TSUMUGU_EXTRA: >
     --allow-mtime-from-parser
