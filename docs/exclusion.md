@@ -9,6 +9,9 @@ v2 is a breaking but much simpler change. It is based on two simple rules:
 
 You need `--exclusion-v2` to enable this new behavior.
 
+> [!TIP]
+> To include `/a/b/c/d`, `/`, `/a/`, `/a/b/`, `/a/b/c/` and `/a/b/c/d` shall all be included.
+
 ## v1
 
 Currently tsumugu follows a simple algorithm to determine whether a path should be completely excluded, partially excluded, or included:
