@@ -1,4 +1,4 @@
-use crate::regex_manager::{Comparison, ExclusionManagerTrait, ExpandedRegex};
+use super::{Comparison, ExclusionManagerTrait, ExpandedRegex};
 
 #[derive(Debug, Clone)]
 pub struct ExclusionManager {
@@ -11,7 +11,7 @@ pub struct ExclusionManager {
 }
 
 impl ExclusionManager {
-    pub fn new(exclusions: &Vec<ExpandedRegex>, inclusions: &Vec<ExpandedRegex>) -> Self {
+    pub fn new(exclusions: &[ExpandedRegex], inclusions: &[ExpandedRegex]) -> Self {
         let mut instant_stop_regexes = Vec::new();
         let mut list_only_regexes = Vec::new();
 
@@ -33,7 +33,7 @@ impl ExclusionManager {
         Self {
             instant_stop_regexes,
             list_only_regexes,
-            include_regexes: inclusions.clone(),
+            include_regexes: inclusions.to_vec(),
         }
     }
 }

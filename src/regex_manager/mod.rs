@@ -1,8 +1,11 @@
 pub mod v1;
+pub mod v2;
 
 use std::str::FromStr;
 
 use regex::Regex;
+
+use crate::SharedArgs;
 
 // Submit an issue if you find this out-of-date!
 // And assuming that all vars are distro_ver
@@ -91,8 +94,19 @@ pub enum Comparison {
     Ok,
 }
 
-pub trait ExclusionManagerTrait {
+pub trait ExclusionManagerTrait: Send + Sync {
     fn match_str(&self, text: &str) -> Comparison;
+}
+
+pub fn get_exclusion_manager(shared_args: impl SharedArgs) -> Box<dyn ExclusionManagerTrait> {
+    if shared_args.use_v2_exclusion() {
+        Box::new(v2::ExclusionManager::new())
+    } else {
+        Box::new(v1::ExclusionManager::new(
+            shared_args.exclude(),
+            shared_args.include(),
+        ))
+    }
 }
 
 #[cfg(test)]

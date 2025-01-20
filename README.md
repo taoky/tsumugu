@@ -200,7 +200,7 @@ More examples in [examples/](./examples/).
 
 ### Regex variables
 
-See [./src/regex_process.rs](./src/regex_process.rs).
+See [./src/regex_manager/mod.rs](./src/regex_manager/mod.rs).
 
 ### Exclusion and inclusion
 

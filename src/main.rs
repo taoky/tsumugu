@@ -63,6 +63,9 @@ enum Commands {
 trait SharedArgs {
     fn user_agent(&self) -> &str;
     fn headers(&self) -> reqwest::header::HeaderMap;
+    fn use_v2_exclusion(&self) -> bool;
+    fn exclude(&self) -> &[ExpandedRegex];
+    fn include(&self) -> &[ExpandedRegex];
 }
 
 #[derive(Parser, Debug)]
@@ -177,6 +180,18 @@ impl SharedArgs for &SyncArgs {
     fn headers(&self) -> reqwest::header::HeaderMap {
         headers_to_headermap(&self.header)
     }
+
+    fn use_v2_exclusion(&self) -> bool {
+        self.exclusion_v2
+    }
+
+    fn exclude(&self) -> &[ExpandedRegex] {
+        &self.exclude
+    }
+
+    fn include(&self) -> &[ExpandedRegex] {
+        &self.include
+    }
 }
 
 #[derive(Parser, Debug)]
@@ -208,6 +223,10 @@ pub struct ListArgs {
     /// Custom header for HTTP(S) requests in format "Headerkey: headervalue". Supports multiple.
     #[clap(long, value_parser)]
     header: Vec<Header>,
+
+    /// The exclusion v2 mode. To keep compatibility, this is off by default.
+    #[clap(long)]
+    exclusion_v2: bool,
 }
 
 impl SharedArgs for &ListArgs {
@@ -217,6 +236,18 @@ impl SharedArgs for &ListArgs {
 
     fn headers(&self) -> reqwest::header::HeaderMap {
         headers_to_headermap(&self.header)
+    }
+
+    fn use_v2_exclusion(&self) -> bool {
+        self.exclusion_v2
+    }
+
+    fn exclude(&self) -> &[ExpandedRegex] {
+        &self.exclude
+    }
+
+    fn include(&self) -> &[ExpandedRegex] {
+        &self.include
     }
 }
 

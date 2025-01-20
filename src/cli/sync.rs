@@ -24,7 +24,7 @@ use crate::{
     extensions::{extension_handler, ExtensionPackage},
     listing::{self, ListItem},
     parser::{ListResult, ParserMux},
-    regex_manager::{self, v1::ExclusionManager, ExclusionManagerTrait},
+    regex_manager::{self, get_exclusion_manager, ExclusionManagerTrait},
     timezone::determinate_timezone,
     utils::{
         self, again, again_async, build_client, get_async, head, is_symlink, naive_to_utc,
@@ -180,7 +180,7 @@ struct TaskContext<'a> {
     worker: &'a Worker<Task>,
     wake: &'a AtomicUsize,
     exclusion_result: regex_manager::Comparison,
-    exclusion_manager: &'a ExclusionManager,
+    exclusion_manager: &'a dyn ExclusionManagerTrait,
     timezone: Option<FixedOffset>,
     async_context: &'a AsyncContext,
 }
@@ -436,7 +436,7 @@ fn download_handler(
 }
 
 fn sync_threads(args: &SyncArgs, parser: &ParserMux, thr_context: &ThreadsContext) {
-    let exclusion_manager = ExclusionManager::new(&args.exclude, &args.include);
+    let exclusion_manager = get_exclusion_manager(args);
 
     // Handling listing
     let listing_client = build_client(
@@ -522,7 +522,7 @@ fn sync_threads(args: &SyncArgs, parser: &ParserMux, thr_context: &ThreadsContex
                             worker: &worker,
                             wake: &wake,
                             exclusion_result,
-                            exclusion_manager: &exclusion_manager,
+                            exclusion_manager: &*exclusion_manager,
                             timezone,
                             async_context: &async_context,
                         };

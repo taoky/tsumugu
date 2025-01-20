@@ -1,7 +1,6 @@
 use crate::{
     parser::ListResult,
-    regex_manager::v1::ExclusionManager,
-    regex_manager::{Comparison, ExclusionManagerTrait},
+    regex_manager::{get_exclusion_manager, Comparison},
     utils::{build_client, relative_str_process},
     AsyncContext, ListArgs,
 };
@@ -15,7 +14,7 @@ pub fn list(args: &ListArgs, bind_address: Option<String>) -> ! {
         listing_client: client.clone(),
         download_client: client,
     };
-    let exclusion_manager = ExclusionManager::new(&args.exclude, &args.include);
+    let exclusion_manager = get_exclusion_manager(args);
     // get relative
     let upstream = &args.upstream;
     let upstream_path = parser.get_path(upstream);
