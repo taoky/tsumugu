@@ -112,14 +112,15 @@ fn download_file(
             };
             set_progress_bar(bar, total_size, &url);
 
-            let mtime = match utils::get_response_mtime(&resp) {
-                Ok(mtime) => mtime,
-                Err(e) => {
-                    if args.allow_mtime_from_parser {
-                        naive_to_utc(&item.mtime, timezone)
-                    } else {
-                        error!("Failed to get mtime of {}: {:?}", url, e);
-                        return Err(e);
+            let mtime = if args.trust_mtime_from_parser {
+                naive_to_utc(&item.mtime, timezone)
+            } else {
+                match utils::get_response_mtime(&resp) {
+                    Ok(mtime) => mtime,
+                    Err(e) => {
+                        let mtime = naive_to_utc(&item.mtime, timezone);
+                        warn!("Failed to get mtime of {} from header, use parser mtime {} instead: {}", url, mtime, e);
+                        mtime
                     }
                 }
             };
@@ -407,7 +408,7 @@ fn download_handler(
             bar,
             cwd,
             // If no sending HEAD before GET, and don't take mtime from parser, check header here
-            !args.head_before_get && !args.allow_mtime_from_parser,
+            !args.head_before_get && !args.trust_mtime_from_parser,
             // compare_size_only to give to should_download_by_header() inside (when check_header is true)
             compare_size_only,
         ) {

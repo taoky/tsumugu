@@ -76,8 +76,8 @@ Options:
           Skip relative path regex if they exist. Supports multiple
       --compare-size-only <COMPARE_SIZE_ONLY>
           Relative path regex for those compare size only **after** HEAD (head_before_get on) or GET (head_before_get off)
-      --allow-mtime-from-parser
-          Allow mtime from parser if not available from HTTP headers
+      --trust-mtime-from-parser
+          Allow mtime from parser if not available from HTTP headers [aliases: allow-mtime-from-parser]
       --apt-packages
           (Experimental) APT Packages file parser to find out missing packages
       --yum-packages

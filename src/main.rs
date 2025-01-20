@@ -141,8 +141,8 @@ pub struct SyncArgs {
     compare_size_only: Vec<ExpandedRegex>,
 
     /// Allow mtime from parser if not available from HTTP headers.
-    #[clap(long)]
-    allow_mtime_from_parser: bool,
+    #[clap(long, visible_alias = "allow-mtime-from-parser")]
+    trust_mtime_from_parser: bool,
 
     /// (Experimental) APT Packages file parser to find out missing packages.
     #[clap(long)]
