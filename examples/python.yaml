@@ -1,0 +1,7 @@
+envs:
+  UPSTREAM: https://www.python.org/ftp/python/
+image: ustcmirror/tsumugu:latest
+cron: 11 5 * * *
+logRotCycle: 10
+name: python
+storageDir: /srv/repo/python/
