@@ -1,5 +1,13 @@
 envs:
   UPSTREAM: https://www.python.org/ftp/python/
+  TSUMUGU_EXCLUDE: >
+    --exclude \.rekor$
+    --exclude ^/2.7.16/windows-fixed/
+    --exclude ^/3.12.0/tmp/
+    --exclude ^/mail/
+    --exclude ^/nt/
+    --exclude ^/pc/
+    --exclude ^/win32/
 image: ustcmirror/tsumugu:latest
 cron: 11 5 * * *
 logRotCycle: 10
