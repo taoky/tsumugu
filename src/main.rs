@@ -4,6 +4,7 @@ use std::{path::PathBuf, sync::Mutex};
 use clap::{Parser, Subcommand};
 
 use parser::{ParserType, ParserTypeMatch};
+use tracing::level_filters::LevelFilter;
 use tracing_subscriber::EnvFilter;
 use url::Url;
 
@@ -258,18 +259,18 @@ pub struct AsyncContext {
 }
 
 fn main() {
-    // https://github.com/tokio-rs/tracing/issues/735#issuecomment-957884930
-    std::env::set_var(
-        "RUST_LOG",
-        format!("info,{}", std::env::var("RUST_LOG").unwrap_or_default()),
-    );
     let enable_color = std::env::var("NO_COLOR").is_err();
     let pb_manager = kyuri::Manager::new(std::time::Duration::from_secs(1));
     pb_manager.set_ticker(true);
     let pb_writer = pb_manager.create_writer();
     tracing_subscriber::fmt()
         .with_thread_ids(true)
-        .with_env_filter(EnvFilter::from_default_env())
+        .with_env_filter(
+            // https://github.com/tokio-rs/tracing/issues/735
+            EnvFilter::builder()
+                .with_default_directive(LevelFilter::INFO.into())
+                .from_env_lossy(),
+        )
         .with_ansi(enable_color)
         .with_writer(Mutex::new(pb_writer))
         .init();
