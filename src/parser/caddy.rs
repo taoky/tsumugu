@@ -52,7 +52,11 @@ impl Parser for CaddyListingParser {
             let selector = Selector::parse("td.size div.sizebar div.sizebar-text").unwrap();
             let size = match element.select(&selector).next() {
                 Some(s) => {
-                    let (n_size, unit) = FileSize::get_humanized(s.inner_html().trim());
+                    let size_text = s.inner_html();
+                    // ↱&nbsp; would be added by caddy when it's a symlink
+                    // https://github.com/caddyserver/caddy/commit/9338741ca79a74247ced86bc26e4994138470852
+                    let size_text = size_text.trim().trim_start_matches("↱&nbsp;");
+                    let (n_size, unit) = FileSize::get_humanized(size_text);
                     Some(FileSize::HumanizedBinary(n_size, unit))
                 }
                 None => None,
@@ -121,6 +125,56 @@ mod tests {
                 assert_eq!(
                     items[6].mtime,
                     NaiveDateTime::parse_from_str("2024-03-10T04:45:24Z", "%Y-%m-%dT%H:%M:%S%Z")
+                        .unwrap()
+                );
+            }
+            _ => unreachable!(),
+        }
+    }
+
+    #[test]
+    fn test_caddy_symlink() {
+        let context = init_async_context();
+        let items = CaddyListingParser
+            .get_list(
+                &context,
+                &url::Url::parse("http://localhost:1921/caddy-symlink").unwrap(),
+            )
+            .unwrap();
+        match items {
+            ListResult::List(items) => {
+                assert_eq!(items.len(), 3);
+                assert_eq!(items[0].name, "aoi.png");
+                assert_eq!(items[0].type_, FileType::File);
+                assert_eq!(
+                    items[0].size,
+                    Some(FileSize::HumanizedBinary(32.0, SizeUnit::K))
+                );
+                assert_eq!(
+                    items[0].mtime,
+                    NaiveDateTime::parse_from_str("2022-11-19T19:15:45Z", "%Y-%m-%dT%H:%M:%S%Z")
+                        .unwrap()
+                );
+                assert_eq!(items[1].name, "index.html.bak");
+                assert_eq!(items[1].type_, FileType::File);
+                assert_eq!(
+                    items[1].size,
+                    Some(FileSize::HumanizedBinary(143.0, SizeUnit::B))
+                );
+                assert_eq!(
+                    items[1].mtime,
+                    NaiveDateTime::parse_from_str("2022-11-19T19:14:38Z", "%Y-%m-%dT%H:%M:%S%Z")
+                        .unwrap()
+                );
+                assert_eq!(items[2].name, "symlink");
+                assert_eq!(items[2].type_, FileType::File);
+                assert_eq!(
+                    items[2].size,
+                    Some(FileSize::HumanizedBinary(143.0, SizeUnit::B))
+                );
+                assert_eq!(
+                    items[2].mtime,
+                    NaiveDateTime::parse_from_str("2025-02-27T10:45:49Z", "%Y-%m-%dT%H:%M:%S%Z")
                         .unwrap()
                 );
             }
