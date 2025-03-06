@@ -103,7 +103,10 @@ impl Parser for NginxListingParser {
                 if date_fmt.is_none() {
                     let (f, r) = guess_date_fmt(metadata_raw);
                     date_fmt = Some(f);
-                    date_regex = Some(Regex::new(&format!(r"({})\s+([\d\.\-]+ ?[kKMGB]*)$", r))?);
+                    date_regex = Some(Regex::new(&format!(
+                        r"({})\s+([\d\.\-]+ ?(?:[kKMGB]|Bytes)*)$",
+                        r
+                    ))?);
                     debug!("date_fmt: {:?} date_regex: {:?}", date_fmt, date_regex)
                 }
                 let metadata =
@@ -380,6 +383,40 @@ mod tests {
                 assert_eq!(
                     items[3].mtime,
                     NaiveDateTime::parse_from_str("2024-11-04 17:40", "%Y-%m-%d %H:%M").unwrap()
+                );
+            }
+            _ => unreachable!(),
+        }
+    }
+
+    #[test]
+    fn test_vscode() {
+        let context = init_async_context();
+        let items = NginxListingParser::default()
+            .get_list(
+                &context,
+                &url::Url::parse("http://localhost:1921/vscode/").unwrap(),
+            )
+            .unwrap();
+        match items {
+            ListResult::List(items) => {
+                assert_eq!(items.len(), 2);
+                assert_eq!(items[0].name, "dists");
+                assert_eq!(items[0].type_, FileType::Directory);
+                assert_eq!(items[0].size, Some(FileSize::Precise(481)));
+                assert_eq!(
+                    items[0].mtime,
+                    NaiveDateTime::parse_from_str("2025-03-06 07:19", "%Y-%m-%d %H:%M").unwrap()
+                );
+                assert_eq!(items[1].name, "pool");
+                assert_eq!(items[1].type_, FileType::Directory);
+                assert_eq!(
+                    items[1].size,
+                    Some(FileSize::HumanizedBinary(104.1, SizeUnit::M))
+                );
+                assert_eq!(
+                    items[1].mtime,
+                    NaiveDateTime::parse_from_str("2024-09-05 18:01", "%Y-%m-%d %H:%M").unwrap()
                 );
             }
             _ => unreachable!(),
