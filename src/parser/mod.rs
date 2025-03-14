@@ -13,6 +13,7 @@ use crate::{listing::ListItem, AsyncContext};
 
 pub mod apache_f2;
 pub mod caddy;
+pub mod denoflare_r2;
 pub mod directory_lister;
 pub mod docker;
 pub mod fallback;
@@ -77,6 +78,7 @@ pub enum ParserType {
     Caddy,
     FancyIndex,
     Gradle,
+    DenoflareR2,
 
     Fallback,
 }
@@ -95,6 +97,7 @@ impl ParserType {
             Self::Caddy => Box::<caddy::CaddyListingParser>::default(),
             Self::FancyIndex => Box::<fancyindex::FancyIndexListingParser>::default(),
             Self::Gradle => Box::<gradle::GradleListingParser>::default(),
+            Self::DenoflareR2 => Box::<denoflare_r2::DenoFlareR2ListingParser>::default(),
             Self::Fallback => Box::<fallback::FallbackParser>::default(),
         }
     }

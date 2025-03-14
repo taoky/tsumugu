@@ -21,6 +21,7 @@ This is a list of parsers that tsumugu supports:
     </li>
     ```
 
+- denoflare-r2: Specialized parser for <https://github.com/skymethod/denoflare/blob/2e89fb33972a924dd9c5078bb2b2834a1f619081/examples/r2-public-read-worker/listing.ts>.
 - fallback: An inefficient fallback parser for `index.htm(l)` which is NOT a file listing:
 
     ```rust
