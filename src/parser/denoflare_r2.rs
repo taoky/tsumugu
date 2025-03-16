@@ -10,6 +10,7 @@ use anyhow::Result;
 use chrono::{FixedOffset, NaiveDateTime};
 use scraper::CaseSensitivity::*;
 use scraper::{Html, Selector};
+use tracing::info;
 
 #[derive(Debug, Clone, Default)]
 pub struct DenoFlareR2ListingParser;
@@ -26,115 +27,155 @@ impl Parser for DenoFlareR2ListingParser {
         async_context: &AsyncContext,
         url: &url::Url,
     ) -> Result<ListResult, ParserError> {
-        let resp = get(
-            &async_context.runtime,
-            &async_context.listing_client,
-            url.clone(),
-        )?;
-        let url = resp.url().clone();
-        let body = get_text(&async_context.runtime, resp)?;
-        assert_if_url_has_no_trailing_slash(&url);
-        let document = Html::parse_document(&body);
-        let selector = Selector::parse("div#contents").unwrap();
-        let contents = document
-            .select(&selector)
-            .next()
-            .expect("<div id=\"contents\"> not found");
+        let mut documents = vec![];
+        assert_if_url_has_no_trailing_slash(url);
+        let mut inner_url = url.clone();
+        loop {
+            info!("(in paging loop) Fetching: {}", inner_url);
+            let resp = get(
+                &async_context.runtime,
+                &async_context.listing_client,
+                inner_url.clone(),
+            )?;
+            let body = get_text(&async_context.runtime, resp)?;
+            let document = Html::parse_document(&body);
+            documents.push((inner_url.clone(), document.clone()));
 
-        enum State {
-            Start,
-            Dirs,
-            Intermediate,
-            Files,
+            // Check if last element of #contents is next ➜
+            let selector = Selector::parse("div#contents").unwrap();
+            let contents = document
+                .select(&selector)
+                .next()
+                .expect("<div id=\"contents\"> not found");
+            // <div class="full"><a href="...">next ➜</a></div>
+            let last_child = contents
+                .child_elements()
+                .last()
+                .expect("Expected last child");
+            // <a href="...">next ➜</a>
+            let last_child = match last_child.last_child() {
+                Some(child) => child,
+                None => break,
+            };
+            // next ➜
+            let textnode = match last_child.first_child() {
+                Some(child) => child,
+                _ => break,
+            };
+            if textnode.value().as_text().map_or("", |t| t) != "next ➜" {
+                break;
+            }
+            let href = last_child
+                .value()
+                .as_element()
+                .unwrap()
+                .attr("href")
+                .unwrap();
+            inner_url = url.join(href)?;
         }
-        let mut state = State::Start;
         let mut items = Vec::new();
+        for (url, document) in documents {
+            let selector = Selector::parse("div#contents").unwrap();
+            let contents = document
+                .select(&selector)
+                .next()
+                .expect("<div id=\"contents\"> not found");
 
-        let mut iter = contents.child_elements().peekable();
-        while let Some(child) = iter.next() {
-            match state {
-                State::Start => {
-                    if child.value().name() == "div"
-                        && child.value().has_class("full", CaseSensitive)
-                        && child.text().next().unwrap_or_default() == "\u{a0}"
-                    // &nbsp;
-                    {
-                        // peek
-                        let next_elem = iter.peek().expect("Expected next element");
-                        let class_is_full = next_elem.value().has_class("full", CaseSensitive);
-                        if class_is_full {
-                            state = State::Dirs;
-                        } else {
-                            state = State::Intermediate;
+            enum State {
+                Start,
+                Dirs,
+                Files,
+            }
+            let mut state = State::Start;
+
+            let mut iter = contents.child_elements().peekable();
+            while let Some(child) = iter.next() {
+                match state {
+                    State::Start => {
+                        if child.value().name() == "div"
+                            && child.value().has_class("full", CaseSensitive)
+                            && child.text().next().unwrap_or_default() == "\u{a0}"
+                        // &nbsp;
+                        {
+                            // peek
+                            let next_elem = iter.peek().expect("Expected next element");
+                            let class_is_full = next_elem.value().has_class("full", CaseSensitive);
+                            if class_is_full {
+                                state = State::Dirs;
+                            } else {
+                                state = State::Files;
+                            }
                         }
                     }
-                }
-                State::Dirs => {
-                    if child.value().name() == "div" {
-                        assert!(
-                            child.value().has_class("full", CaseSensitive),
-                            "Expected class=\"full\" as end of dirs"
-                        );
-                        assert!(
-                            child.text().next().unwrap_or_default() == "\u{a0}",
-                            "Expected &nbsp; as end of dirs"
-                        );
-                        state = State::Intermediate;
-                        continue;
+                    State::Dirs => {
+                        if child.value().name() == "div" {
+                            assert!(
+                                child.value().has_class("full", CaseSensitive),
+                                "Expected class=\"full\" as end of dirs"
+                            );
+                            assert!(
+                                child.text().next().unwrap_or_default() == "\u{a0}",
+                                "Expected &nbsp; as end of dirs"
+                            );
+                            state = State::Files;
+                            continue;
+                        }
+                        assert!(child.value().name() == "a", "Expected <a> in dirs");
+                        let href = child.value().attr("href").expect("href not found");
+                        let name = get_real_name_from_href(href);
+                        let href = url.join(href)?;
+                        items.push(ListItem::new(
+                            href,
+                            name,
+                            FileType::Directory,
+                            None,
+                            NaiveDateTime::UNIX_EPOCH,
+                            None,
+                        ));
                     }
-                    assert!(child.value().name() == "a", "Expected <a> in dirs");
-                    let href = child.value().attr("href").expect("href not found");
-                    let name = get_real_name_from_href(href);
-                    let href = url.join(href)?;
-                    items.push(ListItem::new(
-                        href,
-                        name,
-                        FileType::Directory,
-                        None,
-                        NaiveDateTime::UNIX_EPOCH,
-                        None,
-                    ));
-                }
-                State::Intermediate => {
-                    assert!(child.value().name() == "a", "Expected <a> (to cwd)");
-                    assert!(
-                        child.text().next().unwrap_or_default().is_empty(),
-                        "Expected empty text for cwd <a>"
-                    );
-                    for _ in 0..3 {
-                        iter.next();
+                    State::Files => {
+                        if child.value().name() == "div" {
+                            assert!(
+                                child.value().has_class("full", CaseSensitive),
+                                "Expected class=\"full\" as end of files, if paging required."
+                            );
+                            break;
+                        }
+                        assert!(child.value().name() == "a", "Expected <a> in files");
+                        let href = child.value().attr("href").expect("href not found");
+                        if href.ends_with('/') {
+                            for _ in 0..3 {
+                                iter.next();
+                            }
+                            continue;
+                        }
+                        let name = get_real_name_from_href(href);
+                        let child = iter.next().expect("Expected next child");
+                        let size = child
+                            .text()
+                            .next()
+                            .expect("Expected size text")
+                            .replace(',', ""); // bytes
+                        let size = size.parse::<u64>().expect("Expected size to be u64");
+                        iter.next(); // skip estimated size
+                        let mtime = iter
+                            .next()
+                            .expect("Expected mtime")
+                            .text()
+                            .next()
+                            .expect("Expected mtime text");
+                        let mtime = NaiveDateTime::parse_from_str(mtime, "%Y-%m-%dT%H:%M:%S.%3fZ")
+                            .expect("Expected mtime to be NaiveDateTime");
+                        let href = url.join(href)?;
+                        items.push(ListItem::new(
+                            href,
+                            name,
+                            FileType::File,
+                            Some(FileSize::Precise(size)),
+                            mtime,
+                            FixedOffset::east_opt(0),
+                        ));
                     }
-                    state = State::Files;
-                }
-                State::Files => {
-                    assert!(child.value().name() == "a", "Expected <a> in files");
-                    let href = child.value().attr("href").expect("href not found");
-                    let name = get_real_name_from_href(href);
-                    let child = iter.next().expect("Expected next child");
-                    let size = child
-                        .text()
-                        .next()
-                        .expect("Expected size text")
-                        .replace(',', ""); // bytes
-                    let size = size.parse::<u64>().expect("Expected size to be u64");
-                    iter.next(); // skip estimated size
-                    let mtime = iter
-                        .next()
-                        .expect("Expected mtime")
-                        .text()
-                        .next()
-                        .expect("Expected mtime text");
-                    let mtime = NaiveDateTime::parse_from_str(mtime, "%Y-%m-%dT%H:%M:%S.%3fZ")
-                        .expect("Expected mtime to be NaiveDateTime");
-                    let href = url.join(href)?;
-                    items.push(ListItem::new(
-                        href,
-                        name,
-                        FileType::File,
-                        Some(FileSize::Precise(size)),
-                        mtime,
-                        FixedOffset::east_opt(0),
-                    ));
                 }
             }
         }
@@ -200,6 +241,25 @@ mod tests {
                 assert_eq!(items.len(), 61);
                 assert_eq!(items[0].name, "clickhouse-client_22.3.10.22_amd64.deb");
                 assert_eq!(items[0].type_, FileType::File);
+            }
+            _ => unreachable!(),
+        }
+    }
+
+    #[test]
+    fn test_clickhouse_multipage() {
+        let context = init_async_context();
+        let items = DenoFlareR2ListingParser
+            .get_list(
+                &context,
+                &Url::parse("http://localhost:1921/clickhouse/stable/").unwrap(),
+            )
+            .unwrap();
+        match items {
+            ListResult::List(items) => {
+                assert_eq!(items.len(), 4);
+                assert_eq!(items[0].name, "clickhouse-client-21.1.9.41.tgz.sha512");
+                assert_eq!(items[3].name, "clickhouse-client-23.7.3.14-arm64.tgz");
             }
             _ => unreachable!(),
         }
