@@ -1,5 +1,6 @@
 use crate::listing::FileType;
 use crate::parser::{ListResult, ParserMux};
+use crate::regex_manager::{Comparison, ExclusionManagerTrait};
 use crate::utils::{self, again};
 use crate::utils::{head, relative_to_str};
 use crate::AsyncContext;
@@ -13,6 +14,7 @@ use url::Url;
 pub fn determinate_timezone(
     args: &SyncArgs,
     parser: &ParserMux,
+    exclusion_manager: &dyn ExclusionManagerTrait,
     async_context: &AsyncContext,
 ) -> Option<FixedOffset> {
     match args.timezone {
@@ -43,9 +45,14 @@ pub fn determinate_timezone(
                         async_context: &AsyncContext,
                         url: &Url,
                         relative: Vec<String>,
+                        exclusion_manager: &dyn ExclusionManagerTrait,
                     ) -> Option<(Option<Url>, Url)> {
-                        info!("Try finding first File in {}", url);
                         let relative_str = relative_to_str(&relative, None);
+                        if exclusion_manager.match_str(&relative_str) == Comparison::Stop {
+                            info!("Excluded by exclusion manager: {}", relative_str);
+                            return None;
+                        }
+                        info!("Try finding first File in {}", url);
                         let list = again(|| Ok(parser.get_list_with_filter(async_context, url, &relative_str)?), args.retry)
                             .unwrap_or_else(|_| panic!("Failed to get list for {}. Maybe you shall disable timezone guessing?", url));
                         match list {
@@ -64,6 +71,7 @@ pub fn determinate_timezone(
                                         async_context,
                                         &item.url,
                                         relative,
+                                        exclusion_manager,
                                     ) {
                                         return Some(res);
                                     }
@@ -76,7 +84,14 @@ pub fn determinate_timezone(
                             }
                         }
                     }
-                    find_first_file(args, parser, async_context, &args.upstream, [].to_vec())
+                    find_first_file(
+                        args,
+                        parser,
+                        async_context,
+                        &args.upstream,
+                        [].to_vec(),
+                        exclusion_manager,
+                    )
                 }
             };
             match timezone_base_and_url {

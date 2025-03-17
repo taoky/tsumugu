@@ -465,7 +465,7 @@ fn sync_threads(args: &SyncArgs, parser: &ParserMux, thr_context: &ThreadsContex
         runtime,
     };
 
-    let timezone = determinate_timezone(args, parser, &async_context);
+    let timezone = determinate_timezone(args, parser, &*exclusion_manager, &async_context);
 
     if !args.dry_run {
         std::fs::create_dir_all(thr_context.download_dir).unwrap();
