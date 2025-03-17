@@ -22,17 +22,6 @@ impl ExclusionManager {
         debug!("args: {:?}", args);
         let mut regexes = Vec::new();
         let mut iter = args.iter().peekable();
-        // for arg in args.iter().peekable() {
-        //     if let Some(stripped) = arg.strip_prefix("--exclude=") {
-        //         regexes.push(RegexType::Exclude(
-        //             ExpandedRegex::from_str(stripped).expect("unexpected exclude regex"),
-        //         ));
-        //     } else if let Some(stripped) = arg.strip_prefix("--include=") {
-        //         regexes.push(RegexType::Include(
-        //             ExpandedRegex::from_str(stripped).expect("unexpected include regex"),
-        //         ));
-        //     }
-        // }
         while let Some(arg) = iter.next() {
             if let Some(stripped) = arg.strip_prefix("--exclude=") {
                 regexes.push(RegexType::Exclude(
