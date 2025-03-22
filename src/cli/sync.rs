@@ -317,6 +317,10 @@ fn download_handler(
         "expected_path: {:?}, relative: {:?}",
         expected_path, relative_filepath
     );
+    if is_symlink(&expected_path) {
+        info!("{:?} is a symlink, ignored", expected_path);
+        return;
+    }
 
     // We should put relative filepath into exclusion manager here
     if task_context.exclusion_manager.match_str(&relative_filepath)
