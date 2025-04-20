@@ -14,9 +14,9 @@ const REGEX_REPLACEMENTS: &[(&str, &str)] = &[
     ("${DEBIAN_CURRENT}", "(?<distro_ver>bullseye|bookworm)"),
     // https://endoflife.date/ubuntu (excluding ESM)
     ("${UBUNTU_LTS}", "(?<distro_ver>focal|jammy|noble)"),
-    ("${UBUNTU_NONLTS}", "(?<distro_ver>oracular)"),
+    ("${UBUNTU_NONLTS}", "(?<distro_ver>oracular|plucky)"),
     // https://endoflife.date/fedora
-    ("${FEDORA_CURRENT}", "(?<distro_ver>39|40|41)"),
+    ("${FEDORA_CURRENT}", "(?<distro_ver>40|41|42)"),
     // CentOS is no longer supported -- this regex is replaced to something that could match nothing
     (
         "${CENTOS_CURRENT}",
@@ -25,9 +25,9 @@ const REGEX_REPLACEMENTS: &[(&str, &str)] = &[
     // https://endoflife.date/rhel (excluding ELCS)
     ("${RHEL_CURRENT}", "(?<distro_ver>8|9)"),
     // https://endoflife.date/opensuse
-    ("${OPENSUSE_CURRENT}", "(?<distro_ver>15.5|15.6)"),
+    ("${OPENSUSE_CURRENT}", "(?<distro_ver>15.6)"),
     // https://endoflife.date/sles
-    ("${SLES_CURRENT}", "(?<distro_ver>12|15)"),
+    ("${SLES_CURRENT}", "(?<distro_ver>15)"),
 ];
 
 /// ExpandedRegex contains inner and rev_inner, and would transparently add '/' before string
