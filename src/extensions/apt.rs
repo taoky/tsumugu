@@ -59,7 +59,7 @@ fn get_debian_root(
     pop(&mut packages_path, None, &mut packages_url)?;
     loop {
         let basename = packages_path.file_name().unwrap().to_str().unwrap();
-        let url_basename = packages_url.path_segments().unwrap().last().unwrap();
+        let url_basename = packages_url.path_segments().unwrap().next_back().unwrap();
         if basename == "dists" && url_basename == "dists" {
             // we don't wanna dists folder in return value
             pop(&mut packages_path, Some(&mut relative), &mut packages_url)?;
