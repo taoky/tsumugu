@@ -29,6 +29,7 @@ apt-parser = "1.0.0"
 flate2 = "1.0.28"
 shadow-rs = "0.32.0"
 thiserror = "1.0.63"
+percent-encoding = "2.3.1"
 
 [build-dependencies]
 shadow-rs = "0.32.0"

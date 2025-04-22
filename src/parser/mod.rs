@@ -236,9 +236,13 @@ fn get_real_name_from_href(href: &str) -> String {
     let hash_pos = before_query.find('#').unwrap_or(before_query.len());
     let name = &before_query[..hash_pos];
 
-    let name: String = url::form_urlencoded::parse(name.as_bytes())
-        .map(|(k, v)| [k, v].concat())
-        .collect();
+    let name: String = percent_encoding::percent_decode_str(name)
+        .decode_utf8()
+        .unwrap_or_else(|_| {
+            warn!("Failed to decode percent-encoded string: {}", name);
+            std::borrow::Cow::Borrowed(name)
+        })
+        .to_string();
     name
 }
 
@@ -350,5 +354,6 @@ mod tests {
         assert_eq!(get_real_name_from_href("/aaa/bbb"), "bbb");
 
         assert_eq!(get_real_name_from_href("somefile#performance"), "somefile");
+        assert_eq!(get_real_name_from_href("memtest+"), "memtest+");
     }
 }

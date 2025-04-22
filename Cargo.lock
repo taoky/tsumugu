@@ -2247,6 +2247,7 @@ dependencies = [
  "futures-util",
  "humansize",
  "kyuri",
+ "percent-encoding",
  "regex",
  "reqwest",
  "scraper",

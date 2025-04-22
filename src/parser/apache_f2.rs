@@ -280,4 +280,23 @@ mod tests {
             _ => unreachable!(),
         }
     }
+
+    #[test]
+    fn test_grml() {
+        let context = init_async_context();
+        let items = ApacheF2ListingParser
+            .get_list(
+                &context,
+                &url::Url::parse("http://localhost:1921/grml/").unwrap(),
+            )
+            .unwrap();
+        match items {
+            ListResult::List(items) => {
+                assert_eq!(items.len(), 10);
+                // Test "+"
+                assert_eq!(items[3].name, "memtest86+");
+            }
+            _ => unreachable!(),
+        }
+    }
 }
