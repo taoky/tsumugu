@@ -16,7 +16,7 @@ envs:
   UPSTREAM: https://repo.mysql.com/
   TSUMUGU_EXTRA: --apt-packages --yum-packages --ignore-nonexist
 image: ustcmirror/tsumugu:latest
-cron: 15 5 * * *
+#cron: 15 5 * * *
 logRotCycle: 10
 name: mysql-repo
 storageDir: /srv/repo/mysql-repo

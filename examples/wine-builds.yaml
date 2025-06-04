@@ -13,7 +13,7 @@ envs:
   TSUMUGU_PARSER: apache-f2
   TSUMUGU_EXTRA: --head-before-get
 image: ustcmirror/tsumugu:latest
-cron: 40 6 * * *
+#cron: 40 6 * * *
 logRotCycle: 10
 name: wine-builds
 storageDir: /srv/repo/wine-builds

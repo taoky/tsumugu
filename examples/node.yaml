@@ -12,7 +12,7 @@ envs:
     --skip-if-exists /node[^/]+$
     --skip-if-exists /npm[^/]+$
 image: ustcmirror/tsumugu:latest
-cron: 7 7 * * *
+#cron: 7 7 * * *
 logRotCycle: 10
 name: node
 storageDir: /srv/repo/node/

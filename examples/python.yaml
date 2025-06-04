@@ -9,7 +9,7 @@ envs:
     --exclude ^/pc/
     --exclude ^/win32/
 image: ustcmirror/tsumugu:latest
-cron: 11 5 * * *
+#cron: 11 5 * * *
 logRotCycle: 10
 name: python
 storageDir: /srv/repo/python/

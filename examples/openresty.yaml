@@ -20,7 +20,7 @@ envs:
     --exclude ^/centos/8.*/3$
     --exclude ^/kylin/10/3$
 image: ustcmirror/tsumugu:latest
-cron: 13 5 * * *
+#cron: 13 5 * * *
 logRotCycle: 10
 name: openresty
 storageDir: /srv/repo/openresty/

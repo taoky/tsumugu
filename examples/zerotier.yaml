@@ -17,7 +17,7 @@ envs:
     --allow-mtime-from-parser
     --timezone 0
 image: ustcmirror/tsumugu:latest
-cron: 33 2 * * *
+#cron: 33 2 * * *
 logRotCycle: 10
 name: zerotier
 storageDir: /srv/repo/zerotier/
