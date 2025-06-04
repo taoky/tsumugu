@@ -1,0 +1,12 @@
+envs:
+  UPSTREAM: https://apt.postgresql.org/pub/
+  TSUMUGU_EXCLUDE: >
+    --include ^/repos/
+    --exclude ^/.+
+  TSUMUGU_EXTRA: --exclusion-v2
+  TSUMUGU_PARSER: nginx
+image: ustcmirror/tsumugu:latest
+cron: 13 8 * * *
+logRotCycle: 10
+name: postgresql
+storageDir: /srv/repo/postgresql/
