@@ -127,7 +127,7 @@ For a very brief introduction of parser, see [./docs/parser.md](./docs/parser.md
 
 ## Building with musl
 
-Unfortunately, this requires openssl-sys, which is not included in cross's prebuilt images. Try https://github.com/clux/muslrust.
+The CI uses https://github.com/clux/muslrust to build statically linked binaries with musl libc.
 
 ## Evaluation
 
