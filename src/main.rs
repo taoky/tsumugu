@@ -77,6 +77,14 @@ impl Deref for ListArgs {
 
 #[derive(Parser, Debug)]
 pub struct CommonArgs {
+    /// Choose a main parser.
+    #[clap(long, value_enum, default_value_t = ParserType::Nginx)]
+    parser: ParserType,
+
+    /// The upstream URL.
+    #[clap(value_parser)]
+    upstream: Url,
+
     /// Customize tsumugu's user agent.
     #[clap(long, default_value = "tsumugu")]
     user_agent: String,
@@ -125,10 +133,6 @@ pub struct SyncArgs {
     #[clap(long, default_value_t = 100)]
     max_delete: usize,
 
-    /// The upstream URL.
-    #[clap(value_parser)]
-    upstream: Url,
-
     /// The local directory.
     #[clap(value_parser)]
     local: PathBuf,
@@ -151,10 +155,6 @@ pub struct SyncArgs {
     /// when GETting tsumugu would try checking if we still need to download it.
     #[clap(long)]
     head_before_get: bool,
-
-    /// Choose a main parser.
-    #[clap(long, value_enum, default_value_t = ParserType::Nginx)]
-    parser: ParserType,
 
     /// Choose supplementary parsers. Format: "parsername:matchpattern".
     /// matchpattern is a relative path regex.
@@ -195,14 +195,6 @@ pub struct SyncArgs {
 pub struct ListArgs {
     #[clap(flatten)]
     common: CommonArgs,
-
-    /// The upstream URL.
-    #[clap(value_parser)]
-    upstream: Url,
-
-    /// Choose a main parser.
-    #[clap(long, value_enum, default_value_t=ParserType::Nginx)]
-    parser: ParserType,
 
     /// The upstream base starting with "/".
     #[clap(long, default_value = "/")]

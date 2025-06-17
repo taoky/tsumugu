@@ -46,6 +46,8 @@ Arguments:
   <LOCAL>     The local directory
 
 Options:
+      --parser <PARSER>
+          Choose a main parser [default: nginx] [possible values: nginx, apache-f2, docker, directory-lister, lighttpd, caddy, fancy-index, gradle, denoflare-r2, fallback]
       --user-agent <USER_AGENT>
           Customize tsumugu's user agent [default: tsumugu]
       --header <HEADER>
@@ -72,8 +74,6 @@ Options:
           Retry count for each request [default: 3]
       --head-before-get
           Do an HEAD before actual GET. Otherwise when head-before-get and allow-time-from-parser are not set, when GETting tsumugu would try checking if we still need to download it
-      --parser <PARSER>
-          Choose a main parser [default: nginx] [possible values: nginx, apache-f2, docker, directory-lister, lighttpd, caddy, fancy-index, gradle, denoflare-r2, fallback]
       --parser-match <PARSER_MATCH>
           Choose supplementary parsers. Format: "parsername:matchpattern". matchpattern is a relative path regex. Supports multiple
       --skip-if-exists <SKIP_IF_EXISTS>
@@ -103,12 +103,12 @@ Arguments:
   <UPSTREAM>  The upstream URL
 
 Options:
+      --parser <PARSER>                Choose a main parser [default: nginx] [possible values: nginx, apache-f2, docker, directory-lister, lighttpd, caddy, fancy-index, gradle, denoflare-r2, fallback]
       --user-agent <USER_AGENT>        Customize tsumugu's user agent [default: tsumugu]
       --header <HEADER>                Custom header for HTTP(S) requests in format "Headerkey: headervalue". Supports multiple
       --exclusion-v2                   The exclusion v2 mode. To keep compatibility, this is off by default
       --exclude <EXCLUDE>              Excluded relative path regex. Supports multiple
       --include <INCLUDE>              Included relative path regex (even if excluded). Supports multiple
-      --parser <PARSER>                Choose a main parser [default: nginx] [possible values: nginx, apache-f2, docker, directory-lister, lighttpd, caddy, fancy-index, gradle, denoflare-r2, fallback]
       --upstream-base <UPSTREAM_BASE>  The upstream base starting with "/" [default: /]
   -h, --help                           Print help
   -V, --version                        Print version
