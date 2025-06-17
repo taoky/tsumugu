@@ -62,7 +62,7 @@ pub trait Parser: Sync {
     }
     fn name(&self) -> &'static str;
 
-    /// Used for list command only
+    /// Some parsers (directiory lister) might have different URL path
     fn get_path(&self, url: &Url) -> PathBuf {
         PathBuf::from(url.path())
     }
@@ -163,23 +163,16 @@ impl ParserMux {
         url: &Url,
         relative: &str,
     ) -> Result<ListResult, ParserError> {
-        fn get_list_inner(
-            s: &ParserMux,
-            async_context: &AsyncContext,
-            url: &Url,
-            relative: &str,
-        ) -> Result<ListResult, ParserError> {
-            for s in s.supplementaries.iter() {
+        let res = {
+            for s in self.supplementaries.iter() {
                 let regex = &s.1;
                 if regex.is_match(relative) {
                     info!("URL {} Matches subparser {}", url, s.0.name());
                     return s.0.get_list(async_context, url);
                 }
             }
-            s.main.get_list(async_context, url)
-        }
-
-        let res = get_list_inner(self, async_context, url, relative);
+            self.main.get_list(async_context, url)
+        };
         if !self.auto_fallback {
             return res;
         }
@@ -194,6 +187,10 @@ impl ParserMux {
         // start autofallback logic
         warn!("Parse error with {url}: {e}, try fallback...");
         ParserType::Fallback.build().get_list(async_context, url)
+    }
+
+    pub fn get_path(&self, url: &Url) -> PathBuf {
+        self.main.get_path(url)
     }
 
     pub fn is_auto_redirect(&self) -> bool {

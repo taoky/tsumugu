@@ -1,5 +1,5 @@
 use crate::{
-    parser::ListResult,
+    parser::{ListResult, ParserMux},
     regex_manager::{get_exclusion_manager, Comparison},
     utils::{build_client, relative_str_process},
     AsyncContext, ListArgs,
@@ -7,7 +7,11 @@ use crate::{
 
 // TODO: clean code
 pub fn list(args: &ListArgs, bind_address: Option<String>) -> ! {
-    let parser = args.parser.build();
+    let parser = ParserMux::new(
+        args.parser.clone(),
+        args.parser_match.clone(),
+        args.auto_fallback,
+    );
     let client = build_client(args, parser.is_auto_redirect(), bind_address.as_ref(), true);
     let async_context = AsyncContext {
         runtime: tokio::runtime::Runtime::new().unwrap(),
@@ -26,7 +30,9 @@ pub fn list(args: &ListArgs, bind_address: Option<String>) -> ! {
         .to_owned();
     let relative = relative_str_process(&relative);
     assert!(relative.starts_with('/') && relative.ends_with('/'));
-    let list = parser.get_list(&async_context, upstream).unwrap();
+    let list = parser
+        .get_list_with_filter(&async_context, upstream, &relative)
+        .unwrap();
     let match_cmp = exclusion_manager.match_str(&relative);
 
     println!("Relative: {relative}");

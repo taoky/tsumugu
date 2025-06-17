@@ -104,6 +104,16 @@ pub struct CommonArgs {
     /// Included relative path regex (even if excluded). Supports multiple.
     #[clap(long, value_parser)]
     include: Vec<ExpandedRegex>,
+
+    /// Choose supplementary parsers. Format: "parsername:matchpattern".
+    /// matchpattern is a relative path regex.
+    /// Supports multiple.
+    #[clap(long, value_parser)]
+    parser_match: Vec<ParserTypeMatch>,
+
+    /// Allow automatically choose fallback parser when ParseError occurred.
+    #[clap(long)]
+    auto_fallback: bool,
 }
 
 impl CommonArgs {
@@ -156,12 +166,6 @@ pub struct SyncArgs {
     #[clap(long)]
     head_before_get: bool,
 
-    /// Choose supplementary parsers. Format: "parsername:matchpattern".
-    /// matchpattern is a relative path regex.
-    /// Supports multiple.
-    #[clap(long, value_parser)]
-    parser_match: Vec<ParserTypeMatch>,
-
     /// Skip relative path regex if they exist. Supports multiple.
     #[clap(long, value_parser)]
     skip_if_exists: Vec<ExpandedRegex>,
@@ -185,10 +189,6 @@ pub struct SyncArgs {
     /// Ignore 404 NOT FOUND as error when downloading files.
     #[clap(long)]
     ignore_nonexist: bool,
-
-    /// Allow automatically choose fallback parser when ParseError occurred.
-    #[clap(long)]
-    auto_fallback: bool,
 }
 
 #[derive(Parser, Debug)]

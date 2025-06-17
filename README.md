@@ -58,6 +58,10 @@ Options:
           Excluded relative path regex. Supports multiple
       --include <INCLUDE>
           Included relative path regex (even if excluded). Supports multiple
+      --parser-match <PARSER_MATCH>
+          Choose supplementary parsers. Format: "parsername:matchpattern". matchpattern is a relative path regex. Supports multiple
+      --auto-fallback
+          Allow automatically choose fallback parser when ParseError occurred
       --dry-run
           Do not download files and cleanup
       --threads <THREADS>
@@ -74,8 +78,6 @@ Options:
           Retry count for each request [default: 3]
       --head-before-get
           Do an HEAD before actual GET. Otherwise when head-before-get and allow-time-from-parser are not set, when GETting tsumugu would try checking if we still need to download it
-      --parser-match <PARSER_MATCH>
-          Choose supplementary parsers. Format: "parsername:matchpattern". matchpattern is a relative path regex. Supports multiple
       --skip-if-exists <SKIP_IF_EXISTS>
           Skip relative path regex if they exist. Supports multiple
       --compare-size-only <COMPARE_SIZE_ONLY>
@@ -88,8 +90,6 @@ Options:
           (Experimental) YUM Packages file parser to find out missing packages
       --ignore-nonexist
           Ignore 404 NOT FOUND as error when downloading files
-      --auto-fallback
-          Allow automatically choose fallback parser when ParseError occurred
   -h, --help
           Print help
   -V, --version
@@ -109,6 +109,8 @@ Options:
       --exclusion-v2                   The exclusion v2 mode. To keep compatibility, this is off by default
       --exclude <EXCLUDE>              Excluded relative path regex. Supports multiple
       --include <INCLUDE>              Included relative path regex (even if excluded). Supports multiple
+      --parser-match <PARSER_MATCH>    Choose supplementary parsers. Format: "parsername:matchpattern". matchpattern is a relative path regex. Supports multiple
+      --auto-fallback                  Allow automatically choose fallback parser when ParseError occurred
       --upstream-base <UPSTREAM_BASE>  The upstream base starting with "/" [default: /]
   -h, --help                           Print help
   -V, --version                        Print version
