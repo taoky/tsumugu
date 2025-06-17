@@ -108,7 +108,10 @@ mod tests {
                 assert_eq!(items[0].name, "bgw_replstatus_13-1.0.6-5PGDG.f42.src.rpm");
                 assert_eq!(items[0].type_, FileType::File);
                 assert_eq!(items[0].size, Some(FileSize::Precise(19340)));
-                assert_eq!(items[0].mtime, NaiveDateTime::parse_from_str("2025-03-26 13:41", "%Y-%m-%d %H:%M").unwrap());
+                assert_eq!(
+                    items[0].mtime,
+                    NaiveDateTime::parse_from_str("2025-03-26 13:41", "%Y-%m-%d %H:%M").unwrap()
+                );
             }
             _ => unreachable!(),
         }
