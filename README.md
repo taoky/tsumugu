@@ -48,6 +48,14 @@ Arguments:
 Options:
       --user-agent <USER_AGENT>
           Customize tsumugu's user agent [default: tsumugu]
+      --header <HEADER>
+          Custom header for HTTP(S) requests in format "Headerkey: headervalue". Supports multiple
+      --exclusion-v2
+          The exclusion v2 mode. To keep compatibility, this is off by default
+      --exclude <EXCLUDE>
+          Excluded relative path regex. Supports multiple
+      --include <INCLUDE>
+          Included relative path regex (even if excluded). Supports multiple
       --dry-run
           Do not download files and cleanup
       --threads <THREADS>
@@ -65,13 +73,9 @@ Options:
       --head-before-get
           Do an HEAD before actual GET. Otherwise when head-before-get and allow-time-from-parser are not set, when GETting tsumugu would try checking if we still need to download it
       --parser <PARSER>
-          Choose a main parser [default: nginx] [possible values: nginx, apache-f2, docker, directory-lister, lighttpd, caddy, fancy-index, gradle, fallback]
+          Choose a main parser [default: nginx] [possible values: nginx, apache-f2, docker, directory-lister, lighttpd, caddy, fancy-index, gradle, denoflare-r2, fallback]
       --parser-match <PARSER_MATCH>
           Choose supplementary parsers. Format: "parsername:matchpattern". matchpattern is a relative path regex. Supports multiple
-      --exclude <EXCLUDE>
-          Excluded relative path regex. Supports multiple
-      --include <INCLUDE>
-          Included relative path regex (even if excluded). Supports multiple
       --skip-if-exists <SKIP_IF_EXISTS>
           Skip relative path regex if they exist. Supports multiple
       --compare-size-only <COMPARE_SIZE_ONLY>
@@ -86,10 +90,6 @@ Options:
           Ignore 404 NOT FOUND as error when downloading files
       --auto-fallback
           Allow automatically choose fallback parser when ParseError occurred
-      --header <HEADER>
-          Custom header for HTTP(S) requests in format "Headerkey: headervalue". Supports multiple
-      --exclusion-v2
-          The exclusion v2 mode. To keep compatibility, this is off by default
   -h, --help
           Print help
   -V, --version
@@ -104,12 +104,12 @@ Arguments:
 
 Options:
       --user-agent <USER_AGENT>        Customize tsumugu's user agent [default: tsumugu]
-      --parser <PARSER>                Choose a main parser [default: nginx] [possible values: nginx, apache-f2, docker, directory-lister, lighttpd, caddy, fancy-index, gradle, fallback]
-      --exclude <EXCLUDE>              Excluded relative path regex. Supports multiple
-      --include <INCLUDE>              Included relative path regex (even if excluded). Supports multiple
-      --upstream-base <UPSTREAM_BASE>  The upstream base starting with "/" [default: /]
       --header <HEADER>                Custom header for HTTP(S) requests in format "Headerkey: headervalue". Supports multiple
       --exclusion-v2                   The exclusion v2 mode. To keep compatibility, this is off by default
+      --exclude <EXCLUDE>              Excluded relative path regex. Supports multiple
+      --include <INCLUDE>              Included relative path regex (even if excluded). Supports multiple
+      --parser <PARSER>                Choose a main parser [default: nginx] [possible values: nginx, apache-f2, docker, directory-lister, lighttpd, caddy, fancy-index, gradle, denoflare-r2, fallback]
+      --upstream-base <UPSTREAM_BASE>  The upstream base starting with "/" [default: /]
   -h, --help                           Print help
   -V, --version                        Print version
 ```

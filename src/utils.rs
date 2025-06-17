@@ -9,7 +9,7 @@ use tracing::debug;
 use tracing::warn;
 use url::Url;
 
-use crate::SharedArgs;
+use crate::CommonArgs;
 
 // A simple diagnose of (frustrating) proxy settings
 fn proxy_precheck() {
@@ -123,7 +123,7 @@ impl std::str::FromStr for Header {
 }
 
 pub fn build_client(
-    args: impl SharedArgs,
+    args: &CommonArgs,
     redirect: bool,
     bind_address: Option<&String>,
     auto_compress: bool,
@@ -131,7 +131,7 @@ pub fn build_client(
     proxy_precheck();
     let minute = std::time::Duration::new(60, 0);
     let mut builder = reqwest::Client::builder()
-        .user_agent(args.user_agent())
+        .user_agent(args.user_agent.clone())
         .local_address(bind_address.map(|x| x.parse::<std::net::IpAddr>().unwrap()))
         .default_headers(args.headers())
         // hard code 1min connect/read timeout currently

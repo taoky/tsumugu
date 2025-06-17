@@ -1,5 +1,5 @@
 #![warn(clippy::cognitive_complexity)]
-use std::{path::PathBuf, sync::Mutex};
+use std::{ops::Deref, path::PathBuf, sync::Mutex};
 
 use clap::{Parser, Subcommand};
 
@@ -61,19 +61,53 @@ enum Commands {
     List(ListArgs),
 }
 
-trait SharedArgs {
-    fn user_agent(&self) -> &str;
-    fn headers(&self) -> reqwest::header::HeaderMap;
-    fn use_v2_exclusion(&self) -> bool;
-    fn exclude(&self) -> &[ExpandedRegex];
-    fn include(&self) -> &[ExpandedRegex];
+impl Deref for SyncArgs {
+    type Target = CommonArgs;
+    fn deref(&self) -> &Self::Target {
+        &self.common
+    }
+}
+
+impl Deref for ListArgs {
+    type Target = CommonArgs;
+    fn deref(&self) -> &Self::Target {
+        &self.common
+    }
+}
+
+#[derive(Parser, Debug)]
+pub struct CommonArgs {
+    /// Customize tsumugu's user agent.
+    #[clap(long, default_value = "tsumugu")]
+    user_agent: String,
+
+    /// Custom header for HTTP(S) requests in format "Headerkey: headervalue". Supports multiple.
+    #[clap(long, value_parser)]
+    header: Vec<Header>,
+
+    /// The exclusion v2 mode. To keep compatibility, this is off by default.
+    #[clap(long)]
+    exclusion_v2: bool,
+
+    /// Excluded relative path regex. Supports multiple.
+    #[clap(long, value_parser)]
+    exclude: Vec<ExpandedRegex>,
+
+    /// Included relative path regex (even if excluded). Supports multiple.
+    #[clap(long, value_parser)]
+    include: Vec<ExpandedRegex>,
+}
+
+impl CommonArgs {
+    pub fn headers(&self) -> reqwest::header::HeaderMap {
+        headers_to_headermap(&self.header)
+    }
 }
 
 #[derive(Parser, Debug)]
 pub struct SyncArgs {
-    /// Customize tsumugu's user agent.
-    #[clap(long, default_value = "tsumugu")]
-    user_agent: String,
+    #[clap(flatten)]
+    common: CommonArgs,
 
     /// Do not download files and cleanup.
     #[clap(long)]
@@ -128,14 +162,6 @@ pub struct SyncArgs {
     #[clap(long, value_parser)]
     parser_match: Vec<ParserTypeMatch>,
 
-    /// Excluded relative path regex. Supports multiple.
-    #[clap(long, value_parser)]
-    exclude: Vec<ExpandedRegex>,
-
-    /// Included relative path regex (even if excluded). Supports multiple.
-    #[clap(long, value_parser)]
-    include: Vec<ExpandedRegex>,
-
     /// Skip relative path regex if they exist. Supports multiple.
     #[clap(long, value_parser)]
     skip_if_exists: Vec<ExpandedRegex>,
@@ -163,43 +189,12 @@ pub struct SyncArgs {
     /// Allow automatically choose fallback parser when ParseError occurred.
     #[clap(long)]
     auto_fallback: bool,
-
-    /// Custom header for HTTP(S) requests in format "Headerkey: headervalue". Supports multiple.
-    #[clap(long, value_parser)]
-    header: Vec<Header>,
-
-    /// The exclusion v2 mode. To keep compatibility, this is off by default.
-    #[clap(long)]
-    exclusion_v2: bool,
-}
-
-impl SharedArgs for &SyncArgs {
-    fn user_agent(&self) -> &str {
-        &self.user_agent
-    }
-
-    fn headers(&self) -> reqwest::header::HeaderMap {
-        headers_to_headermap(&self.header)
-    }
-
-    fn use_v2_exclusion(&self) -> bool {
-        self.exclusion_v2
-    }
-
-    fn exclude(&self) -> &[ExpandedRegex] {
-        &self.exclude
-    }
-
-    fn include(&self) -> &[ExpandedRegex] {
-        &self.include
-    }
 }
 
 #[derive(Parser, Debug)]
 pub struct ListArgs {
-    /// Customize tsumugu's user agent.
-    #[clap(long, default_value = "tsumugu")]
-    user_agent: String,
+    #[clap(flatten)]
+    common: CommonArgs,
 
     /// The upstream URL.
     #[clap(value_parser)]
@@ -209,47 +204,9 @@ pub struct ListArgs {
     #[clap(long, value_enum, default_value_t=ParserType::Nginx)]
     parser: ParserType,
 
-    /// Excluded relative path regex. Supports multiple.
-    #[clap(long, value_parser)]
-    exclude: Vec<ExpandedRegex>,
-
-    /// Included relative path regex (even if excluded). Supports multiple.
-    #[clap(long, value_parser)]
-    include: Vec<ExpandedRegex>,
-
     /// The upstream base starting with "/".
     #[clap(long, default_value = "/")]
     upstream_base: String,
-
-    /// Custom header for HTTP(S) requests in format "Headerkey: headervalue". Supports multiple.
-    #[clap(long, value_parser)]
-    header: Vec<Header>,
-
-    /// The exclusion v2 mode. To keep compatibility, this is off by default.
-    #[clap(long)]
-    exclusion_v2: bool,
-}
-
-impl SharedArgs for &ListArgs {
-    fn user_agent(&self) -> &str {
-        &self.user_agent
-    }
-
-    fn headers(&self) -> reqwest::header::HeaderMap {
-        headers_to_headermap(&self.header)
-    }
-
-    fn use_v2_exclusion(&self) -> bool {
-        self.exclusion_v2
-    }
-
-    fn exclude(&self) -> &[ExpandedRegex] {
-        &self.exclude
-    }
-
-    fn include(&self) -> &[ExpandedRegex] {
-        &self.include
-    }
 }
 
 pub struct AsyncContext {
