@@ -47,7 +47,7 @@ Arguments:
 
 Options:
       --parser <PARSER>
-          Choose a main parser [default: nginx] [possible values: nginx, apache-f2, docker, directory-lister, lighttpd, caddy, fancy-index, gradle, denoflare-r2, fallback]
+          Choose a main parser [default: nginx] [possible values: nginx, apache-f2, docker, directory-lister, lighttpd, caddy, fancy-index, gradle, denoflare-r2, s3-indexbuilder, fallback]
       --user-agent <USER_AGENT>
           Customize tsumugu's user agent [default: tsumugu]
       --header <HEADER>
@@ -95,15 +95,7 @@ Options:
   -V, --version
           Print version
 > ./tsumugu list --help
-List files from upstream
-
-Usage: tsumugu list [OPTIONS] <UPSTREAM>
-
-Arguments:
-  <UPSTREAM>  The upstream URL
-
-Options:
-      --parser <PARSER>                Choose a main parser [default: nginx] [possible values: nginx, apache-f2, docker, directory-lister, lighttpd, caddy, fancy-index, gradle, denoflare-r2, fallback]
+      --parser <PARSER>                Choose a main parser [default: nginx] [possible values: nginx, apache-f2, docker, directory-lister, lighttpd, caddy, fancy-index, gradle, denoflare-r2, s3-indexbuilder, fallback]
       --user-agent <USER_AGENT>        Customize tsumugu's user agent [default: tsumugu]
       --header <HEADER>                Custom header for HTTP(S) requests in format "Headerkey: headervalue". Supports multiple
       --exclusion-v2                   The exclusion v2 mode. To keep compatibility, this is off by default

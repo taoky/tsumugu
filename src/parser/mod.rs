@@ -21,6 +21,7 @@ pub mod fancyindex;
 pub mod gradle;
 pub mod lighttpd;
 pub mod nginx;
+pub mod s3indexbuilder;
 
 #[derive(Debug)]
 pub enum ListResult {
@@ -79,6 +80,7 @@ pub enum ParserType {
     FancyIndex,
     Gradle,
     DenoflareR2,
+    S3Indexbuilder,
 
     Fallback,
 }
@@ -98,6 +100,7 @@ impl ParserType {
             Self::FancyIndex => Box::<fancyindex::FancyIndexListingParser>::default(),
             Self::Gradle => Box::<gradle::GradleListingParser>::default(),
             Self::DenoflareR2 => Box::<denoflare_r2::DenoFlareR2ListingParser>::default(),
+            Self::S3Indexbuilder => Box::<s3indexbuilder::S3Indexbuilder>::default(),
             Self::Fallback => Box::<fallback::FallbackParser>::default(),
         }
     }
