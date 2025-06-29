@@ -273,12 +273,47 @@ fn has_timezone_suffix(s: &str) -> bool {
     c1 && c2
 }
 
+fn is_space_before_timezone(s: &str) -> bool {
+    if s.len() < 6 {
+        return false;
+    }
+    let chars: Vec<char> = s.chars().collect();
+    chars[chars.len() - 6] == ' '
+}
+
+fn has_colon_timezone_suffix(s: &str) -> bool {
+    // such as +08:00
+    if s.len() < 6 {
+        return false;
+    }
+    let chars: Vec<char> = s.chars().collect();
+    let c1 = chars[chars.len() - 3] == ':';
+    let c2 = chars[chars.len() - 2..].iter().all(|c| c.is_ascii_digit());
+    let c3 = chars[chars.len() - 5..chars.len() - 3]
+        .iter()
+        .all(|c| c.is_ascii_digit());
+    let c4 = chars[chars.len() - 6] == '+' || chars[chars.len() - 6] == '-';
+    c1 && c2 && c3 && c4
+}
+
+fn is_space_before_colon_timezone(s: &str) -> bool {
+    // such as +08:00
+    if s.len() < 7 {
+        return false;
+    }
+    let chars: Vec<char> = s.chars().collect();
+    chars[chars.len() - 7] == ' '
+}
+
 // Returns format and regex string
 fn guess_date_fmt(date: &str) -> (String, String) {
     let two_colons = contains_two_colons(date);
     let abbr_month = contains_abbreviated_month(date);
     let year_first = has_four_numeric_prefix(date);
     let has_timezone = has_timezone_suffix(date);
+    let space_before_timezone = is_space_before_timezone(date);
+    let has_colon_timezone = has_colon_timezone_suffix(date);
+    let space_before_colon_timezone = is_space_before_colon_timezone(date);
     let (dfmt, dfmt_regex) = match (abbr_month, year_first) {
         (true, true) => ("%Y-%b-%d", r"\d{4}-\w{3}-\d{2}"),
         (true, false) => ("%d-%b-%Y", r"\d{2}-\w{3}-\d{4}"),
@@ -291,7 +326,17 @@ fn guess_date_fmt(date: &str) -> (String, String) {
         ("%H:%M", r"\d{2}:\d{2}")
     };
     let (zfmt, zfmt_regex) = if has_timezone {
-        (" %z", r" [+-]\d{4}")
+        if space_before_timezone {
+            (" %z", r" [+-]\d{4}")
+        } else {
+            ("%z", r"[+-]\d{4}")
+        }
+    } else if has_colon_timezone {
+        if space_before_colon_timezone {
+            (" %:z", r" [+-]\d{2}:\d{2}")
+        } else {
+            ("%:z", r"[+-]\d{2}:\d{2}")
+        }
     } else {
         ("", "")
     };
@@ -339,6 +384,20 @@ mod tests {
             (
                 "%d-%b-%Y %H:%M".to_owned(),
                 r"\d{2}-\w{3}-\d{4} \d{2}:\d{2}".to_owned()
+            )
+        );
+        assert_eq!(
+            guess_date_fmt("2023-11-27 14:22:08 +00:00"),
+            (
+                "%Y-%m-%d %H:%M:%S %:z".to_owned(),
+                r"\d{4}-\d{2}-\d{2} \d{2}:\d{2}:\d{2} [+-]\d{2}:\d{2}".to_owned()
+            )
+        );
+        assert_eq!(
+            guess_date_fmt("2023-11-27 14:22:08+00:00"),
+            (
+                "%Y-%m-%d %H:%M:%S%:z".to_owned(),
+                r"\d{4}-\d{2}-\d{2} \d{2}:\d{2}:\d{2}[+-]\d{2}:\d{2}".to_owned()
             )
         )
     }

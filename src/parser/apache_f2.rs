@@ -80,8 +80,11 @@ impl Parser for ApacheF2ListingParser {
 
             let td_selector = Selector::parse("td").unwrap();
             let mut td_iterator = element.select(&td_selector);
+            let td_count = td_iterator.clone().count();
             // skip icon (first col)
-            td_iterator.next();
+            if td_count > 3 {
+                td_iterator.next();
+            }
             let td = td_iterator
                 .next()
                 .ok_or(anyhow!("no more td after first iterate"))?;
@@ -94,7 +97,8 @@ impl Parser for ApacheF2ListingParser {
             let href = a.value().attr("href").unwrap();
             let name = get_real_name_from_href(href);
             let href = url.join(href)?;
-            let type_ = if href.as_str().ends_with('/') {
+            let type_ = if href.as_str().ends_with('/') || displayed_filename.ends_with('/') {
+                // check displayed filename here to workaround some servers
                 FileType::Directory
             } else {
                 FileType::File
@@ -116,7 +120,14 @@ impl Parser for ApacheF2ListingParser {
                 (col3, col2)
             };
 
-            // debug!("{} {} {} {}", href, name, lastmod, size);
+            let lastmod = if lastmod == "-" {
+                // if lastmod is "-", it means the file is not modified
+                ""
+            } else {
+                lastmod
+            };
+
+            debug!("{} {} {} {}", href, name, lastmod, size);
 
             let date = if lastmod.is_empty() && type_ == FileType::Directory {
                 // if it's a directory, it's okay to have empty lastmod
@@ -124,6 +135,7 @@ impl Parser for ApacheF2ListingParser {
             } else {
                 debug!("lastmod: {}", lastmod);
                 let (date_fmt, _) = guess_date_fmt(lastmod);
+                debug!("date_fmt: {}", date_fmt);
                 NaiveDateTime::parse_from_str(lastmod, &date_fmt)?
             };
 
@@ -295,6 +307,41 @@ mod tests {
                 assert_eq!(items.len(), 10);
                 // Test "+"
                 assert_eq!(items[3].name, "memtest86+");
+            }
+            _ => unreachable!(),
+        }
+    }
+
+    #[test]
+    fn test_influxdata() {
+        let context = init_async_context();
+        let items = ApacheF2ListingParser
+            .get_list(
+                &context,
+                &url::Url::parse("http://localhost:1921/influxdata/").unwrap(),
+            )
+            .unwrap();
+        match items {
+            ListResult::List(items) => {
+                assert_eq!(items.len(), 11);
+                assert_eq!(items[0].name, "centos");
+                assert_eq!(items[0].type_, FileType::Directory);
+                assert_eq!(items[0].size, None);
+                assert_eq!(
+                    items[0].mtime,
+                    NaiveDateTime::parse_from_str("1970-01-01 00:00", "%Y-%m-%d %H:%M").unwrap()
+                );
+                assert_eq!(items[6].name, "influxdata-archive.key");
+                assert_eq!(items[6].type_, FileType::File);
+                assert_eq!(
+                    items[6].size,
+                    // Some(FileSize::Precise(3935))
+                    Some(FileSize::HumanizedBinary(3935.0, SizeUnit::B))
+                );
+                assert_eq!(
+                    items[6].mtime,
+                    NaiveDateTime::parse_from_str("2023-01-26 21:11:34", "%Y-%m-%d %H:%M:%S").unwrap()
+                );
             }
             _ => unreachable!(),
         }
