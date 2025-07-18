@@ -422,4 +422,21 @@ mod tests {
             _ => unreachable!(),
         }
     }
+
+    #[test]
+    fn test_empty() {
+        let context = init_async_context();
+        let items = NginxListingParser::default()
+            .get_list(
+                &context,
+                &url::Url::parse("http://localhost:1921/postgresql/empty/").unwrap(),
+            )
+            .unwrap();
+        match items {
+            ListResult::List(items) => {
+                assert_eq!(items.len(), 0);
+            }
+            _ => unreachable!(),
+        }
+    }
 }
