@@ -6,6 +6,7 @@ use chrono::TimeZone;
 use chrono::{DateTime, Utc};
 use futures_util::Future;
 use tracing::debug;
+use tracing::trace;
 use tracing::warn;
 use url::Url;
 
@@ -237,7 +238,9 @@ pub fn get_text(
     response: reqwest::Response,
 ) -> Result<String, reqwest::Error> {
     let future = async { response.text().await };
-    runtime.block_on(future)
+    let r = runtime.block_on(future);
+    trace!("get text response: {:?}", r);
+    r
 }
 
 pub fn head(
