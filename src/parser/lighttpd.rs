@@ -52,8 +52,6 @@ impl Parser for LighttpdListingParser {
                 .next()
                 .ok_or_else(|| anyhow!("Cannot find .s"))?;
 
-            // let filetype = element.select(&Selector::parse(".t").unwrap()).next().unwrap();
-
             let displayed_filename = a.inner_html();
             if displayed_filename == ".." {
                 continue;

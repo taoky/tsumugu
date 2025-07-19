@@ -22,7 +22,12 @@ impl Parser for FallbackParser {
 
     fn get_list(&self, async_context: &AsyncContext, url: &Url) -> Result<ListResult, ParserError> {
         let url = if !url.path().ends_with('/') {
-            Url::parse(&format!("{}/", url.path())).unwrap()
+            Url::parse(&format!("{}/", url.path())).map_err(|e| {
+                anyhow!(
+                    "Failed to append trailing slash to URL {}: {e}",
+                    url.as_str()
+                )
+            })?
         } else {
             url.clone()
         };
@@ -30,7 +35,9 @@ impl Parser for FallbackParser {
             let mut final_resp = None;
             let mut final_name = None;
             for index in INDEX {
-                let url = url.join(index).unwrap();
+                let url = url.join(index).map_err(|e| {
+                    anyhow!("Failed to join {index} to {url}: {e}, trying next index")
+                })?;
                 let resp = get(
                     &async_context.runtime,
                     &async_context.listing_client,
@@ -76,7 +83,9 @@ impl Parser for FallbackParser {
             timezone,
         ));
         // Remove the "index.htm(l)" part in url
-        let url = url.join("./").unwrap();
+        let url = url
+            .join("./")
+            .map_err(|e| anyhow!("Failed to join ./ to {url}: {e}, this should not happen"))?;
         for element in document.select(&selector) {
             let href = match element.value().attr("href") {
                 // well, what can I say... if you don't have href attribute?

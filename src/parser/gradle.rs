@@ -48,7 +48,10 @@ impl Parser for GradleListingParser {
                     return Err(anyhow!("No <a> in given <li>").into());
                 }
             };
-            let href = a.value().attr("href").unwrap();
+            let href = a
+                .value()
+                .attr("href")
+                .ok_or(anyhow!("No href found in <a> element"))?;
             let displayed_filename = a.inner_html();
 
             if displayed_filename == "Parent Directory/" || href == "../" {
@@ -62,9 +65,17 @@ impl Parser for GradleListingParser {
             } else {
                 FileType::File
             };
-            let size = element.select(&size_selector).next().unwrap().inner_html();
+            let size = element
+                .select(&size_selector)
+                .next()
+                .ok_or(anyhow!("Cannot get size"))?
+                .inner_html();
             let size = size.trim();
-            let date = element.select(&date_selector).next().unwrap().inner_html();
+            let date = element
+                .select(&date_selector)
+                .next()
+                .ok_or(anyhow!("Cannot get date"))?
+                .inner_html();
             let date = date.trim();
 
             // decide (guess) which time format to use

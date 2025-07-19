@@ -77,10 +77,10 @@ impl Parser for NginxListingParser {
             };
             let metadata_raw = element
                 .next_sibling()
-                .unwrap()
+                .ok_or(anyhow!("No metadata found for <a> element"))?
                 .value()
                 .as_text()
-                .unwrap()
+                .ok_or(anyhow!("No text found in next sibling of <a> element"))?
                 .to_string();
             let metadata_raw = metadata_raw.trim();
             debug!("{:?}", metadata_raw);
@@ -121,10 +121,16 @@ impl Parser for NginxListingParser {
                             href
                         ))?;
                 date = NaiveDateTime::parse_from_str(
-                    metadata.get(1).unwrap().as_str(),
+                    metadata
+                        .get(1)
+                        .ok_or(anyhow!("Cannot get date in metadata"))?
+                        .as_str(),
                     &date_fmt.clone().unwrap(),
                 )?;
-                size = metadata.get(2).unwrap().as_str();
+                size = metadata
+                    .get(2)
+                    .ok_or(anyhow!("Cannot get size in metadata"))?
+                    .as_str();
             } else {
                 date = NaiveDateTime::UNIX_EPOCH;
                 size = "-";
@@ -151,7 +157,9 @@ impl Parser for NginxListingParser {
                             Some(FileSize::Precise(n_size as u64)) // workaround
                         }
                     } else {
-                        let n_size = size.parse::<u64>().unwrap();
+                        let n_size = size.parse::<u64>().map_err(|e| {
+                            anyhow!("Failed to parse size '{}' for {} as u64: {}", size, name, e)
+                        })?;
                         Some(FileSize::Precise(n_size))
                     }
                 },

@@ -36,8 +36,14 @@ impl Parser for CaddyListingParser {
         for element in document.select(&selector) {
             // name and herf
             let selector = Selector::parse("td a").unwrap();
-            let a = element.select(&selector).next().unwrap();
-            let href = a.value().attr("href").unwrap();
+            let a = element
+                .select(&selector)
+                .next()
+                .ok_or(anyhow!("td a not found in <tr> element"))?;
+            let href = a
+                .value()
+                .attr("href")
+                .ok_or(anyhow!("no href found in <a> element"))?;
             // Caddy file_server will append "./" to href
             let name = get_real_name_from_href(href)
                 .trim_start_matches("./")
@@ -66,10 +72,10 @@ impl Parser for CaddyListingParser {
             let mtime = element
                 .select(&selector)
                 .next()
-                .unwrap()
+                .ok_or(anyhow!("td.timestamp time not found in <tr> element"))?
                 .value()
                 .attr("datetime")
-                .unwrap()
+                .ok_or(anyhow!("no datetime found in <time> element"))?
                 .trim();
             // Store UTC time
             let date = NaiveDateTime::parse_from_str(mtime, "%Y-%m-%dT%H:%M:%S%Z")?;

@@ -6,7 +6,7 @@ use crate::{
 };
 
 use super::{ListResult, Parser, ParserError};
-use anyhow::Result;
+use anyhow::{anyhow, Result};
 use chrono::{FixedOffset, NaiveDateTime};
 use scraper::CaseSensitivity::*;
 use scraper::{Html, Selector};
@@ -68,9 +68,9 @@ impl Parser for DenoFlareR2ListingParser {
             let href = last_child
                 .value()
                 .as_element()
-                .unwrap()
+                .ok_or(anyhow!("Expected <a> element"))?
                 .attr("href")
-                .unwrap();
+                .ok_or(anyhow!("href not found in <a> element"))?;
             inner_url = url.join(href)?;
         }
         let mut items = Vec::new();

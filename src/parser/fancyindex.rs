@@ -56,7 +56,10 @@ impl Parser for FancyIndexListingParser {
                     return Err(anyhow!("Cannot find <a> in first cell.").into());
                 }
             };
-            let href = a.value().attr("href").unwrap();
+            let href = a
+                .value()
+                .attr("href")
+                .ok_or(anyhow!("No href found in <a> element in first cell"))?;
             let displayed_filename = a.inner_html();
 
             if displayed_filename == "Parent Directory/" || href == "../" {
@@ -70,9 +73,15 @@ impl Parser for FancyIndexListingParser {
             } else {
                 FileType::File
             };
-            let size = td_iterator.next().unwrap().inner_html();
+            let size = td_iterator
+                .next()
+                .ok_or(anyhow!("Cannot get size in td"))?
+                .inner_html();
             let size = size.trim();
-            let date = td_iterator.next().unwrap().inner_html();
+            let date = td_iterator
+                .next()
+                .ok_or(anyhow!("Cannot get date in td"))?
+                .inner_html();
             let date = date.trim();
 
             // decide (guess) which time format to use

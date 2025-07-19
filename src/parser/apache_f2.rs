@@ -88,13 +88,19 @@ impl Parser for ApacheF2ListingParser {
             let td = td_iterator
                 .next()
                 .ok_or(anyhow!("no more td after first iterate"))?;
-            let a = td.select(&a_selector).next().unwrap();
+            let a = td
+                .select(&a_selector)
+                .next()
+                .ok_or(anyhow!("no <a> found in <td>"))?;
             let displayed_filename = a.inner_html();
             if displayed_filename == "Parent Directory" || displayed_filename == ".." {
                 continue;
             }
 
-            let href = a.value().attr("href").unwrap();
+            let href = a
+                .value()
+                .attr("href")
+                .ok_or(anyhow!("no href found in <a>"))?;
             let name = get_real_name_from_href(href);
             let href = url.join(href)?;
             let type_ = if href.as_str().ends_with('/') || displayed_filename.ends_with('/') {
@@ -340,7 +346,8 @@ mod tests {
                 );
                 assert_eq!(
                     items[6].mtime,
-                    NaiveDateTime::parse_from_str("2023-01-26 21:11:34", "%Y-%m-%d %H:%M:%S").unwrap()
+                    NaiveDateTime::parse_from_str("2023-01-26 21:11:34", "%Y-%m-%d %H:%M:%S")
+                        .unwrap()
                 );
             }
             _ => unreachable!(),

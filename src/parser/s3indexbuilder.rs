@@ -8,7 +8,7 @@ use crate::{
     },
     utils::{get, get_text},
 };
-use anyhow::Result;
+use anyhow::{anyhow, Result};
 use chrono::{FixedOffset, NaiveDateTime};
 use scraper::{Html, Selector};
 
@@ -35,7 +35,10 @@ impl Parser for S3Indexbuilder {
         assert_if_url_has_no_trailing_slash(&url);
         let document = Html::parse_document(&body);
         let selector = Selector::parse("table").unwrap();
-        let table = document.select(&selector).next().unwrap();
+        let table = document
+            .select(&selector)
+            .next()
+            .ok_or(anyhow!("No <table> found in document"))?;
         let selector = Selector::parse("tr").unwrap();
         let mut items = Vec::new();
         for element in table.select(&selector) {
@@ -47,11 +50,17 @@ impl Parser for S3Indexbuilder {
                 "Expected 3 <td> elements, found {}",
                 tds.len()
             );
-            let a = tds[0].child_elements().next().unwrap();
+            let a = tds[0]
+                .child_elements()
+                .next()
+                .ok_or(anyhow!("No <a> element found in first <td>"))?;
             if a.inner_html() == "../" {
                 continue;
             }
-            let href = a.value().attr("href").unwrap();
+            let href = a
+                .value()
+                .attr("href")
+                .ok_or(anyhow!("No href found in <a> element in first <td>"))?;
             let name = get_real_name_from_href(href);
             let href = url.join(href)?;
             let type_ = if href.as_str().ends_with('/') {

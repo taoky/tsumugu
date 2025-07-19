@@ -53,27 +53,52 @@ impl Parser for DirectoryListerListingParser {
 
         // find <ul> which contains file index
         let selector = Selector::parse("ul").unwrap();
-        let indexlist = document.select(&selector).next().unwrap();
+        let indexlist = document
+            .select(&selector)
+            .next()
+            .ok_or(anyhow!("No <ul> found in document"))?;
         // find second <li>
         let selector = Selector::parse("li").unwrap();
-        let indexlist = indexlist.select(&selector).nth(1).unwrap();
+        let indexlist = indexlist
+            .select(&selector)
+            .nth(1)
+            .ok_or(anyhow!("No second <li> found in <ul>"))?;
         let selector = Selector::parse("a").unwrap();
         let mut items = Vec::new();
         for element in indexlist.select(&selector) {
-            let href = element.value().attr("href").unwrap();
+            let href = element
+                .value()
+                .attr("href")
+                .ok_or(anyhow!("No href found in <a> element"))?;
             let href = url.join(href)?;
             // displayed file name, class = "flex-1 truncate"
             let selector = Selector::parse("div.flex-1.truncate").unwrap();
-            let displayed_filename = element.select(&selector).next().unwrap().inner_html();
+            let displayed_filename = element
+                .select(&selector)
+                .next()
+                .ok_or(anyhow!("No div.flex-1.truncate found"))?
+                .inner_html();
             let displayed_filename = displayed_filename.trim();
             // size, class = "hidden whitespace-nowrap text-right mx-2 w-1/6 sm:block"
             let selector = Selector::parse("div.hidden.whitespace-nowrap.text-right.mx-2").unwrap();
-            let size = element.select(&selector).next().unwrap().inner_html();
+            let size = element
+                .select(&selector)
+                .next()
+                .ok_or(anyhow!(
+                    "No div.hidden.whitespace-nowrap.text-right.mx-2 found"
+                ))?
+                .inner_html();
             let size = size.trim();
             // mtime, class = "hidden whitespace-nowrap text-right truncate ml-2 w-1/4 sm:block"
             let selector =
                 Selector::parse("div.hidden.whitespace-nowrap.text-right.truncate.ml-2").unwrap();
-            let mtime = element.select(&selector).next().unwrap().inner_html();
+            let mtime = element
+                .select(&selector)
+                .next()
+                .ok_or(anyhow!(
+                    "No div.hidden.whitespace-nowrap.text-right.truncate.ml-2 found"
+                ))?
+                .inner_html();
             let mtime = mtime.trim();
 
             if displayed_filename == ".." {

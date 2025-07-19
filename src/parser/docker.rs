@@ -80,19 +80,29 @@ impl Parser for DockerListingParser {
                 } else {
                     let metadata_raw = element
                         .next_sibling()
-                        .unwrap()
+                        .ok_or(anyhow!("No metadata found for <a> element"))?
                         .value()
                         .as_text()
-                        .unwrap()
+                        .ok_or(anyhow!("No text found in next sibling of <a> element"))?
                         .to_string();
                     let metadata_raw = metadata_raw.trim();
-                    let metadata = self.metadata_regex.captures(metadata_raw).unwrap();
-                    let date = metadata.get(1).unwrap().as_str();
+                    let metadata = self
+                        .metadata_regex
+                        .captures(metadata_raw)
+                        .ok_or(anyhow!("Failed to parse metadata: {}", metadata_raw))?;
+                    let date = metadata
+                        .get(1)
+                        .ok_or(anyhow!("Cannot get date from metadata: {}", metadata_raw))?
+                        .as_str();
                     let date = match NaiveDateTime::parse_from_str(date, "%Y-%m-%d %H:%M:%S") {
                         Ok(date) => date,
-                        Err(_) => NaiveDateTime::parse_from_str(date, "%Y-%m-%d %H:%M").unwrap(),
+                        Err(_) => NaiveDateTime::parse_from_str(date, "%Y-%m-%d %H:%M")
+                            .map_err(|e| anyhow!("Failed to parse date '{}': {}", date, e))?,
                     };
-                    let size = metadata.get(3).unwrap().as_str();
+                    let size = metadata
+                        .get(3)
+                        .ok_or(anyhow!("Cannot get size from metadata: {}", metadata_raw))?
+                        .as_str();
                     if size == "-" {
                         (FileType::Directory, None, date)
                     } else {
