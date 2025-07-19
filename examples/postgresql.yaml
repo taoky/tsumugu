@@ -3,7 +3,11 @@ envs:
   TSUMUGU_EXCLUDE: >
     --include ^/repos/
     --exclude ^/.+
-  TSUMUGU_EXTRA: --exclusion-v2 --parser-match s3-indexbuilder:/repos/yum/srpms/testing/
+  TSUMUGU_EXTRA: >
+    --exclusion-v2
+    --parser-match s3-indexbuilder:/repos/yum/srpms/testing/
+    --parser-match s3-indexbuilder:/repos/zypp/srpms/.+
+    --ignore-nonexist
   TSUMUGU_PARSER: nginx
 image: ustcmirror/tsumugu:latest
 #cron: 13 8 * * *
