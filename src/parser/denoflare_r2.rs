@@ -46,12 +46,12 @@ impl Parser for DenoFlareR2ListingParser {
             let contents = document
                 .select(&selector)
                 .next()
-                .expect("<div id=\"contents\"> not found");
+                .ok_or(anyhow!("<div id=\"contents\"> not found"))?;
             // <div class="full"><a href="...">next ➜</a></div>
             let last_child = contents
                 .child_elements()
                 .last()
-                .expect("Expected last child");
+                .ok_or(anyhow!("Expected last child"))?;
             // <a href="...">next ➜</a>
             let last_child = match last_child.last_child() {
                 Some(child) => child,
@@ -79,7 +79,7 @@ impl Parser for DenoFlareR2ListingParser {
             let contents = document
                 .select(&selector)
                 .next()
-                .expect("<div id=\"contents\"> not found");
+                .ok_or(anyhow!("<div id=\"contents\"> not found"))?;
 
             enum State {
                 Start,
@@ -98,7 +98,7 @@ impl Parser for DenoFlareR2ListingParser {
                         // &nbsp;
                         {
                             // peek
-                            let next_elem = iter.peek().expect("Expected next element");
+                            let next_elem = iter.peek().ok_or(anyhow!("Expected next element"))?;
                             let class_is_full = next_elem.value().has_class("full", CaseSensitive);
                             if class_is_full {
                                 state = State::Dirs;
@@ -121,7 +121,10 @@ impl Parser for DenoFlareR2ListingParser {
                             continue;
                         }
                         assert!(child.value().name() == "a", "Expected <a> in dirs");
-                        let href = child.value().attr("href").expect("href not found");
+                        let href = child
+                            .value()
+                            .attr("href")
+                            .ok_or(anyhow!("href not found"))?;
                         let name = get_real_name_from_href(href);
                         let href = url.join(href)?;
                         items.push(ListItem::new(
@@ -142,7 +145,10 @@ impl Parser for DenoFlareR2ListingParser {
                             break;
                         }
                         assert!(child.value().name() == "a", "Expected <a> in files");
-                        let href = child.value().attr("href").expect("href not found");
+                        let href = child
+                            .value()
+                            .attr("href")
+                            .ok_or(anyhow!("href not found"))?;
                         if href.ends_with('/') {
                             for _ in 0..3 {
                                 iter.next();
@@ -150,22 +156,24 @@ impl Parser for DenoFlareR2ListingParser {
                             continue;
                         }
                         let name = get_real_name_from_href(href);
-                        let child = iter.next().expect("Expected next child");
+                        let child = iter.next().ok_or(anyhow!("Expected next child"))?;
                         let size = child
                             .text()
                             .next()
-                            .expect("Expected size text")
+                            .ok_or(anyhow!("Expected size text"))?
                             .replace(',', ""); // bytes
-                        let size = size.parse::<u64>().expect("Expected size to be u64");
+                        let size = size
+                            .parse::<u64>()
+                            .map_err(|e| anyhow!("Expected size to be u64: {}", e))?;
                         iter.next(); // skip estimated size
                         let mtime = iter
                             .next()
-                            .expect("Expected mtime")
+                            .ok_or(anyhow!("Expected mtime"))?
                             .text()
                             .next()
-                            .expect("Expected mtime text");
+                            .ok_or(anyhow!("Expected mtime text"))?;
                         let mtime = NaiveDateTime::parse_from_str(mtime, "%Y-%m-%dT%H:%M:%S.%3fZ")
-                            .expect("Expected mtime to be NaiveDateTime");
+                            .map_err(|e| anyhow!("Expected mtime to be NaiveDateTime: {}", e))?;
                         let href = url.join(href)?;
                         items.push(ListItem::new(
                             href,

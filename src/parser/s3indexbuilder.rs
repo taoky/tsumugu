@@ -79,7 +79,9 @@ impl Parser for S3Indexbuilder {
             let size = if size.is_empty() {
                 None
             } else {
-                let size = size.parse::<u64>().expect("Expected size to be u64");
+                let size = size
+                    .parse::<u64>()
+                    .map_err(|e| anyhow!("Expected size to be u64: {}", e))?;
                 Some(FileSize::Precise(size))
             };
             items.push(ListItem::new(

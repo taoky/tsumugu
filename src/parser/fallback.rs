@@ -124,7 +124,7 @@ impl Parser for FallbackParser {
             }
             let href = url
                 .join(&relative_href)
-                .expect("unexpected error of handling URL");
+                .map_err(|e| anyhow!("unexpected error of handling URL: {}", e))?;
             let type_ = if relative_href.ends_with('/') {
                 FileType::Directory
             } else {
