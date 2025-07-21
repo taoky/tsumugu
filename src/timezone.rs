@@ -1,7 +1,7 @@
 use crate::listing::FileType;
 use crate::parser::{ListResult, ParserMux};
 use crate::regex_manager::{Comparison, ExclusionManagerTrait};
-use crate::utils::{self, again};
+use crate::utils::{self, again, relative_str_process};
 use crate::utils::{head, relative_to_str};
 use crate::AsyncContext;
 use crate::{parser, SyncArgs};
@@ -134,12 +134,13 @@ fn guess_remote_timezone(
         None => Url::parse(&file_url_str[..=file_url_str.rfind('/').unwrap()]).unwrap(),
     };
     let relative = base_url.path().strip_prefix(upstream.path()).unwrap();
+    let relative = relative_str_process(relative);
     debug!("get {relative} as relative for parser in guess remote timezone");
 
     info!("base: {:?}", base_url);
     info!("file: {:?}", file_url);
 
-    let list = parser.get_list_with_filter(async_context, &base_url, relative)?;
+    let list = parser.get_list_with_filter(async_context, &base_url, &relative)?;
     let list = match list {
         parser::ListResult::Redirect(_) => {
             anyhow::bail!("Redirection not supported");
