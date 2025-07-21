@@ -151,7 +151,10 @@ fn download_file(
                 .unwrap();
             }
             // move tmp file to expected path
-            std::fs::rename(&tmp_path, path).unwrap();
+            std::fs::rename(&tmp_path, path).expect(&format!(
+                "renaming from {:?} to {:?} shall never fail",
+                tmp_path, path
+            ));
             bar.finish();
             bar.set_visible(false);
             Ok(())
@@ -170,6 +173,16 @@ struct ThreadsContext<'a> {
     failure_listing: &'a AtomicBool,
     failure_downloading: &'a AtomicBool,
     pb_manager: &'a kyuri::Manager,
+}
+
+impl ThreadsContext<'_> {
+    fn mark_failure_listing(&self) {
+        self.failure_listing.store(true, Ordering::SeqCst);
+    }
+
+    fn mark_failure_downloading(&self) {
+        self.failure_downloading.store(true, Ordering::SeqCst);
+    }
 }
 
 struct TaskContext<'a> {
@@ -215,7 +228,7 @@ fn list_handler(
         Ok(items) => items,
         Err(e) => {
             error!("Failed to list {}: {:?}", task.url, e);
-            thr_context.failure_listing.store(true, Ordering::SeqCst);
+            thr_context.mark_failure_listing();
             return;
         }
     };
@@ -307,7 +320,11 @@ fn download_handler(
     let cwd = task_context.cwd;
     // create path in case for first sync
     if !args.dry_run {
-        std::fs::create_dir_all(cwd).unwrap();
+        if let Err(e) = std::fs::create_dir_all(cwd) {
+            error!("Failed to create directory {:?}: {:?}", cwd, e);
+            thr_context.mark_failure_downloading();
+            return;
+        }
     }
     // Absolute filesystem path of expected file
     let expected_path = cwd.join(&item.name);
@@ -395,9 +412,7 @@ fn download_handler(
             }
             Err(e) => {
                 error!("Failed to HEAD {}: {:?}", task.url, e);
-                thr_context
-                    .failure_downloading
-                    .store(true, Ordering::SeqCst);
+                thr_context.mark_failure_downloading();
                 should_download = false;
             }
         };
@@ -425,9 +440,7 @@ fn download_handler(
                 }
             }
             if set_error {
-                thr_context
-                    .failure_downloading
-                    .store(true, Ordering::SeqCst);
+                thr_context.mark_failure_downloading();
             }
         }
     } else if should_download {
