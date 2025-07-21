@@ -151,10 +151,12 @@ fn download_file(
                 .unwrap();
             }
             // move tmp file to expected path
-            std::fs::rename(&tmp_path, path).expect(&format!(
-                "renaming from {:?} to {:?} shall never fail",
-                tmp_path, path
-            ));
+            std::fs::rename(&tmp_path, path).unwrap_or_else(|_| {
+                panic!(
+                    "renaming from {:?} to {:?} shall never fail",
+                    tmp_path, path
+                )
+            });
             bar.finish();
             bar.set_visible(false);
             Ok(())
