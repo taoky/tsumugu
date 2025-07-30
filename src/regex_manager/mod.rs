@@ -11,19 +11,19 @@ use crate::CommonArgs;
 // And assuming that all vars are distro_ver
 const REGEX_REPLACEMENTS: &[(&str, &str)] = &[
     // https://endoflife.date/debian
-    ("${DEBIAN_CURRENT}", "(?<distro_ver>bullseye|bookworm)"),
+    ("${DEBIAN_CURRENT}", "(?<distro_ver>bullseye|bookworm|trixie)"),
     // https://endoflife.date/ubuntu (excluding ESM)
-    ("${UBUNTU_LTS}", "(?<distro_ver>focal|jammy|noble)"),
-    ("${UBUNTU_NONLTS}", "(?<distro_ver>oracular|plucky)"),
+    ("${UBUNTU_LTS}", "(?<distro_ver>jammy|noble)"),
+    ("${UBUNTU_NONLTS}", "(?<distro_ver>plucky)"),
     // https://endoflife.date/fedora
-    ("${FEDORA_CURRENT}", "(?<distro_ver>40|41|42)"),
+    ("${FEDORA_CURRENT}", "(?<distro_ver>41|42)"),
     // CentOS is no longer supported -- this regex is replaced to something that could match nothing
     (
         "${CENTOS_CURRENT}",
         "(?<distro_ver>NONEXISTFILENAMESOITCOULDNEVERMATCHANYTHING)",
     ),
     // https://endoflife.date/rhel (excluding ELCS)
-    ("${RHEL_CURRENT}", "(?<distro_ver>8|9)"),
+    ("${RHEL_CURRENT}", "(?<distro_ver>8|9|10)"),
     // https://endoflife.date/opensuse
     ("${OPENSUSE_CURRENT}", "(?<distro_ver>15.6)"),
     // https://endoflife.date/sles
