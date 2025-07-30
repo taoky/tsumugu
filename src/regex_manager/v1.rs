@@ -91,10 +91,10 @@ mod tests {
     #[test]
     fn test_partial() {
         let target1 = "/yum/mysql-tools-community/fc/24/x86_64";
-        let target2 = "/yum/mysql-tools-community/fc/40/x86_64";
+        let target2 = "/yum/mysql-tools-community/fc/42/x86_64";
         let target3 = "/yum/mysql-tools-community/fc/";
         let target4 = "/yum/mysql-tools-community/fc/24/";
-        let target5 = "/yum/mysql-tools-community/fc/40/";
+        let target5 = "/yum/mysql-tools-community/fc/42/";
         let exclusions = vec![ExpandedRegex::from_str("/fc/").unwrap()];
         let inclusions = vec![ExpandedRegex::from_str("/fc/${FEDORA_CURRENT}").unwrap()];
         debug!("exclusions: {:?}", exclusions);
