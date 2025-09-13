@@ -999,9 +999,9 @@ dependencies = [
 
 [[package]]
 name = "kyuri"
-version = "0.2.5"
+version = "0.2.6"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "d66c56c656e3e55c37f9a1c6a4b9592e897a1f82ed62fb5e79e89d97ce83b1d7"
+checksum = "7ac3ea9392cad0da408f6074bef7366fbd3e1f90961f1410ad136620c179f6fc"
 
 [[package]]
 name = "lazy_static"
@@ -1404,7 +1404,7 @@ dependencies = [
  "once_cell",
  "socket2",
  "tracing",
- "windows-sys 0.52.0",
+ "windows-sys 0.59.0",
 ]
 
 [[package]]

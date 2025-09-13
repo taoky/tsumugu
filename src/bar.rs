@@ -6,4 +6,5 @@ pub fn set_progress_bar(bar: &kyuri::Bar, len: u64, url: &url::Url) {
     bar.set_template(TEMPLATE_DEFAULT);
     bar.set_pos(0);
     bar.set_visible(true);
+    bar.reset_created_at();
 }
