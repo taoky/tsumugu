@@ -1,2 +1,6 @@
 /target
 Cargo.toml.cache
+.direnv
+
+# Add use nix if using direnv with nix
+.envrc
