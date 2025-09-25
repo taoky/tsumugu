@@ -200,6 +200,18 @@ struct TaskContext<'a> {
     async_context: &'a AsyncContext,
 }
 
+// Check if e is a 404 error and args.ignore_nonexist is set
+fn should_set_error(args: &SyncArgs, e: &anyhow::Error) -> bool {
+    if args.ignore_nonexist {
+        if let Some(reqwest_err) = e.downcast_ref::<reqwest::Error>() {
+            if reqwest_err.status() == Some(StatusCode::NOT_FOUND) {
+                return false;
+            }
+        }
+    }
+    true
+}
+
 fn list_handler(
     args: &SyncArgs,
     parser: &ParserMux,
@@ -230,7 +242,9 @@ fn list_handler(
         Ok(items) => items,
         Err(e) => {
             error!("Failed to list {}: {:?}", task.url, e);
-            thr_context.mark_failure_listing();
+            if should_set_error(args, &e) {
+                thr_context.mark_failure_listing();
+            }
             return;
         }
     };
@@ -433,15 +447,7 @@ fn download_handler(
             // compare_size_only to give to should_download_by_header() inside (when check_header is true)
             compare_size_only,
         ) {
-            let mut set_error = true;
-            if args.ignore_nonexist {
-                if let Some(reqwest_err) = e.downcast_ref::<reqwest::Error>() {
-                    if reqwest_err.status() == Some(StatusCode::NOT_FOUND) {
-                        set_error = false;
-                    }
-                }
-            }
-            if set_error {
+            if should_set_error(args, &e) {
                 thr_context.mark_failure_downloading();
             }
         }

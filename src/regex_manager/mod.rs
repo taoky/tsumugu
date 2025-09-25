@@ -11,7 +11,10 @@ use crate::CommonArgs;
 // And assuming that all vars are distro_ver
 const REGEX_REPLACEMENTS: &[(&str, &str)] = &[
     // https://endoflife.date/debian
-    ("${DEBIAN_CURRENT}", "(?<distro_ver>bullseye|bookworm|trixie)"),
+    (
+        "${DEBIAN_CURRENT}",
+        "(?<distro_ver>bullseye|bookworm|trixie)",
+    ),
     // https://endoflife.date/ubuntu (excluding ESM)
     ("${UBUNTU_LTS}", "(?<distro_ver>jammy|noble)"),
     ("${UBUNTU_NONLTS}", "(?<distro_ver>plucky)"),
