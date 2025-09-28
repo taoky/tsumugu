@@ -34,12 +34,12 @@ fn get_version() -> &'static str {
         Box::leak(format!("{} (dirty)", build::SHORT_COMMIT).into_boxed_str())
     } else if tag.is_empty() {
         if short_commit.is_empty() {
-            return build::PKG_VERSION;
+            build::PKG_VERSION
         } else {
-            return short_commit;
+            short_commit
         }
     } else {
-        return tag;
+        tag
     }
 }
 
