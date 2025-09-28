@@ -175,20 +175,20 @@ pub fn get_response_mtime(resp: &reqwest::Response) -> Result<DateTime<Utc>> {
     parse_last_modified(last_modified)
 }
 
-pub fn again<T>(closure: impl Fn() -> Result<T>, retry: usize) -> Result<T> {
-    let mut count = 0;
-    loop {
-        match closure() {
-            Ok(x) => return Ok(x),
+pub fn again<T, E: std::fmt::Debug, F: FnMut() -> Result<T, E>>(
+    mut f: F,
+    retries: usize,
+) -> Result<T, E> {
+    for attempt in 0..=retries {
+        match f() {
+            Ok(v) => return Ok(v),
+            Err(e) if attempt == retries => return Err(e),
             Err(e) => {
-                warn!("Error: {:?}, retrying {}/{}", e, count, retry);
-                count += 1;
-                if count > retry {
-                    return Err(e);
-                }
+                warn!("Error: {:?}. retry {}/{}", e, attempt + 1, retries);
             }
         }
     }
+    unreachable!()
 }
 
 pub async fn again_async<T, Fut, F: Fn() -> Fut>(f: F, retry: usize) -> Result<T>

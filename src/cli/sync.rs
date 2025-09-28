@@ -23,7 +23,7 @@ use crate::{
     compare::{should_download_by_header, should_download_by_list},
     extensions::{extension_handler, ExtensionPackage},
     listing::{self, ListItem},
-    parser::{ListResult, ParserMux},
+    parser::{self, ListResult, ParserMux},
     regex_manager::{self, get_exclusion_manager, ExclusionManagerTrait},
     timezone::determinate_timezone,
     utils::{
@@ -236,13 +236,16 @@ fn list_handler(
 
     let relative = &relative_to_str(task_context.relative, None);
     let items = match again(
-        || Ok(parser.get_list_with_filter(task_context.async_context, &task.url, relative)?),
+        || parser.get_list_with_filter(task_context.async_context, &task.url, relative),
         args.retry,
     ) {
         Ok(items) => items,
         Err(e) => {
             error!("Failed to list {}: {:?}", task.url, e);
-            if should_set_error(args, &e) {
+            if match e {
+                parser::ParserError::ParseError(_) => true,
+                parser::ParserError::NetworkError(e) => should_set_error(args, &e.into()),
+            } {
                 thr_context.mark_failure_listing();
             }
             return;
@@ -412,11 +415,11 @@ fn download_handler(
     if should_download && args.head_before_get {
         match again(
             || {
-                Ok(head(
+                head(
                     &task_context.async_context.runtime,
                     &task_context.async_context.download_client,
                     item.url.clone(),
-                )?)
+                )
             },
             args.retry,
         ) {

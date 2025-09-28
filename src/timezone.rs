@@ -53,7 +53,7 @@ pub fn determinate_timezone(
                             return None;
                         }
                         info!("Try finding first File in {}", url);
-                        let list = again(|| Ok(parser.get_list_with_filter(async_context, url, &relative_str)?), args.retry)
+                        let list = again(|| parser.get_list_with_filter(async_context, url, &relative_str), args.retry)
                             .unwrap_or_else(|_| panic!("Failed to get list for {}. Maybe you shall disable timezone guessing?", url));
                         match list {
                             ListResult::List(list) => {
