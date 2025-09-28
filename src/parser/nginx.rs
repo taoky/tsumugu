@@ -395,6 +395,35 @@ mod tests {
             }
             _ => unreachable!(),
         }
+        let items = NginxListingParser::default()
+            .get_list(
+                &context,
+                &url::Url::parse("http://localhost:1921/nodejs/latest-jod/").unwrap(),
+            )
+            .unwrap();
+        match items {
+            ListResult::List(items) => {
+                assert_eq!(items.len(), 36);
+                assert_eq!(items[0].name, "docs");
+                assert_eq!(items[0].type_, FileType::Directory);
+                assert_eq!(items[0].size, None);
+                assert_eq!(
+                    items[0].mtime,
+                    NaiveDateTime::UNIX_EPOCH, // No mtime
+                );
+                assert_eq!(items[4].name, "SHASUMS256.txt.asc");
+                assert_eq!(items[4].type_, FileType::File);
+                assert_eq!(
+                    items[4].size,
+                    Some(FileSize::HumanizedBinary(4.7, SizeUnit::K))
+                );
+                assert_eq!(
+                    items[4].mtime,
+                    NaiveDateTime::parse_from_str("2025-09-24 13:12", "%Y-%m-%d %H:%M").unwrap()
+                );
+            }
+            _ => unreachable!(),
+        }
     }
 
     #[test]

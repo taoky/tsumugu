@@ -305,6 +305,30 @@ fn is_space_before_colon_timezone(s: &str) -> bool {
     chars[chars.len() - 7] == ' '
 }
 
+fn is_space_abbr_dmy(s: &str) -> bool {
+    let mut it = s.split_whitespace();
+    let d = match it.next() {
+        Some(x) => x,
+        None => return false,
+    };
+    let m = match it.next() {
+        Some(x) => x,
+        None => return false,
+    };
+    let y_raw = match it.next() {
+        Some(x) => x,
+        None => return false,
+    };
+    let y = y_raw.trim_end_matches(',');
+
+    d.len() == 2
+        && d.chars().all(|c| c.is_ascii_digit())
+        && m.len() == 3
+        && m.chars().all(|c| c.is_ascii_alphabetic())
+        && y.len() == 4
+        && y.chars().all(|c| c.is_ascii_digit())
+}
+
 // Parsing NodeJS page, to bypass limitation of %b (which must be 3-letter month)
 fn date_normalization(date: &str) -> String {
     date.replace("Sept", "Sep")
@@ -319,17 +343,29 @@ fn guess_date_fmt(date: &str) -> (String, String) {
     let space_before_timezone = is_space_before_timezone(date);
     let has_colon_timezone = has_colon_timezone_suffix(date);
     let space_before_colon_timezone = is_space_before_colon_timezone(date);
-    let (dfmt, dfmt_regex) = match (abbr_month, year_first) {
-        (true, true) => ("%Y-%b-%d", r"\d{4}-\w{3}-\d{2}"),
-        (true, false) => ("%d-%b-%Y", r"\d{2}-\w{3}-\d{4}"),
-        (false, true) => ("%Y-%m-%d", r"\d{4}-\d{2}-\d{2}"),
-        (false, false) => ("%d-%m-%Y", r"\d{2}-\d{2}-\d{4}"),
+    let abbr_space_dmy = is_space_abbr_dmy(date);
+    let (dfmt, dfmt_regex) = if abbr_space_dmy {
+        ("%d %b %Y", r"\d{2} \w{3} \d{4}")
+    } else {
+        match (abbr_month, year_first) {
+            (true, true) => ("%Y-%b-%d", r"\d{4}-\w{3}-\d{2}"),
+            (true, false) => ("%d-%b-%Y", r"\d{2}-\w{3}-\d{4}"),
+            (false, true) => ("%Y-%m-%d", r"\d{4}-\d{2}-\d{2}"),
+            (false, false) => ("%d-%m-%Y", r"\d{2}-\d{2}-\d{4}"),
+        }
     };
     let (tfmt, tfmt_regex) = if two_colons {
         ("%H:%M:%S", r"\d{2}:\d{2}:\d{2}")
     } else {
         ("%H:%M", r"\d{2}:\d{2}")
     };
+
+    let (dt_sep, dt_sep_regex) = if date.contains(',') {
+        (", ", r", ")
+    } else {
+        (" ", " ")
+    };
+
     let (zfmt, zfmt_regex) = if has_timezone {
         if space_before_timezone {
             (" %z", r" [+-]\d{4}")
@@ -346,8 +382,8 @@ fn guess_date_fmt(date: &str) -> (String, String) {
         ("", "")
     };
     (
-        format!("{} {}{}", dfmt, tfmt, zfmt),
-        format!("{} {}{}", dfmt_regex, tfmt_regex, zfmt_regex),
+        format!("{}{}{}{}", dfmt, dt_sep, tfmt, zfmt),
+        format!("{}{}{}{}", dfmt_regex, dt_sep_regex, tfmt_regex, zfmt_regex),
     )
 }
 
