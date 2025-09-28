@@ -305,6 +305,11 @@ fn is_space_before_colon_timezone(s: &str) -> bool {
     chars[chars.len() - 7] == ' '
 }
 
+// Parsing NodeJS page, to bypass limitation of %b (which must be 3-letter month)
+fn date_normalization(date: &str) -> String {
+    date.replace("Sept", "Sep")
+}
+
 // Returns format and regex string
 fn guess_date_fmt(date: &str) -> (String, String) {
     let two_colons = contains_two_colons(date);
@@ -399,7 +404,22 @@ mod tests {
                 "%Y-%m-%d %H:%M:%S%:z".to_owned(),
                 r"\d{4}-\d{2}-\d{2} \d{2}:\d{2}:\d{2}[+-]\d{2}:\d{2}".to_owned()
             )
+        );
+        assert_eq!(
+            guess_date_fmt("24 Sep 2025, 13:10"),
+            (
+                "%d %b %Y, %H:%M".to_owned(),
+                r"\d{2} \w{3} \d{4}, \d{2}:\d{2}".to_owned()
+            )
         )
+    }
+
+    #[test]
+    fn test_date_normalization() {
+        assert_eq!(
+            date_normalization("15-Sept-2024 09:46"),
+            "15-Sep-2024 09:46"
+        );
     }
 
     #[test]

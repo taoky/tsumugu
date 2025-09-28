@@ -82,7 +82,7 @@ impl Parser for NginxListingParser {
                 .as_text()
                 .ok_or(anyhow!("No text found in next sibling of <a> element"))?
                 .to_string();
-            let metadata_raw = metadata_raw.trim();
+            let metadata_raw = &date_normalization(metadata_raw.trim());
             debug!("{:?}", metadata_raw);
             // if it's a directory, and metadata are "- -", do some special handling for the date fmt...
             // as directory mtime is useless, and nodejs gives us something like this...

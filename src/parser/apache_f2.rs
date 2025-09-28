@@ -130,7 +130,7 @@ impl Parser for ApacheF2ListingParser {
                 // if lastmod is "-", it means the file is not modified
                 ""
             } else {
-                lastmod
+                &date_normalization(lastmod)
             };
 
             debug!("{} {} {} {}", href, name, lastmod, size);

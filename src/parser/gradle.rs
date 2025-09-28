@@ -76,7 +76,7 @@ impl Parser for GradleListingParser {
                 .next()
                 .ok_or(anyhow!("Cannot get date"))?
                 .inner_html();
-            let date = date.trim();
+            let date = &date_normalization(date.trim());
 
             // decide (guess) which time format to use
             let (date_fmt, _) = guess_date_fmt(date);
