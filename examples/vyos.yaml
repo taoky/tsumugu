@@ -1,12 +1,12 @@
 envs:
-  UPSTREAM: https://dev.packages.vyos.net/
+  UPSTREAM: https://packages.vyos.net/
   TSUMUGU_EXCLUDE: >
     --exclude [=/]tmp
     --exclude /legacy/
     --exclude /sagitta/
     --exclude /equuleus/
-  TSUMUGU_PARSER: directory-lister
-  TSUMUGU_EXTRA: --allow-mtime-from-parser
+    --exclude /circinus/
+  TSUMUGU_PARSER: nginx
 image: ustcmirror/tsumugu:latest
 #cron: 25 5 * * *
 logRotCycle: 10
