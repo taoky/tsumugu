@@ -15,6 +15,7 @@ envs:
     --exclude /fedora/
     --include /fedora/docker-ce.+
     --include /fedora/${FEDORA_CURRENT}/
+    --include /fedora/gpg
     --exclude /ubuntu/
     --include /ubuntu/dists/${UBUNTU_LTS}/
     --include /ubuntu/dists/${UBUNTU_NONLTS}/
