@@ -19,7 +19,7 @@ const REGEX_REPLACEMENTS: &[(&str, &str)] = &[
     ("${UBUNTU_LTS}", "(?<distro_ver>jammy|noble)"),
     ("${UBUNTU_NONLTS}", "(?<distro_ver>plucky|questing)"),
     // https://endoflife.date/fedora
-    ("${FEDORA_CURRENT}", "(?<distro_ver>41|42)"),
+    ("${FEDORA_CURRENT}", "(?<distro_ver>41|42|43)"),
     // CentOS is no longer supported -- this regex is replaced to something that could match nothing
     (
         "${CENTOS_CURRENT}",
