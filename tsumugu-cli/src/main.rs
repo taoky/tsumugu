@@ -3,7 +3,7 @@ use std::{ops::Deref, path::PathBuf, sync::Mutex};
 
 use clap::{Parser, Subcommand};
 
-use tracing::level_filters::LevelFilter;
+use tracing::{level_filters::LevelFilter, trace};
 use tracing_subscriber::EnvFilter;
 use tsumugu_parser::{
     client::{HttpClient, RequestType},
@@ -42,7 +42,9 @@ impl HttpClient for TokioHttpClient {
     }
 
     fn get_text(&self, response: reqwest::Response) -> Result<String, reqwest::Error> {
-        self.runtime.block_on(response.text())
+        let r = self.runtime.block_on(response.text());
+        trace!("get text response: {:?}", r);
+        r
     }
 
     fn head_with_type(
