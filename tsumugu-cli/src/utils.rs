@@ -124,13 +124,12 @@ impl std::str::FromStr for Header {
 pub(crate) fn get_exclusion_manager(
     args: &CommonArgs,
 ) -> Box<dyn tsumugu_parser::regex_manager::ExclusionManagerTrait> {
-    let exclusion_manager = if args.exclusion_v2 {
+    if args.exclusion_v2 {
         let args = std::env::args().collect::<Vec<_>>();
         get_exclusion_manager_v2(&args)
     } else {
         get_exclusion_manager_v1(&args.exclude, &args.include)
-    };
-    exclusion_manager
+    }
 }
 
 pub(crate) fn build_client(

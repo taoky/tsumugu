@@ -240,7 +240,7 @@ fn list_handler(
     let items = match again(
         || {
             parser.get_list_with_filter(
-                &*task_context.client as &TokioHttpClient,
+                task_context.client as &TokioHttpClient,
                 &task.url,
                 relative,
             )
