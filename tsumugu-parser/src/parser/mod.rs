@@ -30,8 +30,9 @@ pub enum ListResult {
 
 #[derive(thiserror::Error, Debug)]
 pub enum ParserError {
-    #[error("network error: {0}")]
-    NetworkError(#[from] reqwest::Error),
+    // TODO: now reqwest::Error is not returned by parsers because they do not use reqwest
+    // #[error("network error: {0}")]
+    // NetworkError(#[from] reqwest::Error),
     #[error("parse error: {0}")]
     ParseError(#[from] anyhow::Error),
 }
@@ -48,12 +49,7 @@ macro_rules! impl_parser_error {
     };
 }
 
-impl_parser_error!(
-    url::ParseError,
-    reqwest::header::ToStrError,
-    chrono::ParseError,
-    regex::Error
-);
+impl_parser_error!(url::ParseError, chrono::ParseError, regex::Error);
 
 pub trait Parser: Sync {
     fn get_list(&self, client: &dyn HttpClient, url: &Url) -> Result<ListResult, ParserError>;
@@ -183,7 +179,7 @@ impl ParserMux {
             Err(e) => e,
         };
         let e = match e {
-            ParserError::NetworkError(_) => return Err(e),
+            // ParserError::NetworkError(_) => return Err(e),
             ParserError::ParseError(e) => e,
         };
         // start autofallback logic
@@ -209,7 +205,8 @@ impl ParserMux {
 fn assert_if_url_has_no_trailing_slash(url: &Url) {
     assert!(
         url.path().ends_with('/'),
-        "URL for listing should have a trailing slash"
+        "URL for listing should have a trailing slash: {}",
+        url.as_str()
     );
 }
 
@@ -392,6 +389,8 @@ fn date_fmt_has_timezone(datefmt: &str) -> bool {
 
 #[cfg(test)]
 mod tests {
+    use crate::client::HttpResponse;
+
     use super::*;
 
     pub(crate) struct TokioClient {
@@ -407,35 +406,56 @@ mod tests {
     }
 
     impl HttpClient for TokioClient {
-        fn get_with_type(
+        fn head_with_type(
             &self,
-            url: url::Url,
+            url: &Url,
             _req_type: crate::client::RequestType,
-        ) -> Result<reqwest::Response, reqwest::Error> {
+        ) -> anyhow::Result<HttpResponse> {
             let future = async {
-                self.client
-                    .get(url.clone())
-                    .send()
-                    .await?
-                    .error_for_status()
+                let resp = self.client.head(url.clone()).send().await?;
+                let status_code = resp.status().as_u16();
+                let final_url = resp.url().clone();
+                let headers = resp.headers().clone();
+                let content_length = resp.content_length();
+                let modified_time = crate::utils::last_modified_from_header(&headers);
+                Ok(HttpResponse {
+                    body: String::new(),
+                    final_url,
+                    status_code,
+                    headers,
+                    content_length,
+                    modified_time,
+                })
             };
             self.runtime.block_on(future)
         }
-        fn get_text(&self, response: reqwest::Response) -> Result<String, reqwest::Error> {
-            let future = async { response.text().await };
-            self.runtime.block_on(future)
-        }
-        fn head_with_type(
+
+        fn get_text_with_type(
             &self,
-            url: url::Url,
+            url: &Url,
             _req_type: crate::client::RequestType,
-        ) -> Result<reqwest::Response, reqwest::Error> {
+        ) -> anyhow::Result<HttpResponse> {
             let future = async {
-                self.client
-                    .head(url.clone())
+                let resp = self
+                    .client
+                    .get(url.clone())
                     .send()
                     .await?
-                    .error_for_status()
+                    .error_for_status()?;
+                let status_code = resp.status().as_u16();
+                let final_url = resp.url().clone();
+                let headers = resp.headers().clone();
+                let content_length = resp.content_length();
+                let body = resp.text().await?;
+                let modified_time = crate::utils::last_modified_from_header(&headers);
+                Ok(HttpResponse {
+                    body,
+                    final_url,
+                    status_code,
+                    headers,
+                    modified_time,
+                    content_length,
+                })
             };
             self.runtime.block_on(future)
         }

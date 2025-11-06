@@ -21,11 +21,10 @@ impl Parser for ApacheF2ListingParser {
     }
 
     fn get_list(&self, client: &dyn HttpClient, url: &url::Url) -> Result<ListResult, ParserError> {
-        let resp = client.get(url.clone())?;
-        let url = resp.url().clone();
-        let body = client.get_text(resp)?;
-        assert_if_url_has_no_trailing_slash(&url);
-        let document = Html::parse_document(&body);
+        let resp = client.get_text(url)?;
+        let url: &Url = &resp.final_url;
+        assert_if_url_has_no_trailing_slash(url);
+        let document = Html::parse_document(&resp.body);
         // find the indexlist which contains file index
         let selector = Selector::parse("table").unwrap();
         let mut selector_iter = document.select(&selector);

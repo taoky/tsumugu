@@ -1,10 +1,7 @@
 // An inefficient fallback parser only for non-listing HTML.
 // Read docs/parser.md for known limitations.
 
-use crate::{
-    listing::{FileSize, FileType, ListItem},
-    utils::get_response_mtime,
-};
+use crate::listing::{FileSize, FileType, ListItem};
 use scraper::{Html, Selector};
 use tracing::debug;
 
@@ -38,7 +35,7 @@ impl Parser for FallbackParser {
                 let url = url.join(index).map_err(|e| {
                     anyhow!("Failed to join {index} to {url}: {e}, trying next index")
                 })?;
-                let resp = client.get(url.clone());
+                let resp = client.get_text(&url);
                 match resp {
                     Ok(r) => {
                         final_resp = Some(r);
@@ -58,11 +55,12 @@ impl Parser for FallbackParser {
         };
         let resp = resp?;
         let name = name.unwrap();
-        let mtime = get_response_mtime(&resp)
+        let mtime = resp
+            .modified_time
             .unwrap_or(chrono::offset::Utc::now())
             .naive_utc();
-        let url = resp.url().clone();
-        let body = client.get_text(resp)?;
+        let url = resp.final_url;
+        let body = resp.body;
         let size = body.len();
         let timezone = chrono::FixedOffset::east_opt(0);
 
@@ -129,25 +127,18 @@ impl Parser for FallbackParser {
 
             // Try HEAD
             debug!("HEADing {href} in fallback parser");
-            let resp = match client.head(href.clone()) {
+            let resp = match client.head(&href) {
                 Ok(r) => r,
                 Err(e) => {
-                    let status = e.status();
-                    if status == Some(reqwest::StatusCode::NOT_FOUND)
-                        || status == Some(reqwest::StatusCode::FORBIDDEN)
-                    {
-                        continue;
-                    }
-
                     // TODO: what to do here?
-                    warn!("Cannot get from {}, skipping", href);
+                    warn!("Cannot get from {}: {}, skipping", href, e);
                     continue;
                 }
             };
 
-            let item = if type_ == FileType::File {
-                let size = resp.content_length();
-                let mtime = match get_response_mtime(&resp) {
+            let item: ListItem = if type_ == FileType::File {
+                let size = resp.content_length;
+                let mtime = match resp.modified_time {
                     Ok(m) => m,
                     Err(e) => {
                         warn!("Cannot get mtime from {href}: {e}, skipping");

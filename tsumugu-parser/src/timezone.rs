@@ -4,7 +4,7 @@ use crate::parser;
 use crate::parser::{ListResult, ParserMux};
 use crate::regex_manager::{Comparison, ExclusionManagerTrait};
 use crate::utils::relative_to_str;
-use crate::utils::{self, again, relative_str_process};
+use crate::utils::{again, relative_str_process};
 
 use anyhow::{bail, Result};
 use chrono::{DateTime, FixedOffset, Utc};
@@ -154,8 +154,9 @@ fn guess_remote_timezone(
     for item in list {
         if item.url == file_url {
             // access file_url with HEAD
-            let resp = client.head_with_type(file_url.clone(), RequestType::Download)?;
-            let mtime = utils::get_response_mtime(&resp)?;
+            let mtime = client
+                .head_with_type(&item.url, RequestType::Download)?
+                .modified_time?;
 
             // compare how many hours are there between mtime (FixedOffset) and item.mtime (Naive)
             // assuming that Naive one is UTC

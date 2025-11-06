@@ -2232,6 +2232,7 @@ dependencies = [
  "chrono",
  "clap",
  "flate2",
+ "http",
  "percent-encoding",
  "regex",
  "reqwest",

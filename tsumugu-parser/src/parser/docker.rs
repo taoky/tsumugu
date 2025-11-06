@@ -37,10 +37,10 @@ impl Parser for DockerListingParser {
 
     fn get_list(&self, client: &dyn HttpClient, url: &url::Url) -> Result<ListResult, ParserError> {
         assert_if_url_has_no_trailing_slash(url);
-        let resp = client.get(url.clone())?;
+        let resp = client.get_text(&url)?;
         // if is a redirect?
-        if let Some(url) = resp.headers().get("location") {
-            let mut url = url.to_str()?.to_string();
+        if let Some(url) = resp.headers.get("location") {
+            let mut url = url.to_str().map_err(|e| anyhow!(e))?.to_string();
             // replace /index.html at the end to /
             if url.ends_with("/index.html") {
                 url = url.trim_end_matches("/index.html").to_string();
@@ -48,8 +48,7 @@ impl Parser for DockerListingParser {
             }
             return Ok(ListResult::Redirect(url));
         }
-        let body = client.get_text(resp)?;
-        let document = Html::parse_document(&body);
+        let document = Html::parse_document(&resp.body);
         let selector = Selector::parse("a").unwrap();
         let mut items = Vec::new();
         for element in document.select(&selector) {

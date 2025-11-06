@@ -19,19 +19,20 @@ use tracing::{debug, error, info, warn};
 use url::Url;
 
 use tsumugu_parser::{
-    client::{HttpClient, RequestType},
     extensions::{extension_handler, ExtensionPackage},
     listing::{self, ListItem},
     parser::{self, ListResult, ParserMux},
     regex_manager::{self, ExclusionManagerTrait},
     timezone::determinate_timezone,
-    utils::{again, get_async, relative_to_str},
+    utils::{again, relative_to_str},
 };
 
 use crate::{
     bar::set_progress_bar,
     compare::{should_download_by_header, should_download_by_list},
-    utils::{again_async, build_client, get_exclusion_manager, is_symlink, naive_to_utc},
+    utils::{
+        again_async, build_client, get_async, get_exclusion_manager, is_symlink, naive_to_utc,
+    },
     SyncArgs, TokioHttpClient,
 };
 
@@ -117,7 +118,7 @@ fn download_file(
             let mtime = if args.trust_mtime_from_parser {
                 naive_to_utc(&item.mtime, timezone)
             } else {
-                match tsumugu_parser::utils::get_response_mtime(&resp) {
+                match crate::utils::get_response_mtime(&resp) {
                     Ok(mtime) => mtime,
                     Err(e) => {
                         let mtime = naive_to_utc(&item.mtime, timezone);
@@ -251,8 +252,8 @@ fn list_handler(
         Err(e) => {
             error!("Failed to list {}: {:?}", task.url, e);
             if match e {
-                parser::ParserError::ParseError(_) => true,
-                parser::ParserError::NetworkError(e) => should_set_error(args, &e.into()),
+                parser::ParserError::ParseError(_) => should_set_error(args, &e.into()),
+                // parser::ParserError::NetworkError(e) => should_set_error(args, &e.into()),
             } {
                 thr_context.mark_failure_listing();
             }
@@ -423,9 +424,15 @@ fn download_handler(
     if should_download && args.head_before_get {
         match again(
             || {
-                task_context
-                    .client
-                    .head_with_type(task.url.clone(), RequestType::Download)
+                let future = async {
+                    task_context
+                        .client
+                        .download_client
+                        .head(task.url.clone())
+                        .send()
+                        .await
+                };
+                task_context.client.runtime.block_on(future)
             },
             args.retry,
         ) {

@@ -33,11 +33,10 @@ impl Parser for DirectoryListerListingParser {
     }
 
     fn get_list(&self, client: &dyn HttpClient, url: &url::Url) -> Result<ListResult, ParserError> {
-        let resp = client.get(url.clone())?;
-        let url = resp.url().clone();
-        let body = client.get_text(resp)?;
-        assert_if_url_has_no_trailing_slash(&url);
-        let document = Html::parse_document(&body);
+        let resp = client.get_text(url)?;
+        let url: &Url = &resp.final_url;
+        assert_if_url_has_no_trailing_slash(url);
+        let document = Html::parse_document(&resp.body);
         // https://github.com/DirectoryLister/DirectoryLister/blob/0283f14aa1fbd97796f753e8d6105c752546050f/app/views/components/file.twig
 
         // find <ul> which contains file index

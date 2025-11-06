@@ -27,9 +27,8 @@ impl Parser for DenoFlareR2ListingParser {
         let mut inner_url = url.clone();
         loop {
             info!("(in paging loop) Fetching: {}", inner_url);
-            let resp = client.get(inner_url.clone())?;
-            let body = client.get_text(resp)?;
-            let document = Html::parse_document(&body);
+            let resp = client.get_text(&inner_url)?;
+            let document = Html::parse_document(&resp.body);
             documents.push((inner_url.clone(), document.clone()));
 
             // Check if last element of #contents is next ➜

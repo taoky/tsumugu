@@ -124,7 +124,7 @@ pub(crate) fn should_download_by_header(
                 return true;
             }
         })),
-        mtime: match tsumugu_parser::utils::get_response_mtime(resp) {
+        mtime: match crate::utils::get_response_mtime(resp) {
             Ok(m) => m,
             Err(e) => {
                 warn!(

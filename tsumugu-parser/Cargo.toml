@@ -12,7 +12,6 @@ tracing = { workspace = true }
 clap = { workspace = true }
 chrono = { workspace = true }
 url = { workspace = true }
-reqwest = { workspace = true }
 
 flate2 = "1.0.28"
 apt-parser = "1.0.0"
@@ -20,7 +19,9 @@ percent-encoding = "2.3.1"
 regex = "1.9.1"
 thiserror = "1.0.63"
 scraper = "0.23.1"
+http = "1"
 
 [dev-dependencies]
 test-log = { workspace= true }
+reqwest = { workspace = true }
 tokio = { workspace = true }

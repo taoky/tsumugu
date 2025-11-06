@@ -1,5 +1,4 @@
-use anyhow::anyhow;
-use anyhow::Result;
+use anyhow::{anyhow, Result};
 use chrono::FixedOffset;
 use chrono::NaiveDateTime;
 use chrono::{DateTime, Utc};
@@ -24,27 +23,12 @@ pub fn parse_last_modified(last_modified: &str) -> Result<DateTime<Utc>> {
     Ok(last_modified.with_timezone(&Utc))
 }
 
-pub fn get_response_mtime(resp: &reqwest::Response) -> Result<DateTime<Utc>> {
-    let last_modified = resp
-        .headers()
-        .get("Last-Modified")
-        .ok_or(anyhow!("Last-Modified header not found"))?
-        .to_str()?;
+pub fn last_modified_from_header(headers: &http::HeaderMap) -> Result<DateTime<Utc>> {
+    let last_modified = headers
+        .get(http::header::LAST_MODIFIED)
+        .ok_or(anyhow!("No Last-Modified header found in response"))?;
+    let last_modified = last_modified.to_str()?;
     parse_last_modified(last_modified)
-}
-
-pub async fn get_async(
-    client: &reqwest::Client,
-    url: url::Url,
-) -> Result<reqwest::Response, reqwest::Error> {
-    client.get(url).send().await?.error_for_status()
-}
-
-pub async fn head_async(
-    client: &reqwest::Client,
-    url: url::Url,
-) -> Result<reqwest::Response, reqwest::Error> {
-    client.head(url).send().await?.error_for_status()
 }
 
 pub fn again<T, E: std::fmt::Debug, F: FnMut() -> Result<T, E>>(
