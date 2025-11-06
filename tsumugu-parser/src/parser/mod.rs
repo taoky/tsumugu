@@ -178,10 +178,6 @@ impl ParserMux {
             Ok(r) => return Ok(r),
             Err(e) => e,
         };
-        let e = match e {
-            // ParserError::NetworkError(_) => return Err(e),
-            ParserError::ParseError(e) => e,
-        };
         // start autofallback logic
         warn!("Parse error with {url}: {e}, try fallback...");
         ParserType::Fallback.build().get_list(client, url)

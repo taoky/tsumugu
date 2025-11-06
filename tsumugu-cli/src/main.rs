@@ -31,7 +31,7 @@ fn tokio_resp_to_tsumugu_resp(resp: &reqwest::Response) -> anyhow::Result<HttpRe
     let content_length = resp.content_length();
     let status_code = resp.status().as_u16();
     let final_url = resp.url().clone();
-    let modified_time = utils::get_response_mtime(&resp);
+    let modified_time = utils::get_response_mtime(resp);
     let headers = resp.headers().clone();
     Ok(HttpResponse {
         body: String::new(),
@@ -68,6 +68,7 @@ impl HttpClient for TokioHttpClient {
         let future =
             async { crate::utils::head_async(self.select_client(req_type), url.clone()).await };
         let resp = self.runtime.block_on(future)?;
+        trace!("HEAD {} -> {}: {:?}", url, resp.status(), resp);
         tokio_resp_to_tsumugu_resp(&resp)
     }
 }
