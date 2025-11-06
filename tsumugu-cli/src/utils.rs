@@ -121,7 +121,9 @@ impl std::str::FromStr for Header {
     }
 }
 
-pub(crate) fn get_exclusion_manager(args: &CommonArgs) -> Box<dyn tsumugu_parser::regex_manager::ExclusionManagerTrait> {
+pub(crate) fn get_exclusion_manager(
+    args: &CommonArgs,
+) -> Box<dyn tsumugu_parser::regex_manager::ExclusionManagerTrait> {
     let exclusion_manager = if args.exclusion_v2 {
         let args = std::env::args().collect::<Vec<_>>();
         get_exclusion_manager_v2(&args)
@@ -180,7 +182,10 @@ pub(crate) fn is_symlink(path: &std::path::Path) -> bool {
         .unwrap_or(false)
 }
 
-pub(crate) fn naive_to_utc(naive: &chrono::NaiveDateTime, timezone: Option<FixedOffset>) -> DateTime<Utc> {
+pub(crate) fn naive_to_utc(
+    naive: &chrono::NaiveDateTime,
+    timezone: Option<FixedOffset>,
+) -> DateTime<Utc> {
     match timezone {
         None => DateTime::<Utc>::from_naive_utc_and_offset(*naive, Utc),
         Some(timezone) => timezone.from_local_datetime(naive).unwrap().into(),

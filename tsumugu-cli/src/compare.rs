@@ -5,9 +5,7 @@ use tracing::{debug, warn};
 
 use tsumugu_parser::listing::{FileSize, FileType, ListItem, SizeUnit};
 
-use crate::{
-    utils::{naive_to_utc},
-};
+use crate::utils::naive_to_utc;
 
 pub(crate) fn compare_filetype(fstype: std::fs::FileType, tsumugu_type: FileType) -> bool {
     match tsumugu_type {
@@ -101,7 +99,11 @@ pub(crate) fn should_download_by_list(
     }
 }
 
-pub(crate) fn should_download_by_header(path: &Path, resp: &reqwest::Response, size_only: bool) -> bool {
+pub(crate) fn should_download_by_header(
+    path: &Path,
+    resp: &reqwest::Response,
+    size_only: bool,
+) -> bool {
     // Construct a valid "ListItem" and pass to should_download_by_list
     debug!("Checking {:?} by header: {:?}", path, resp);
     let item = ListItem {

@@ -1,6 +1,4 @@
-use crate::{
-    listing::{FileSize, FileType, ListItem},
-};
+use crate::listing::{FileSize, FileType, ListItem};
 
 use super::*;
 use anyhow::Result;
@@ -34,11 +32,7 @@ impl Parser for DirectoryListerListingParser {
         PathBuf::from(dir)
     }
 
-    fn get_list(
-        &self,
-        client: &dyn HttpClient,
-        url: &url::Url,
-    ) -> Result<ListResult, ParserError> {
+    fn get_list(&self, client: &dyn HttpClient, url: &url::Url) -> Result<ListResult, ParserError> {
         let resp = client.get(url.clone())?;
         let url = resp.url().clone();
         let body = client.get_text(resp)?;

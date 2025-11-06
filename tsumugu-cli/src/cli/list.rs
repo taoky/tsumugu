@@ -1,11 +1,12 @@
 use tsumugu_parser::{
     parser::{ListResult, ParserMux},
-    regex_manager::{Comparison},
-    utils::{relative_str_process},
+    regex_manager::Comparison,
+    utils::relative_str_process,
 };
 
 use crate::{
-    ListArgs, utils::{build_client, get_exclusion_manager}
+    utils::{build_client, get_exclusion_manager},
+    ListArgs,
 };
 
 use crate::TokioHttpClient;

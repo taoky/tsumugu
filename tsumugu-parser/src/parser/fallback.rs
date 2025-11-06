@@ -3,7 +3,7 @@
 
 use crate::{
     listing::{FileSize, FileType, ListItem},
-    utils::{get_response_mtime},
+    utils::get_response_mtime,
 };
 use scraper::{Html, Selector};
 use tracing::debug;

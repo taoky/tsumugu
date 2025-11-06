@@ -3,14 +3,14 @@ use std::{ops::Deref, path::PathBuf, sync::Mutex};
 
 use clap::{Parser, Subcommand};
 
+use tracing::level_filters::LevelFilter;
+use tracing_subscriber::EnvFilter;
 use tsumugu_parser::{
     client::{HttpClient, RequestType},
     parser::{ParserType, ParserTypeMatch},
     regex_manager::ExpandedRegex,
-    utils::{get_async, head_async}
+    utils::{get_async, head_async},
 };
-use tracing::level_filters::LevelFilter;
-use tracing_subscriber::EnvFilter;
 use url::Url;
 
 use shadow_rs::shadow;
@@ -29,7 +29,11 @@ struct TokioHttpClient {
 }
 
 impl HttpClient for TokioHttpClient {
-    fn get_with_type(&self, url: Url, req_type: RequestType) -> Result<reqwest::Response, reqwest::Error> {
+    fn get_with_type(
+        &self,
+        url: Url,
+        req_type: RequestType,
+    ) -> Result<reqwest::Response, reqwest::Error> {
         let client = match req_type {
             RequestType::List => &self.listing_client,
             RequestType::Download => &self.download_client,
@@ -41,7 +45,11 @@ impl HttpClient for TokioHttpClient {
         self.runtime.block_on(response.text())
     }
 
-    fn head_with_type(&self, url: Url, req_type: RequestType) -> Result<reqwest::Response, reqwest::Error> {
+    fn head_with_type(
+        &self,
+        url: Url,
+        req_type: RequestType,
+    ) -> Result<reqwest::Response, reqwest::Error> {
         let client = match req_type {
             RequestType::List => &self.listing_client,
             RequestType::Download => &self.download_client,

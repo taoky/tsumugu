@@ -1,6 +1,6 @@
 use crate::{
+    client::HttpClient,
     listing::{FileSize, FileType, ListItem},
-    client::HttpClient
 };
 use chrono::NaiveDateTime;
 use scraper::{Html, Selector};
@@ -35,11 +35,7 @@ impl Parser for DockerListingParser {
         false
     }
 
-    fn get_list(
-        &self,
-        client: &dyn HttpClient,
-        url: &url::Url,
-    ) -> Result<ListResult, ParserError> {
+    fn get_list(&self, client: &dyn HttpClient, url: &url::Url) -> Result<ListResult, ParserError> {
         assert_if_url_has_no_trailing_slash(url);
         let resp = client.get(url.clone())?;
         // if is a redirect?

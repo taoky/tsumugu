@@ -1,8 +1,8 @@
 // Nginx fancyindex parser
 
 use crate::{
+    client::HttpClient,
     listing::{FileSize, FileType, ListItem},
-    client::HttpClient
 };
 
 use super::*;
@@ -18,11 +18,7 @@ impl Parser for FancyIndexListingParser {
         "Fancyindex"
     }
 
-    fn get_list(
-        &self,
-        client: &dyn HttpClient,
-        url: &url::Url,
-    ) -> Result<ListResult, ParserError> {
+    fn get_list(&self, client: &dyn HttpClient, url: &url::Url) -> Result<ListResult, ParserError> {
         let resp = client.get(url.clone())?;
         let url = resp.url().clone();
         let body = client.get_text(resp)?;

@@ -19,23 +19,20 @@ use tracing::{debug, error, info, warn};
 use url::Url;
 
 use tsumugu_parser::{
+    client::{HttpClient, RequestType},
     extensions::{extension_handler, ExtensionPackage},
     listing::{self, ListItem},
     parser::{self, ListResult, ParserMux},
     regex_manager::{self, ExclusionManagerTrait},
     timezone::determinate_timezone,
-    utils::{get_async, again, relative_to_str},
-    client::{HttpClient, RequestType},
+    utils::{again, get_async, relative_to_str},
 };
 
 use crate::{
     bar::set_progress_bar,
     compare::{should_download_by_header, should_download_by_list},
-    utils::{
-        again_async, build_client, is_symlink, naive_to_utc, get_exclusion_manager
-    },
-    SyncArgs,
-    TokioHttpClient,
+    utils::{again_async, build_client, get_exclusion_manager, is_symlink, naive_to_utc},
+    SyncArgs, TokioHttpClient,
 };
 
 #[derive(Debug, Clone)]
@@ -241,7 +238,13 @@ fn list_handler(
 
     let relative = &relative_to_str(task_context.relative, None);
     let items = match again(
-        || parser.get_list_with_filter(&*task_context.client as &TokioHttpClient, &task.url, relative),
+        || {
+            parser.get_list_with_filter(
+                &*task_context.client as &TokioHttpClient,
+                &task.url,
+                relative,
+            )
+        },
         args.retry,
     ) {
         Ok(items) => items,
@@ -461,9 +464,16 @@ fn download_handler(
         info!("Dry run, not downloading {}", task.url);
     }
 
-    extension_handler(args.apt_packages, args.yum_packages, &expected_path, &task.relative, &item.url, |package| {
-        extension_push_task(task_context.worker, task_context.wake, package);
-    });
+    extension_handler(
+        args.apt_packages,
+        args.yum_packages,
+        &expected_path,
+        &task.relative,
+        &item.url,
+        |package| {
+            extension_push_task(task_context.worker, task_context.wake, package);
+        },
+    );
 }
 
 fn sync_threads(args: &SyncArgs, parser: &ParserMux, thr_context: &ThreadsContext) {
@@ -497,8 +507,13 @@ fn sync_threads(args: &SyncArgs, parser: &ParserMux, thr_context: &ThreadsContex
     };
 
     let timezone = determinate_timezone(
-        &args.upstream, args.timezone, args.timezone_file.as_deref(), 
-        args.retry, parser, &*exclusion_manager, &client
+        &args.upstream,
+        args.timezone,
+        args.timezone_file.as_deref(),
+        args.retry,
+        parser,
+        &*exclusion_manager,
+        &client,
     );
 
     if !args.dry_run {

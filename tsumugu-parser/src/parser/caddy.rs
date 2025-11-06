@@ -1,7 +1,7 @@
 /// A parser for default caddy file_server format
 use crate::{
+    client::HttpClient,
     listing::{FileSize, FileType, ListItem},
-    client::HttpClient
 };
 
 use super::*;
@@ -17,11 +17,7 @@ impl Parser for CaddyListingParser {
         "Caddy"
     }
 
-    fn get_list(
-        &self,
-        client: &dyn HttpClient,
-        url: &url::Url,
-    ) -> Result<ListResult, ParserError> {
+    fn get_list(&self, client: &dyn HttpClient, url: &url::Url) -> Result<ListResult, ParserError> {
         let resp = client.get(url.clone())?;
         let url = resp.url().clone();
         let body = client.get_text(resp)?;

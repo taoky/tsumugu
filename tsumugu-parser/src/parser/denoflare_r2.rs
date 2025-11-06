@@ -1,7 +1,7 @@
 use crate::{
+    client::HttpClient,
     listing::{FileSize, FileType, ListItem},
     parser::{assert_if_url_has_no_trailing_slash, get_real_name_from_href},
-    client::HttpClient
 };
 
 use super::{ListResult, Parser, ParserError};
@@ -21,11 +21,7 @@ impl Parser for DenoFlareR2ListingParser {
         "DenoFlare R2 Public Read Worker example"
     }
 
-    fn get_list(
-        &self,
-        client: &dyn HttpClient,
-        url: &url::Url,
-    ) -> Result<ListResult, ParserError> {
+    fn get_list(&self, client: &dyn HttpClient, url: &url::Url) -> Result<ListResult, ParserError> {
         let mut documents = vec![];
         assert_if_url_has_no_trailing_slash(url);
         let mut inner_url = url.clone();

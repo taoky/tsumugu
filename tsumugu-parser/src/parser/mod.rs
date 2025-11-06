@@ -8,7 +8,7 @@ use url::Url;
 
 use crate::regex_manager::ExpandedRegex;
 
-use crate::{listing::ListItem, client::HttpClient};
+use crate::{client::HttpClient, listing::ListItem};
 
 pub mod apache_f2;
 pub mod caddy;
@@ -407,16 +407,36 @@ mod tests {
     }
 
     impl HttpClient for TokioClient {
-        fn get_with_type(&self, url: url::Url, _req_type: crate::client::RequestType) -> Result<reqwest::Response, reqwest::Error> {
-            let future = async { self.client.get(url.clone()).send().await?.error_for_status() };
+        fn get_with_type(
+            &self,
+            url: url::Url,
+            _req_type: crate::client::RequestType,
+        ) -> Result<reqwest::Response, reqwest::Error> {
+            let future = async {
+                self.client
+                    .get(url.clone())
+                    .send()
+                    .await?
+                    .error_for_status()
+            };
             self.runtime.block_on(future)
         }
         fn get_text(&self, response: reqwest::Response) -> Result<String, reqwest::Error> {
             let future = async { response.text().await };
             self.runtime.block_on(future)
         }
-        fn head_with_type(&self, url: url::Url, _req_type: crate::client::RequestType) -> Result<reqwest::Response, reqwest::Error> {
-            let future = async { self.client.head(url.clone()).send().await?.error_for_status() };
+        fn head_with_type(
+            &self,
+            url: url::Url,
+            _req_type: crate::client::RequestType,
+        ) -> Result<reqwest::Response, reqwest::Error> {
+            let future = async {
+                self.client
+                    .head(url.clone())
+                    .send()
+                    .await?
+                    .error_for_status()
+            };
             self.runtime.block_on(future)
         }
     }

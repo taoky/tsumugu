@@ -1,10 +1,10 @@
+use crate::client::{HttpClient, RequestType};
 use crate::listing::FileType;
+use crate::parser;
 use crate::parser::{ListResult, ParserMux};
 use crate::regex_manager::{Comparison, ExclusionManagerTrait};
+use crate::utils::relative_to_str;
 use crate::utils::{self, again, relative_str_process};
-use crate::utils::{relative_to_str};
-use crate::parser;
-use crate::client::{HttpClient, RequestType};
 
 use anyhow::{bail, Result};
 use chrono::{DateTime, FixedOffset, Utc};

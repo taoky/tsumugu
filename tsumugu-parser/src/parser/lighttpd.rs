@@ -1,6 +1,6 @@
 use crate::{
+    client::HttpClient,
     listing::{FileSize, FileType, ListItem},
-    client::HttpClient
 };
 use chrono::NaiveDateTime;
 use scraper::{Html, Selector};
@@ -17,11 +17,7 @@ impl Parser for LighttpdListingParser {
         "Lighttpd"
     }
 
-    fn get_list(
-        &self,
-        client: &dyn HttpClient,
-        url: &url::Url,
-    ) -> Result<ListResult, ParserError> {
+    fn get_list(&self, client: &dyn HttpClient, url: &url::Url) -> Result<ListResult, ParserError> {
         let resp = client.get(url.clone())?;
         let url = resp.url().clone();
         let body = client.get_text(resp)?;

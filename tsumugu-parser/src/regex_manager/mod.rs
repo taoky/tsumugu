@@ -99,9 +99,7 @@ pub trait ExclusionManagerTrait: Send + Sync {
     fn match_str(&self, text: &str) -> Comparison;
 }
 
-pub fn get_exclusion_manager_v2(
-    args: &[String],
-) -> Box<dyn ExclusionManagerTrait> {
+pub fn get_exclusion_manager_v2(args: &[String]) -> Box<dyn ExclusionManagerTrait> {
     Box::new(v2::ExclusionManager::new(args))
 }
 

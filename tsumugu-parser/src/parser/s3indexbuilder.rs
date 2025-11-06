@@ -1,12 +1,12 @@
 // For https://github.com/mhagander/s3indexbuilder
 
 use crate::{
+    client::HttpClient,
     listing::{FileSize, FileType, ListItem},
     parser::{
         assert_if_url_has_no_trailing_slash, get_real_name_from_href, ListResult, Parser,
         ParserError,
     },
-    client::HttpClient
 };
 use anyhow::{anyhow, Result};
 use chrono::{FixedOffset, NaiveDateTime};
@@ -20,11 +20,7 @@ impl Parser for S3Indexbuilder {
         "s3indexbuilder format"
     }
 
-    fn get_list(
-        &self,
-        client: &dyn HttpClient,
-        url: &url::Url,
-    ) -> Result<ListResult, ParserError> {
+    fn get_list(&self, client: &dyn HttpClient, url: &url::Url) -> Result<ListResult, ParserError> {
         let resp = client.get(url.clone())?;
         let url = resp.url().clone();
         let body = client.get_text(resp)?;
