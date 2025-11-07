@@ -24,6 +24,7 @@ To successfully sync from these domains, where lftp/rclone fails or finds diffic
 
 This project uses cargo workspace with the following crates:
 
+- [tsumugu-net](./tsumugu-net/): Abstraction of HTTP client (required by `tsumugu-parser`) and an implementation with `reqwest` + `tokio` (used by `tsumugu-cli`).
 - [tsumugu-parser](./tsumugu-parser/): A parser crate for various directory listing formats. Can be reused by other projects.
 - [tsumugu-cli](./tsumugu-cli/): The CLI tool for syncing. For historical reasons, the crate name (and binary name) is called `tsumugu`.
 
