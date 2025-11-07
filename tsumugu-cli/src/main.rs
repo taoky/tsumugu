@@ -13,7 +13,7 @@ use tsumugu_parser::{
 use url::Url;
 
 use shadow_rs::shadow;
-use utils::{Header, headers_to_headermap};
+use utils::{headers_to_headermap, Header};
 shadow!(build);
 
 mod bar;

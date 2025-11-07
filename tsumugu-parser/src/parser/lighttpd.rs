@@ -6,7 +6,7 @@ use scraper::{Html, Selector};
 use tsumugu_net::client::HttpClient;
 
 use super::*;
-use anyhow::{Result, anyhow};
+use anyhow::{anyhow, Result};
 
 #[derive(Debug, Clone, Default)]
 pub struct LighttpdListingParser;

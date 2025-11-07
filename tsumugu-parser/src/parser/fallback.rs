@@ -35,7 +35,7 @@ impl Parser for FallbackParser {
                 let url = url.join(index).map_err(|e| {
                     parse_error!("Failed to join {index} to {url}: {e}, trying next index")
                 })?;
-                let resp = client.get_text(&url);
+                let resp = handle_net!(client.get_text(&url));
                 match resp {
                     Ok(r) => {
                         final_resp = Some(r);
@@ -127,7 +127,7 @@ impl Parser for FallbackParser {
 
             // Try HEAD
             debug!("HEADing {href} in fallback parser");
-            let resp = match client.head(&href) {
+            let resp = match handle_net!(client.head(&href)) {
                 Ok(r) => r,
                 Err(e) => {
                     // TODO: what to do here?

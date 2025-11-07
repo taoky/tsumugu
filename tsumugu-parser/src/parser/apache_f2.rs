@@ -6,7 +6,7 @@ use crate::listing::{FileSize, FileType, ListItem};
 use tsumugu_net::client::HttpClient;
 
 use super::*;
-use anyhow::{Result, anyhow};
+use anyhow::{anyhow, Result};
 use chrono::NaiveDateTime;
 use scraper::{Html, Selector};
 use tracing::debug;

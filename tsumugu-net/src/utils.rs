@@ -1,4 +1,4 @@
-use anyhow::{Result, anyhow};
+use anyhow::{anyhow, Result};
 use chrono::{DateTime, FixedOffset, NaiveDateTime, Utc};
 
 pub fn parse_last_modified(last_modified: &str) -> Result<DateTime<Utc>> {
