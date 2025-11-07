@@ -20,7 +20,7 @@ impl Parser for FallbackParser {
     fn get_list(&self, client: &dyn HttpClient, url: &Url) -> Result<ListResult, ParserError> {
         let url = if !url.path().ends_with('/') {
             Url::parse(&format!("{}/", url.path())).map_err(|e| {
-                anyhow!(
+                parse_error!(
                     "Failed to append trailing slash to URL {}: {e}",
                     url.as_str()
                 )
@@ -33,7 +33,7 @@ impl Parser for FallbackParser {
             let mut final_name = None;
             for index in INDEX {
                 let url = url.join(index).map_err(|e| {
-                    anyhow!("Failed to join {index} to {url}: {e}, trying next index")
+                    parse_error!("Failed to join {index} to {url}: {e}, trying next index")
                 })?;
                 let resp = client.get_text(&url);
                 match resp {
@@ -50,7 +50,7 @@ impl Parser for FallbackParser {
             }
             (
                 final_name,
-                final_resp.ok_or(anyhow!("Does not match index list: {:?}", INDEX)),
+                final_resp.ok_or(parse_error!("Does not match index list: {:?}", INDEX)),
             )
         };
         let resp = resp?;
@@ -79,7 +79,7 @@ impl Parser for FallbackParser {
         // Remove the "index.htm(l)" part in url
         let url = url
             .join("./")
-            .map_err(|e| anyhow!("Failed to join ./ to {url}: {e}, this should not happen"))?;
+            .map_err(|e| parse_error!("Failed to join ./ to {url}: {e}, this should not happen"))?;
         for element in document.select(&selector) {
             let href = match element.value().attr("href") {
                 // well, what can I say... if you don't have href attribute?
@@ -118,7 +118,7 @@ impl Parser for FallbackParser {
             }
             let href = url
                 .join(&relative_href)
-                .map_err(|e| anyhow!("unexpected error of handling URL: {}", e))?;
+                .map_err(|e| parse_error!("unexpected error of handling URL: {}", e))?;
             let type_ = if relative_href.ends_with('/') {
                 FileType::Directory
             } else {

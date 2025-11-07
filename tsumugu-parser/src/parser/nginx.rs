@@ -17,7 +17,7 @@ impl Parser for NginxListingParser {
     }
 
     fn get_list(&self, client: &dyn HttpClient, url: &url::Url) -> Result<ListResult, ParserError> {
-        let resp = client.get_text(url)?;
+        let resp = handle_net!(client.get_text(url))?;
         let url: &Url = &resp.final_url;
         assert_if_url_has_no_trailing_slash(url);
         let document = Html::parse_document(&resp.body);
@@ -68,10 +68,10 @@ impl Parser for NginxListingParser {
             };
             let metadata_raw = element
                 .next_sibling()
-                .ok_or(anyhow!("No metadata found for <a> element"))?
+                .ok_or(parse_error!("No metadata found for <a> element"))?
                 .value()
                 .as_text()
-                .ok_or(anyhow!("No text found in next sibling of <a> element"))?
+                .ok_or(parse_error!("No text found in next sibling of <a> element"))?
                 .to_string();
             let metadata_raw = &date_normalization(metadata_raw.trim());
             debug!("{:?}", metadata_raw);
@@ -105,7 +105,7 @@ impl Parser for NginxListingParser {
                         .clone()
                         .unwrap()
                         .captures(metadata_raw)
-                        .ok_or(anyhow!(
+                        .ok_or(parse_error!(
                             "Get '{}' for {} ({}) metadata, is this a nginx page?",
                             metadata_raw,
                             name,
@@ -114,13 +114,13 @@ impl Parser for NginxListingParser {
                 date = NaiveDateTime::parse_from_str(
                     metadata
                         .get(1)
-                        .ok_or(anyhow!("Cannot get date in metadata"))?
+                        .ok_or(parse_error!("Cannot get date in metadata"))?
                         .as_str(),
                     &date_fmt.clone().unwrap(),
                 )?;
                 size = metadata
                     .get(2)
-                    .ok_or(anyhow!("Cannot get size in metadata"))?
+                    .ok_or(parse_error!("Cannot get size in metadata"))?
                     .as_str();
             } else {
                 date = DateTime::UNIX_EPOCH.naive_utc();
@@ -149,7 +149,12 @@ impl Parser for NginxListingParser {
                         }
                     } else {
                         let n_size = size.parse::<u64>().map_err(|e| {
-                            anyhow!("Failed to parse size '{}' for {} as u64: {}", size, name, e)
+                            parse_error!(
+                                "Failed to parse size '{}' for {} as u64: {}",
+                                size,
+                                name,
+                                e
+                            )
                         })?;
                         Some(FileSize::Precise(n_size))
                     }

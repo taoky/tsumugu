@@ -3,8 +3,8 @@
 use crate::{
     listing::{FileSize, FileType, ListItem},
     parser::{
-        assert_if_url_has_no_trailing_slash, get_real_name_from_href, ListResult, Parser,
-        ParserError,
+        assert_if_url_has_no_trailing_slash, get_real_name_from_href, handle_net, parse_error,
+        ListResult, Parser, ParserError,
     },
 };
 use anyhow::{anyhow, Result};
@@ -22,7 +22,7 @@ impl Parser for S3Indexbuilder {
     }
 
     fn get_list(&self, client: &dyn HttpClient, url: &url::Url) -> Result<ListResult, ParserError> {
-        let resp = client.get_text(url)?;
+        let resp = handle_net!(client.get_text(url))?;
         let url = &resp.final_url;
         assert_if_url_has_no_trailing_slash(url);
         let document = Html::parse_document(&resp.body);
@@ -30,7 +30,7 @@ impl Parser for S3Indexbuilder {
         let table = document
             .select(&selector)
             .next()
-            .ok_or(anyhow!("No <table> found in document"))?;
+            .ok_or(parse_error!("No <table> found in document"))?;
         let selector = Selector::parse("tr").unwrap();
         let mut items = Vec::new();
         for element in table.select(&selector) {
@@ -45,14 +45,14 @@ impl Parser for S3Indexbuilder {
             let a = tds[0]
                 .child_elements()
                 .next()
-                .ok_or(anyhow!("No <a> element found in first <td>"))?;
+                .ok_or(parse_error!("No <a> element found in first <td>"))?;
             if a.inner_html() == "../" {
                 continue;
             }
             let href = a
                 .value()
                 .attr("href")
-                .ok_or(anyhow!("No href found in <a> element in first <td>"))?;
+                .ok_or(parse_error!("No href found in <a> element in first <td>"))?;
             let name = get_real_name_from_href(href);
             let href = url.join(href)?;
             let type_ = if href.as_str().ends_with('/') {
@@ -73,7 +73,7 @@ impl Parser for S3Indexbuilder {
             } else {
                 let size = size
                     .parse::<u64>()
-                    .map_err(|e| anyhow!("Expected size to be u64: {}", e))?;
+                    .map_err(|e| parse_error!("Expected size to be u64: {}", e))?;
                 Some(FileSize::Precise(size))
             };
             items.push(ListItem::new(

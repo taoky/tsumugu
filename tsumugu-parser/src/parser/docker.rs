@@ -36,10 +36,13 @@ impl Parser for DockerListingParser {
 
     fn get_list(&self, client: &dyn HttpClient, url: &url::Url) -> Result<ListResult, ParserError> {
         assert_if_url_has_no_trailing_slash(url);
-        let resp = client.get_text(&url)?;
+        let resp = handle_net!(client.get_text(url))?;
         // if is a redirect?
         if let Some(url) = resp.headers.get("location") {
-            let mut url = url.to_str().map_err(|e| anyhow!(e))?.to_string();
+            let mut url = url
+                .to_str()
+                .map_err(|e| parse_error!("url to str error: {}", e))?
+                .to_string();
             // replace /index.html at the end to /
             if url.ends_with("/index.html") {
                 url = url.trim_end_matches("/index.html").to_string();
@@ -70,28 +73,34 @@ impl Parser for DockerListingParser {
                 } else {
                     let metadata_raw = element
                         .next_sibling()
-                        .ok_or(anyhow!("No metadata found for <a> element"))?
+                        .ok_or(parse_error!("No metadata found for <a> element"))?
                         .value()
                         .as_text()
-                        .ok_or(anyhow!("No text found in next sibling of <a> element"))?
+                        .ok_or(parse_error!("No text found in next sibling of <a> element"))?
                         .to_string();
                     let metadata_raw = metadata_raw.trim();
                     let metadata = self
                         .metadata_regex
                         .captures(metadata_raw)
-                        .ok_or(anyhow!("Failed to parse metadata: {}", metadata_raw))?;
+                        .ok_or(parse_error!("Failed to parse metadata: {}", metadata_raw))?;
                     let date = metadata
                         .get(1)
-                        .ok_or(anyhow!("Cannot get date from metadata: {}", metadata_raw))?
+                        .ok_or(parse_error!(
+                            "Cannot get date from metadata: {}",
+                            metadata_raw
+                        ))?
                         .as_str();
                     let date = match NaiveDateTime::parse_from_str(date, "%Y-%m-%d %H:%M:%S") {
                         Ok(date) => date,
                         Err(_) => NaiveDateTime::parse_from_str(date, "%Y-%m-%d %H:%M")
-                            .map_err(|e| anyhow!("Failed to parse date '{}': {}", date, e))?,
+                            .map_err(|e| parse_error!("Failed to parse date '{}': {}", date, e))?,
                     };
                     let size = metadata
                         .get(3)
-                        .ok_or(anyhow!("Cannot get size from metadata: {}", metadata_raw))?
+                        .ok_or(parse_error!(
+                            "Cannot get size from metadata: {}",
+                            metadata_raw
+                        ))?
                         .as_str();
                     if size == "-" {
                         (FileType::Directory, None, date)

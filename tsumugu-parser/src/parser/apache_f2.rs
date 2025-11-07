@@ -20,7 +20,7 @@ impl Parser for ApacheF2ListingParser {
     }
 
     fn get_list(&self, client: &dyn HttpClient, url: &url::Url) -> Result<ListResult, ParserError> {
-        let resp = client.get_text(url)?;
+        let resp = handle_net!(client.get_text(url))?;
         let url: &Url = &resp.final_url;
         assert_if_url_has_no_trailing_slash(url);
         let document = Html::parse_document(&resp.body);
@@ -31,7 +31,7 @@ impl Parser for ApacheF2ListingParser {
         loop {
             let t = selector_iter
                 .next()
-                .ok_or(anyhow!("No more <table> matched"))?;
+                .ok_or(parse_error!("No more <table> matched"))?;
             let t_html = t.html().to_lowercase();
             if t_html.contains("name")
                 && t_html.contains("last modified")
@@ -77,11 +77,11 @@ impl Parser for ApacheF2ListingParser {
             }
             let td = td_iterator
                 .next()
-                .ok_or(anyhow!("no more td after first iterate"))?;
+                .ok_or(parse_error!("no more td after first iterate"))?;
             let a = td
                 .select(&a_selector)
                 .next()
-                .ok_or(anyhow!("no <a> found in <td>"))?;
+                .ok_or(parse_error!("no <a> found in <td>"))?;
             let displayed_filename = a.inner_html();
             if displayed_filename == "Parent Directory" || displayed_filename == ".." {
                 continue;
@@ -90,7 +90,7 @@ impl Parser for ApacheF2ListingParser {
             let href = a
                 .value()
                 .attr("href")
-                .ok_or(anyhow!("no href found in <a>"))?;
+                .ok_or(parse_error!("no href found in <a>"))?;
             let name = get_real_name_from_href(href);
             let href = url.join(href)?;
             let type_ = if href.as_str().ends_with('/') || displayed_filename.ends_with('/') {
@@ -101,12 +101,12 @@ impl Parser for ApacheF2ListingParser {
             };
             let col2 = td_iterator
                 .next()
-                .ok_or(anyhow!("no more td after second iterate"))?
+                .ok_or(parse_error!("no more td after second iterate"))?
                 .inner_html();
             let col2 = col2.trim();
             let col3 = td_iterator
                 .next()
-                .ok_or(anyhow!("no more td after third iterate"))?
+                .ok_or(parse_error!("no more td after third iterate"))?
                 .inner_html();
             let col3 = col3.trim();
 

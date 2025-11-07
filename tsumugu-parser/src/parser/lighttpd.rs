@@ -17,7 +17,7 @@ impl Parser for LighttpdListingParser {
     }
 
     fn get_list(&self, client: &dyn HttpClient, url: &url::Url) -> Result<ListResult, ParserError> {
-        let resp = client.get_text(url)?;
+        let resp = handle_net!(client.get_text(url))?;
         let url: &Url = &resp.final_url;
         assert_if_url_has_no_trailing_slash(url);
         let document = Html::parse_document(&resp.body);
@@ -25,22 +25,22 @@ impl Parser for LighttpdListingParser {
         let indexlist = document
             .select(&selector)
             .next()
-            .ok_or_else(|| anyhow!("Cannot find <tbody>"))?;
+            .ok_or_else(|| parse_error!("Cannot find <tbody>"))?;
         let selector = Selector::parse("tr").unwrap();
         let mut items = Vec::new();
         for element in indexlist.select(&selector) {
             let a = element
                 .select(&Selector::parse("a").unwrap())
                 .next()
-                .ok_or_else(|| anyhow!("Cannot find <a>"))?;
+                .ok_or_else(|| parse_error!("Cannot find <a>"))?;
             let mtime = element
                 .select(&Selector::parse(".m").unwrap())
                 .next()
-                .ok_or_else(|| anyhow!("Cannot find .m"))?;
+                .ok_or_else(|| parse_error!("Cannot find .m"))?;
             let size = element
                 .select(&Selector::parse(".s").unwrap())
                 .next()
-                .ok_or_else(|| anyhow!("Cannot find .s"))?;
+                .ok_or_else(|| parse_error!("Cannot find .s"))?;
 
             let displayed_filename = a.inner_html();
             if displayed_filename == ".." {
@@ -49,7 +49,7 @@ impl Parser for LighttpdListingParser {
             let href = a
                 .value()
                 .attr("href")
-                .ok_or_else(|| anyhow!("Cannot find href inside <a>"))?;
+                .ok_or_else(|| parse_error!("Cannot find href inside <a>"))?;
             let name = get_real_name_from_href(href);
             let href = url.join(href)?;
 

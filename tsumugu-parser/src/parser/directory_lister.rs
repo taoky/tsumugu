@@ -33,7 +33,7 @@ impl Parser for DirectoryListerListingParser {
     }
 
     fn get_list(&self, client: &dyn HttpClient, url: &url::Url) -> Result<ListResult, ParserError> {
-        let resp = client.get_text(url)?;
+        let resp = handle_net!(client.get_text(url))?;
         let url: &Url = &resp.final_url;
         assert_if_url_has_no_trailing_slash(url);
         let document = Html::parse_document(&resp.body);
@@ -44,27 +44,27 @@ impl Parser for DirectoryListerListingParser {
         let indexlist = document
             .select(&selector)
             .next()
-            .ok_or(anyhow!("No <ul> found in document"))?;
+            .ok_or(parse_error!("No <ul> found in document"))?;
         // find second <li>
         let selector = Selector::parse("li").unwrap();
         let indexlist = indexlist
             .select(&selector)
             .nth(1)
-            .ok_or(anyhow!("No second <li> found in <ul>"))?;
+            .ok_or(parse_error!("No second <li> found in <ul>"))?;
         let selector = Selector::parse("a").unwrap();
         let mut items = Vec::new();
         for element in indexlist.select(&selector) {
             let href = element
                 .value()
                 .attr("href")
-                .ok_or(anyhow!("No href found in <a> element"))?;
+                .ok_or(parse_error!("No href found in <a> element"))?;
             let href = url.join(href)?;
             // displayed file name, class = "flex-1 truncate"
             let selector = Selector::parse("div.flex-1.truncate").unwrap();
             let displayed_filename = element
                 .select(&selector)
                 .next()
-                .ok_or(anyhow!("No div.flex-1.truncate found"))?
+                .ok_or(parse_error!("No div.flex-1.truncate found"))?
                 .inner_html();
             let displayed_filename = displayed_filename.trim();
             // size, class = "hidden whitespace-nowrap text-right mx-2 w-1/6 sm:block"
@@ -72,7 +72,7 @@ impl Parser for DirectoryListerListingParser {
             let size = element
                 .select(&selector)
                 .next()
-                .ok_or(anyhow!(
+                .ok_or(parse_error!(
                     "No div.hidden.whitespace-nowrap.text-right.mx-2 found"
                 ))?
                 .inner_html();
@@ -83,7 +83,7 @@ impl Parser for DirectoryListerListingParser {
             let mtime = element
                 .select(&selector)
                 .next()
-                .ok_or(anyhow!(
+                .ok_or(parse_error!(
                     "No div.hidden.whitespace-nowrap.text-right.truncate.ml-2 found"
                 ))?
                 .inner_html();

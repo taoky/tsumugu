@@ -30,20 +30,52 @@ pub enum ListResult {
 }
 
 #[derive(thiserror::Error, Debug)]
-pub enum ParserError {
-    // TODO: now reqwest::Error is not returned by parsers because they do not use reqwest
-    // #[error("network error: {0}")]
-    // NetworkError(#[from] reqwest::Error),
-    #[error("parse error: {0}")]
-    ParseError(#[from] anyhow::Error),
+pub enum AnyParseError {
+    #[error(transparent)]
+    Inner(#[from] anyhow::Error),
 }
+
+#[derive(thiserror::Error, Debug)]
+pub enum AnyNetworkError {
+    #[error(transparent)]
+    Inner(#[from] anyhow::Error),
+}
+
+#[derive(thiserror::Error, Debug)]
+pub enum ParserError {
+    #[error("network error: {0}")]
+    NetworkError(#[from] AnyNetworkError),
+    #[error("parse error: {0}")]
+    ParseError(#[from] AnyParseError),
+    // #[error("other error: {0}")]
+    // Other(#[from] anyhow::Error),
+}
+
+macro_rules! parse_error {
+    ($($msg:expr), * ) => {
+        ParserError::ParseError(crate::parser::AnyParseError::Inner(anyhow!($($msg), *)))
+    };
+}
+
+macro_rules! handle_net {
+    ($exp:expr) => {
+        $exp.map_err(|e| {
+            ParserError::NetworkError(crate::parser::AnyNetworkError::Inner(anyhow::Error::from(
+                e,
+            )))
+        })
+    };
+}
+
+pub(crate) use handle_net;
+pub(crate) use parse_error;
 
 macro_rules! impl_parser_error {
     ($($ty:ty),*) => {
         $(
             impl From<$ty> for ParserError {
                 fn from(value: $ty) -> Self {
-                    ParserError::ParseError(anyhow::Error::from(value))
+                    ParserError::ParseError(AnyParseError::Inner(anyhow::Error::from(value)))
                 }
             }
         )*
@@ -115,7 +147,7 @@ impl FromStr for ParserTypeMatch {
         // split by first :
         let (p, r) = match s.split_once(':') {
             Some((l, r)) => {
-                let p = ParserType::from_str(l, true).map_err(|s| anyhow!(s))?;
+                let p = ParserType::from_str(l, true).map_err(|s| parse_error!(s))?;
                 let r = ExpandedRegex::from_str(r)?;
                 (p, r)
             }

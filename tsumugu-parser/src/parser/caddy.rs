@@ -17,7 +17,7 @@ impl Parser for CaddyListingParser {
     }
 
     fn get_list(&self, client: &dyn HttpClient, url: &url::Url) -> Result<ListResult, ParserError> {
-        let resp = client.get_text(url)?;
+        let resp = handle_net!(client.get_text(url))?;
         let url: &Url = &resp.final_url;
         assert_if_url_has_no_trailing_slash(url);
         let document = Html::parse_document(&resp.body);
@@ -29,11 +29,11 @@ impl Parser for CaddyListingParser {
             let a = element
                 .select(&selector)
                 .next()
-                .ok_or(anyhow!("td a not found in <tr> element"))?;
+                .ok_or(parse_error!("td a not found in <tr> element"))?;
             let href = a
                 .value()
                 .attr("href")
-                .ok_or(anyhow!("no href found in <a> element"))?;
+                .ok_or(parse_error!("no href found in <a> element"))?;
             // Caddy file_server will append "./" to href
             let name = get_real_name_from_href(href)
                 .trim_start_matches("./")
@@ -62,10 +62,10 @@ impl Parser for CaddyListingParser {
             let mtime = element
                 .select(&selector)
                 .next()
-                .ok_or(anyhow!("td.timestamp time not found in <tr> element"))?
+                .ok_or(parse_error!("td.timestamp time not found in <tr> element"))?
                 .value()
                 .attr("datetime")
-                .ok_or(anyhow!("no datetime found in <time> element"))?
+                .ok_or(parse_error!("no datetime found in <time> element"))?
                 .trim();
             // Store UTC time
             let date = NaiveDateTime::parse_from_str(mtime, "%Y-%m-%dT%H:%M:%S%Z")?;

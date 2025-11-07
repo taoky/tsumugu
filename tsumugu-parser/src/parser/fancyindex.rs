@@ -18,7 +18,7 @@ impl Parser for FancyIndexListingParser {
     }
 
     fn get_list(&self, client: &dyn HttpClient, url: &url::Url) -> Result<ListResult, ParserError> {
-        let resp = client.get_text(url)?;
+        let resp = handle_net!(client.get_text(url))?;
         let url: &Url = &resp.final_url;
         assert_if_url_has_no_trailing_slash(url);
         let document = Html::parse_document(&resp.body);
@@ -43,13 +43,13 @@ impl Parser for FancyIndexListingParser {
             let a = match td_a.select(&Selector::parse("a").unwrap()).next() {
                 Some(a) => a,
                 None => {
-                    return Err(anyhow!("Cannot find <a> in first cell.").into());
+                    return Err(parse_error!("Cannot find <a> in first cell."));
                 }
             };
             let href = a
                 .value()
                 .attr("href")
-                .ok_or(anyhow!("No href found in <a> element in first cell"))?;
+                .ok_or(parse_error!("No href found in <a> element in first cell"))?;
             let displayed_filename = a.inner_html();
 
             if displayed_filename == "Parent Directory/" || href == "../" {
@@ -65,12 +65,12 @@ impl Parser for FancyIndexListingParser {
             };
             let size = td_iterator
                 .next()
-                .ok_or(anyhow!("Cannot get size in td"))?
+                .ok_or(parse_error!("Cannot get size in td"))?
                 .inner_html();
             let size = size.trim();
             let date = td_iterator
                 .next()
-                .ok_or(anyhow!("Cannot get date in td"))?
+                .ok_or(parse_error!("Cannot get date in td"))?
                 .inner_html();
             let date = &date_normalization(date.trim());
 

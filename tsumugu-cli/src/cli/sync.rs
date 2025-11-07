@@ -246,8 +246,8 @@ fn list_handler(
         Err(e) => {
             error!("Failed to list {}: {:?}", task.url, e);
             if match e {
-                parser::ParserError::ParseError(_) => should_set_error(args, &e.into()),
-                // parser::ParserError::NetworkError(e) => should_set_error(args, &e.into()),
+                parser::ParserError::ParseError(_) => true,
+                parser::ParserError::NetworkError(e) => should_set_error(args, &e.into()),
             } {
                 thr_context.mark_failure_listing();
             }
