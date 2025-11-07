@@ -3,13 +3,13 @@ use std::{ops::Deref, path::PathBuf, sync::Mutex};
 
 use clap::{Parser, Subcommand};
 
-use tracing::{level_filters::LevelFilter, trace};
+use tracing::level_filters::LevelFilter;
 use tracing_subscriber::EnvFilter;
 use tsumugu_parser::{
-    client::{HttpClient, HttpResponse, RequestType},
     parser::{ParserType, ParserTypeMatch},
     regex_manager::ExpandedRegex,
 };
+
 use url::Url;
 
 use shadow_rs::shadow;
@@ -20,58 +20,6 @@ mod bar;
 mod cli;
 mod compare;
 mod utils;
-
-struct TokioHttpClient {
-    runtime: tokio::runtime::Runtime,
-    listing_client: reqwest::Client,
-    download_client: reqwest::Client,
-}
-
-fn tokio_resp_to_tsumugu_resp(resp: &reqwest::Response) -> anyhow::Result<HttpResponse> {
-    let content_length = resp.content_length();
-    let status_code = resp.status().as_u16();
-    let final_url = resp.url().clone();
-    let modified_time = utils::get_response_mtime(resp);
-    let headers = resp.headers().clone();
-    Ok(HttpResponse {
-        body: String::new(),
-        final_url,
-        status_code,
-        content_length,
-        modified_time,
-        headers,
-    })
-}
-
-impl TokioHttpClient {
-    fn select_client(&self, req_type: RequestType) -> &reqwest::Client {
-        match req_type {
-            RequestType::List => &self.listing_client,
-            RequestType::Download => &self.download_client,
-        }
-    }
-}
-
-impl HttpClient for TokioHttpClient {
-    fn get_text_with_type(&self, url: &Url, req_type: RequestType) -> anyhow::Result<HttpResponse> {
-        let future =
-            async { crate::utils::get_async(self.select_client(req_type), url.clone()).await };
-        let resp = self.runtime.block_on(future)?;
-        let http_resp = tokio_resp_to_tsumugu_resp(&resp)?;
-        let body_text = self.runtime.block_on(resp.text())?;
-        Ok(HttpResponse {
-            body: body_text,
-            ..http_resp
-        })
-    }
-    fn head_with_type(&self, url: &Url, req_type: RequestType) -> anyhow::Result<HttpResponse> {
-        let future =
-            async { crate::utils::head_async(self.select_client(req_type), url.clone()).await };
-        let resp = self.runtime.block_on(future)?;
-        trace!("HEAD {} -> {}: {:?}", url, resp.status(), resp);
-        tokio_resp_to_tsumugu_resp(&resp)
-    }
-}
 
 #[allow(clippy::const_is_empty)]
 fn get_version() -> &'static str {

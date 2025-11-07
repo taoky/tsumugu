@@ -27,13 +27,13 @@ use tsumugu_parser::{
     utils::{again, relative_to_str},
 };
 
+use tsumugu_net::{client::impls::TokioHttpClient, utils::get_response_mtime};
+
 use crate::{
     bar::set_progress_bar,
     compare::{should_download_by_header, should_download_by_list},
-    utils::{
-        again_async, build_client, get_async, get_exclusion_manager, is_symlink, naive_to_utc,
-    },
-    SyncArgs, TokioHttpClient,
+    utils::{again_async, build_client, get_exclusion_manager, is_symlink, naive_to_utc},
+    SyncArgs,
 };
 
 #[derive(Debug, Clone)]
@@ -94,7 +94,7 @@ fn download_file(
     let future = again_async(
         || async {
             let url = item.url.clone();
-            let resp = match get_async(client, url.clone()).await {
+            let resp = match client.get(url.clone()).send().await?.error_for_status() {
                 Ok(resp) => resp,
                 Err(e) => {
                     error!("Failed to GET {}: {:?}", url, e);
@@ -118,7 +118,7 @@ fn download_file(
             let mtime = if args.trust_mtime_from_parser {
                 naive_to_utc(&item.mtime, timezone)
             } else {
-                match crate::utils::get_response_mtime(&resp) {
+                match get_response_mtime(&resp) {
                     Ok(mtime) => mtime,
                     Err(e) => {
                         let mtime = naive_to_utc(&item.mtime, timezone);
@@ -239,13 +239,7 @@ fn list_handler(
 
     let relative = &relative_to_str(task_context.relative, None);
     let items = match again(
-        || {
-            parser.get_list_with_filter(
-                task_context.client as &TokioHttpClient,
-                &task.url,
-                relative,
-            )
-        },
+        || parser.get_list_with_filter(task_context.client, &task.url, relative),
         args.retry,
     ) {
         Ok(items) => items,

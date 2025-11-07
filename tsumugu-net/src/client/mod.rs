@@ -31,3 +31,6 @@ pub trait HttpClient {
         self.head_with_type(url, RequestType::List)
     }
 }
+
+#[cfg(feature = "with-impl")]
+pub mod impls;

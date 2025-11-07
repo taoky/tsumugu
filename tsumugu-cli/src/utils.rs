@@ -1,4 +1,4 @@
-use anyhow::{anyhow, Result};
+use anyhow::Result;
 use chrono::FixedOffset;
 use chrono::TimeZone;
 use chrono::{DateTime, Utc};
@@ -130,29 +130,6 @@ pub(crate) fn get_exclusion_manager(
     } else {
         get_exclusion_manager_v1(&args.exclude, &args.include)
     }
-}
-
-pub(crate) async fn get_async(
-    client: &reqwest::Client,
-    url: Url,
-) -> Result<reqwest::Response, reqwest::Error> {
-    client.get(url).send().await?.error_for_status()
-}
-
-pub(crate) async fn head_async(
-    client: &reqwest::Client,
-    url: Url,
-) -> Result<reqwest::Response, reqwest::Error> {
-    client.head(url).send().await
-}
-
-pub(crate) fn get_response_mtime(resp: &reqwest::Response) -> Result<DateTime<Utc>> {
-    let last_modified = resp
-        .headers()
-        .get("Last-Modified")
-        .ok_or(anyhow!("Last-Modified header not found"))?
-        .to_str()?;
-    tsumugu_parser::utils::parse_last_modified(last_modified)
 }
 
 pub(crate) fn build_client(

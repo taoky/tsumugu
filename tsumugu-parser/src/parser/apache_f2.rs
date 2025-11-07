@@ -1,10 +1,9 @@
 // https://httpd.apache.org/docs/2.4/mod/mod_autoindex.html
 // > F=2 formats the listing as an HTMLTable FancyIndexed list
 
-use crate::{
-    client::HttpClient,
-    listing::{FileSize, FileType, ListItem},
-};
+use crate::listing::{FileSize, FileType, ListItem};
+
+use tsumugu_net::client::HttpClient;
 
 use super::*;
 use anyhow::{anyhow, Result};

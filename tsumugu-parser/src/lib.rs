@@ -1,4 +1,3 @@
-pub mod client;
 pub mod extensions;
 pub mod listing;
 pub mod parser;

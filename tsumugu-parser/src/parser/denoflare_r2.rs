@@ -1,8 +1,9 @@
 use crate::{
-    client::HttpClient,
     listing::{FileSize, FileType, ListItem},
     parser::{assert_if_url_has_no_trailing_slash, get_real_name_from_href},
 };
+
+use tsumugu_net::client::HttpClient;
 
 use super::{ListResult, Parser, ParserError};
 use anyhow::{anyhow, Result};

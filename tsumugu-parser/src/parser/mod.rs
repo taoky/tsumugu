@@ -6,9 +6,10 @@ use clap::ValueEnum;
 use tracing::{info, warn};
 use url::Url;
 
+use crate::listing::ListItem;
 use crate::regex_manager::ExpandedRegex;
 
-use crate::{client::HttpClient, listing::ListItem};
+use tsumugu_net::client::HttpClient;
 
 pub mod apache_f2;
 pub mod caddy;
@@ -385,76 +386,12 @@ fn date_fmt_has_timezone(datefmt: &str) -> bool {
 
 #[cfg(test)]
 mod tests {
-    use crate::client::HttpResponse;
+    use tsumugu_net::client::impls::TokioHttpClient;
 
     use super::*;
 
-    pub(crate) struct TokioClient {
-        client: reqwest::Client,
-        runtime: tokio::runtime::Runtime,
-    }
-
-    pub(crate) fn init_client() -> TokioClient {
-        TokioClient {
-            client: reqwest::Client::new(),
-            runtime: tokio::runtime::Runtime::new().unwrap(),
-        }
-    }
-
-    impl HttpClient for TokioClient {
-        fn head_with_type(
-            &self,
-            url: &Url,
-            _req_type: crate::client::RequestType,
-        ) -> anyhow::Result<HttpResponse> {
-            let future = async {
-                let resp = self.client.head(url.clone()).send().await?;
-                let status_code = resp.status().as_u16();
-                let final_url = resp.url().clone();
-                let headers = resp.headers().clone();
-                let content_length = resp.content_length();
-                let modified_time = crate::utils::last_modified_from_header(&headers);
-                Ok(HttpResponse {
-                    body: String::new(),
-                    final_url,
-                    status_code,
-                    headers,
-                    content_length,
-                    modified_time,
-                })
-            };
-            self.runtime.block_on(future)
-        }
-
-        fn get_text_with_type(
-            &self,
-            url: &Url,
-            _req_type: crate::client::RequestType,
-        ) -> anyhow::Result<HttpResponse> {
-            let future = async {
-                let resp = self
-                    .client
-                    .get(url.clone())
-                    .send()
-                    .await?
-                    .error_for_status()?;
-                let status_code = resp.status().as_u16();
-                let final_url = resp.url().clone();
-                let headers = resp.headers().clone();
-                let content_length = resp.content_length();
-                let body = resp.text().await?;
-                let modified_time = crate::utils::last_modified_from_header(&headers);
-                Ok(HttpResponse {
-                    body,
-                    final_url,
-                    status_code,
-                    headers,
-                    modified_time,
-                    content_length,
-                })
-            };
-            self.runtime.block_on(future)
-        }
+    pub(crate) fn init_client() -> TokioHttpClient {
+        TokioHttpClient::init_with_defaults()
     }
 
     #[test]

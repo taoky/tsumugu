@@ -1,7 +1,6 @@
 // For https://github.com/mhagander/s3indexbuilder
 
 use crate::{
-    client::HttpClient,
     listing::{FileSize, FileType, ListItem},
     parser::{
         assert_if_url_has_no_trailing_slash, get_real_name_from_href, ListResult, Parser,
@@ -11,6 +10,8 @@ use crate::{
 use anyhow::{anyhow, Result};
 use chrono::{FixedOffset, NaiveDateTime};
 use scraper::{Html, Selector};
+
+use tsumugu_net::client::HttpClient;
 
 #[derive(Debug, Clone, Default)]
 pub struct S3Indexbuilder;

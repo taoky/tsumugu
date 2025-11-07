@@ -1,8 +1,7 @@
 /// A parser for default caddy file_server format
-use crate::{
-    client::HttpClient,
-    listing::{FileSize, FileType, ListItem},
-};
+use crate::listing::{FileSize, FileType, ListItem};
+
+use tsumugu_net::client::HttpClient;
 
 use super::*;
 use anyhow::Result;

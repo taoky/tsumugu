@@ -8,6 +8,7 @@ repository = "https://github.com/taoky/tsumugu"
 
 [dependencies]
 tsumugu-parser = { path = "../tsumugu-parser" }
+tsumugu-net = { path = "../tsumugu-net", features = ["with-impl"] }
 walkdir = "2.3.3"
 crossbeam-deque = "0.8.3"
 humansize = "2.1.3"

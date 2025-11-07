@@ -9,7 +9,7 @@ use crate::{
     ListArgs,
 };
 
-use crate::TokioHttpClient;
+use tsumugu_net::client::impls::TokioHttpClient;
 
 // TODO: clean code
 pub(crate) fn list(args: &ListArgs, bind_address: Option<String>) -> ! {
@@ -18,11 +18,11 @@ pub(crate) fn list(args: &ListArgs, bind_address: Option<String>) -> ! {
         args.parser_match.clone(),
         args.auto_fallback,
     );
-    let client = build_client(args, parser.is_auto_redirect(), bind_address.as_ref(), true);
-    let async_context = TokioHttpClient {
+    let req_client = build_client(args, parser.is_auto_redirect(), bind_address.as_ref(), true);
+    let client = TokioHttpClient {
         runtime: tokio::runtime::Runtime::new().unwrap(),
-        listing_client: client.clone(),
-        download_client: client,
+        listing_client: req_client.clone(),
+        download_client: req_client,
     };
     let exclusion_manager = get_exclusion_manager(args);
     // get relative
@@ -37,7 +37,7 @@ pub(crate) fn list(args: &ListArgs, bind_address: Option<String>) -> ! {
     let relative = relative_str_process(&relative);
     assert!(relative.starts_with('/') && relative.ends_with('/'));
     let list = parser
-        .get_list_with_filter(&async_context, upstream, &relative)
+        .get_list_with_filter(&client, upstream, &relative)
         .unwrap();
     let match_cmp = exclusion_manager.match_str(&relative);
 

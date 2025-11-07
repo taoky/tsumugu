@@ -1,28 +1,25 @@
 [package]
-name = "tsumugu-parser"
+name = "tsumugu-net"
 version = "0.20250929.1"
 edition = "2021"
-description = "Parser for various directory listing formats"
+description = "Network abstraction for tsumugu"
 license = "MIT"
 repository = "https://github.com/taoky/tsumugu"
 
 [dependencies]
-tsumugu-net = { path = "../tsumugu-net" }
 
 anyhow = { workspace = true }
 tracing = { workspace = true }
-clap = { workspace = true }
 chrono = { workspace = true }
 url = { workspace = true }
+reqwest = { workspace = true }
+tokio = { workspace = true }
 
-flate2 = "1.0.28"
-apt-parser = "1.0.0"
-percent-encoding = "2.3.1"
-regex = "1.9.1"
 thiserror = "1.0.63"
-scraper = "0.23.1"
 http = "1"
 
 [dev-dependencies]
 test-log = { workspace= true }
-tsumugu-net = { path = "../tsumugu-net", features = ["with-impl"]}
+
+[features]
+with-impl = []

@@ -2,6 +2,7 @@
 resolver = "3"
 members = [
     "tsumugu-parser",
+    "tsumugu-net",
     "tsumugu-cli"
 ]
 

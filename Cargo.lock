@@ -2218,9 +2218,25 @@ dependencies = [
  "tokio",
  "tracing",
  "tracing-subscriber",
+ "tsumugu-net",
  "tsumugu-parser",
  "url",
  "walkdir",
+]
+
+[[package]]
+name = "tsumugu-net"
+version = "0.20250929.1"
+dependencies = [
+ "anyhow",
+ "chrono",
+ "http",
+ "reqwest",
+ "test-log",
+ "thiserror 1.0.69",
+ "tokio",
+ "tracing",
+ "url",
 ]
 
 [[package]]
@@ -2235,12 +2251,11 @@ dependencies = [
  "http",
  "percent-encoding",
  "regex",
- "reqwest",
  "scraper",
  "test-log",
  "thiserror 1.0.69",
- "tokio",
  "tracing",
+ "tsumugu-net",
  "url",
 ]
 
