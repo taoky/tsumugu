@@ -1,7 +1,7 @@
 use std::path::PathBuf;
 use std::str::FromStr;
 
-use anyhow::{anyhow, bail, Result};
+use anyhow::{Result, anyhow, bail};
 use clap::ValueEnum;
 use tracing::{info, warn};
 use url::Url;
@@ -120,7 +120,9 @@ impl ParserType {
             Self::ApacheF2 => Box::<apache_f2::ApacheF2ListingParser>::default(),
             Self::Docker => Box::<docker::DockerListingParser>::default(),
             Self::DirectoryLister => {
-                warn!("html5ever parser does not support foster parenting. The result may be incorrect.");
+                warn!(
+                    "html5ever parser does not support foster parenting. The result may be incorrect."
+                );
                 Box::<directory_lister::DirectoryListerListingParser>::default()
             }
             Self::Lighttpd => Box::<lighttpd::LighttpdListingParser>::default(),
@@ -224,7 +226,9 @@ impl ParserMux {
         let main_redirect = self.main.is_auto_redirect();
         for s in self.supplementaries.iter() {
             if s.0.is_auto_redirect() != main_redirect {
-                warn!("Supplementary parsers do not have same redirect settings as main parser. Ignored.")
+                warn!(
+                    "Supplementary parsers do not have same redirect settings as main parser. Ignored."
+                )
             }
         }
         main_redirect

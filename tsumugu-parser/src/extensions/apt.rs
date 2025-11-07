@@ -41,13 +41,13 @@ fn get_debian_root(
                 u
             );
         }
-        if let Some(r) = r {
-            if r.pop().is_none() {
-                anyhow::bail!(
-                    "Cannot find debian root (relative can not be popped, relative = {:?})",
-                    r
-                );
-            }
+        if let Some(r) = r
+            && r.pop().is_none()
+        {
+            anyhow::bail!(
+                "Cannot find debian root (relative can not be popped, relative = {:?})",
+                r
+            );
         }
         u.path_segments_mut().unwrap().pop();
         Ok(())

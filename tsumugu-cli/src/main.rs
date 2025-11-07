@@ -13,7 +13,7 @@ use tsumugu_parser::{
 use url::Url;
 
 use shadow_rs::shadow;
-use utils::{headers_to_headermap, Header};
+use utils::{Header, headers_to_headermap};
 shadow!(build);
 
 mod bar;
@@ -240,7 +240,9 @@ fn main() {
     match args.command {
         Commands::Sync(args) => {
             if !args.upstream.path().ends_with('/') {
-                tracing::warn!("It's suggested to append backslash to upstream, though this also works in most cases (most web servers redirects this to URL with backslash at end).")
+                tracing::warn!(
+                    "It's suggested to append backslash to upstream, though this also works in most cases (most web servers redirects this to URL with backslash at end)."
+                )
             }
             cli::sync(&args, bind_address, pb_manager);
         }

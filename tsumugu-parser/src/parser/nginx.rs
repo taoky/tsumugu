@@ -5,7 +5,7 @@ use scraper::{Html, Selector};
 use tracing::debug;
 
 use super::*;
-use anyhow::{anyhow, Result};
+use anyhow::{Result, anyhow};
 use regex::Regex;
 
 #[derive(Debug, Clone, Default)]
@@ -26,10 +26,10 @@ impl Parser for NginxListingParser {
         let mut date_fmt = None;
         let mut date_regex = None;
         for element in document.select(&selector) {
-            if let Some(target) = element.value().attr("target") {
-                if target == "_blank" {
-                    continue;
-                }
+            if let Some(target) = element.value().attr("target")
+                && target == "_blank"
+            {
+                continue;
             };
             let href = match element.value().attr("href") {
                 Some(href) => href,

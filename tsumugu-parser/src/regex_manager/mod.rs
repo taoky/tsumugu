@@ -69,7 +69,9 @@ impl FromStr for ExpandedRegex {
 impl ExpandedRegex {
     fn text_transform(text: &str) -> String {
         if !text.starts_with('/') {
-            tracing::warn!("(unexpected internal input: string given to match_str shall start with /, anything wrong?)");
+            tracing::warn!(
+                "(unexpected internal input: string given to match_str shall start with /, anything wrong?)"
+            );
             format!("/{}", text)
         } else {
             text.to_string()

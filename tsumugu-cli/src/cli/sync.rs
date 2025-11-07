@@ -5,8 +5,8 @@ use std::{
     os::unix::fs::symlink,
     path::{Path, PathBuf},
     sync::{
-        atomic::{AtomicBool, AtomicU64, AtomicUsize, Ordering},
         Arc, Mutex,
+        atomic::{AtomicBool, AtomicU64, AtomicUsize, Ordering},
     },
 };
 
@@ -19,7 +19,7 @@ use tracing::{debug, error, info, warn};
 use url::Url;
 
 use tsumugu_parser::{
-    extensions::{extension_handler, ExtensionPackage},
+    extensions::{ExtensionPackage, extension_handler},
     listing::{self, ListItem},
     parser::{self, ListResult, ParserMux},
     regex_manager::{self, ExclusionManagerTrait},
@@ -27,13 +27,13 @@ use tsumugu_parser::{
     utils::{again, relative_to_str},
 };
 
-use tsumugu_net::client::impls::{get_response_mtime, TokioHttpClient};
+use tsumugu_net::client::impls::{TokioHttpClient, get_response_mtime};
 
 use crate::{
+    SyncArgs,
     bar::set_progress_bar,
     compare::{should_download_by_header, should_download_by_list},
     utils::{again_async, build_client, get_exclusion_manager, is_symlink, naive_to_utc},
-    SyncArgs,
 };
 
 #[derive(Debug, Clone)]
@@ -122,7 +122,10 @@ fn download_file(
                     Ok(mtime) => mtime,
                     Err(e) => {
                         let mtime = naive_to_utc(&item.mtime, timezone);
-                        warn!("Failed to get mtime of {} from header, use parser mtime {} instead: {}", url, mtime, e);
+                        warn!(
+                            "Failed to get mtime of {} from header, use parser mtime {} instead: {}",
+                            url, mtime, e
+                        );
                         mtime
                     }
                 }
@@ -205,12 +208,11 @@ struct TaskContext<'a> {
 
 // Check if e is a 404 error and args.ignore_nonexist is set
 fn should_set_error(args: &SyncArgs, e: &anyhow::Error) -> bool {
-    if args.ignore_nonexist {
-        if let Some(reqwest_err) = e.downcast_ref::<reqwest::Error>() {
-            if reqwest_err.status() == Some(StatusCode::NOT_FOUND) {
-                return false;
-            }
-        }
+    if args.ignore_nonexist
+        && let Some(reqwest_err) = e.downcast_ref::<reqwest::Error>()
+        && reqwest_err.status() == Some(StatusCode::NOT_FOUND)
+    {
+        return false;
     }
     true
 }
@@ -309,7 +311,10 @@ fn list_handler(
                 task.url, target_url
             );
             if cwd.exists() {
-                warn!("Skipping symlink creation because {:?} already exists, but it is not a symlink", cwd);
+                warn!(
+                    "Skipping symlink creation because {:?} already exists, but it is not a symlink",
+                    cwd
+                );
                 return;
             }
             // get last segment of target_url
@@ -341,12 +346,12 @@ fn download_handler(
     let task = task_context.task;
     let cwd = task_context.cwd;
     // create path in case for first sync
-    if !args.dry_run {
-        if let Err(e) = std::fs::create_dir_all(cwd) {
-            error!("Failed to create directory {:?}: {:?}", cwd, e);
-            thr_context.mark_failure_downloading();
-            return;
-        }
+    if !args.dry_run
+        && let Err(e) = std::fs::create_dir_all(cwd)
+    {
+        error!("Failed to create directory {:?}: {:?}", cwd, e);
+        thr_context.mark_failure_downloading();
+        return;
     }
     // Absolute filesystem path of expected file
     let expected_path = cwd.join(&item.name);
@@ -456,10 +461,9 @@ fn download_handler(
             !args.head_before_get && !args.trust_mtime_from_parser,
             // compare_size_only to give to should_download_by_header() inside (when check_header is true)
             compare_size_only,
-        ) {
-            if should_set_error(args, &e) {
-                thr_context.mark_failure_downloading();
-            }
+        ) && should_set_error(args, &e)
+        {
+            thr_context.mark_failure_downloading();
         }
     } else if should_download {
         info!("Dry run, not downloading {}", task.url);

@@ -35,12 +35,12 @@ impl ExclusionManager {
                         ExpandedRegex::from_str(s).expect("unexpected exclude regex"),
                     ));
                 }
-            } else if arg == "--include" {
-                if let Some(s) = iter.peek() {
-                    regexes.push(RegexType::Include(
-                        ExpandedRegex::from_str(s).expect("unexpected include regex"),
-                    ));
-                }
+            } else if arg == "--include"
+                && let Some(s) = iter.peek()
+            {
+                regexes.push(RegexType::Include(
+                    ExpandedRegex::from_str(s).expect("unexpected include regex"),
+                ));
             }
         }
         debug!("regexes: {:?}", regexes);
