@@ -4,9 +4,8 @@ use chrono::{DateTime, NaiveDateTime};
 use scraper::{Html, Selector};
 use tracing::debug;
 
-
 use super::*;
-use anyhow::{anyhow, Result};
+use anyhow::{Result, anyhow};
 use regex::Regex;
 
 #[derive(Debug, Clone, Default)]

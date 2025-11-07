@@ -3,11 +3,11 @@
 use crate::{
     listing::{FileSize, FileType, ListItem},
     parser::{
-        assert_if_url_has_no_trailing_slash, get_real_name_from_href, handle_net, parse_error,
-        ListResult, Parser, ParserError,
+        ListResult, Parser, ParserError, assert_if_url_has_no_trailing_slash,
+        get_real_name_from_href, handle_net, parse_error,
     },
 };
-use anyhow::{anyhow, Result};
+use anyhow::{Result, anyhow};
 use chrono::{FixedOffset, NaiveDateTime};
 use scraper::{Html, Selector};
 

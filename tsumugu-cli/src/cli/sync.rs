@@ -5,8 +5,8 @@ use std::{
     os::unix::fs::symlink,
     path::{Path, PathBuf},
     sync::{
-        atomic::{AtomicBool, AtomicU64, AtomicUsize, Ordering}, Arc,
-        Mutex,
+        Arc, Mutex,
+        atomic::{AtomicBool, AtomicU64, AtomicUsize, Ordering},
     },
 };
 
@@ -19,7 +19,7 @@ use tracing::{debug, error, info, warn};
 use url::Url;
 
 use tsumugu_parser::{
-    extensions::{extension_handler, ExtensionPackage},
+    extensions::{ExtensionPackage, extension_handler},
     listing::{self, ListItem},
     parser::{self, ListResult, ParserMux},
     regex_manager::{self, ExclusionManagerTrait},
@@ -27,13 +27,13 @@ use tsumugu_parser::{
     utils::{again, relative_to_str},
 };
 
-use tsumugu_net::client::impls::{get_response_mtime, TokioHttpClient};
+use tsumugu_net::client::impls::{TokioHttpClient, get_response_mtime};
 
 use crate::{
+    SyncArgs,
     bar::set_progress_bar,
     compare::{should_download_by_header, should_download_by_list},
     utils::{again_async, build_client, get_exclusion_manager, is_symlink, naive_to_utc},
-    SyncArgs,
 };
 
 #[derive(Debug, Clone)]

@@ -5,8 +5,8 @@ use crate::{
 
 use tsumugu_net::client::HttpClient;
 
-use super::{handle_net, parse_error, ListResult, Parser, ParserError};
-use anyhow::{anyhow, Result};
+use super::{ListResult, Parser, ParserError, handle_net, parse_error};
+use anyhow::{Result, anyhow};
 use chrono::{DateTime, FixedOffset, NaiveDateTime};
 use scraper::CaseSensitivity::*;
 use scraper::{Html, Selector};

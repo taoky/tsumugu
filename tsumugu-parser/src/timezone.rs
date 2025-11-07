@@ -6,7 +6,7 @@ use crate::utils::{again, relative_str_process, relative_to_str};
 
 use tsumugu_net::client::{HttpClient, RequestType};
 
-use anyhow::{bail, Result};
+use anyhow::{Result, bail};
 use chrono::{DateTime, FixedOffset, Utc};
 use tracing::{debug, info};
 use url::Url;
