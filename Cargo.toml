@@ -7,14 +7,12 @@ members = [
 ]
 
 [workspace.dependencies]
-anyhow = { version = "1.0.71", features = ["backtrace"] }
-chrono = { version = "0.4.26", default-features = false, features = ["clock"] }
-clap = { version = "4.3.12", features = ["derive"] }
-url = "2.5.4"
+anyhow = { version = "1.0", features = ["backtrace"] }
+chrono = { version = "0.4", default-features = false, features = ["clock"] }
+clap = { version = "4.5", features = ["derive"] }
+url = "2.5"
 tracing = "0.1"
-reqwest = { version = "0.12.9", default-features = false, features = ["stream", "gzip", "deflate", "brotli", "socks", "rustls-tls-native-roots", "http2"] }
-test-log = { version = "0.2.14", default-features = false, features = ["trace"] }
-tokio = { version = "1.43.1", features = ["rt-multi-thread"] }
-shadow-rs = "0.32.0"
-thiserror = "1.0.63"
-http = "1"
+reqwest = { version = "0.12", default-features = false, features = ["stream", "gzip", "deflate", "brotli", "socks", "rustls-tls-native-roots", "http2"] }
+test-log = { version = "0.2", default-features = false, features = ["trace"] }
+tokio = { version = "1.4", features = ["rt-multi-thread"] }
+http = "1.3"

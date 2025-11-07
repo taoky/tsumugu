@@ -7,21 +7,20 @@ license = "MIT"
 repository = "https://github.com/taoky/tsumugu"
 
 [dependencies]
-tsumugu-net = { path = "../tsumugu-net" }
+tsumugu-net = { version = "0", path = "../tsumugu-net" }
 
 anyhow = { workspace = true }
 tracing = { workspace = true }
 clap = { workspace = true }
 chrono = { workspace = true }
 url = { workspace = true }
-thiserror = { workspace = true }
-http = { workspace = true }
 
-flate2 = "1.0.28"
-apt-parser = "1.0.0"
-percent-encoding = "2.3.1"
-regex = "1.9.1"
-scraper = "0.23.1"
+flate2 = "1.1"
+apt-parser = "1.0"
+percent-encoding = "2.3"
+regex = "1.12"
+scraper = "0.24"
+thiserror = "2.0"
 
 [dev-dependencies]
 test-log = { workspace= true }
