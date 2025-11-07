@@ -1,15 +1,6 @@
 use anyhow::{anyhow, Result};
 use chrono::{DateTime, FixedOffset, NaiveDateTime, Utc};
 
-pub fn get_response_mtime(resp: &reqwest::Response) -> Result<DateTime<Utc>> {
-    let last_modified = resp
-        .headers()
-        .get("Last-Modified")
-        .ok_or(anyhow!("Last-Modified header not found"))?
-        .to_str()?;
-    parse_last_modified(last_modified)
-}
-
 pub fn parse_last_modified(last_modified: &str) -> Result<DateTime<Utc>> {
     let last_modified = match DateTime::parse_from_rfc2822(last_modified) {
         Ok(res) => res,

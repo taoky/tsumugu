@@ -7,19 +7,21 @@ license = "MIT"
 repository = "https://github.com/taoky/tsumugu"
 
 [dependencies]
-
 anyhow = { workspace = true }
 tracing = { workspace = true }
 chrono = { workspace = true }
 url = { workspace = true }
-reqwest = { workspace = true }
-tokio = { workspace = true }
+# thiserror = { workspace = true }
+http = { workspace = true }
 
-thiserror = "1.0.63"
-http = "1"
+reqwest = { workspace = true, optional = true }
+tokio = { workspace = true, optional = true }
 
 [dev-dependencies]
 test-log = { workspace= true }
 
 [features]
-with-impl = []
+with-impl = [
+    "dep:reqwest",
+    "dep:tokio",
+] # otherwise interface only

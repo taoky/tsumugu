@@ -2233,7 +2233,6 @@ dependencies = [
  "http",
  "reqwest",
  "test-log",
- "thiserror 1.0.69",
  "tokio",
  "tracing",
  "url",

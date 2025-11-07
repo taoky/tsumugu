@@ -18,8 +18,6 @@ pub struct HttpResponse {
 }
 
 /// A trait for HTTP clients used by the parser.
-/// Please ensure those methods only return Error when the request itself fails,
-/// not when the response has an error status code, or any parsing fails.
 pub trait HttpClient {
     fn get_text_with_type(&self, url: &Url, req_type: RequestType) -> Result<HttpResponse>;
     fn get_text(&self, url: &Url) -> Result<HttpResponse> {

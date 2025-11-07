@@ -1,7 +1,18 @@
+use anyhow::{anyhow, Result};
 use tracing::trace;
 use url::Url;
 
 use super::*;
+use crate::utils::parse_last_modified;
+
+pub fn get_response_mtime(resp: &reqwest::Response) -> Result<DateTime<Utc>> {
+    let last_modified = resp
+        .headers()
+        .get("Last-Modified")
+        .ok_or(anyhow!("Last-Modified header not found"))?
+        .to_str()?;
+    parse_last_modified(last_modified)
+}
 
 pub struct TokioHttpClient {
     pub runtime: tokio::runtime::Runtime,
@@ -9,20 +20,20 @@ pub struct TokioHttpClient {
     pub download_client: reqwest::Client,
 }
 
-fn tokio_resp_to_tsumugu_resp(resp: &reqwest::Response) -> anyhow::Result<HttpResponse> {
+fn tokio_resp_to_tsumugu_resp(resp: &reqwest::Response) -> HttpResponse {
     let content_length = resp.content_length();
     let status_code = resp.status().as_u16();
     let final_url = resp.url().clone();
-    let modified_time = crate::utils::get_response_mtime(resp);
+    let modified_time = get_response_mtime(resp);
     let headers = resp.headers().clone();
-    Ok(HttpResponse {
+    HttpResponse {
         body: String::new(),
         final_url,
         status_code,
         content_length,
         modified_time,
         headers,
-    })
+    }
 }
 
 impl TokioHttpClient {
@@ -44,7 +55,7 @@ impl TokioHttpClient {
 }
 
 impl HttpClient for TokioHttpClient {
-    fn get_text_with_type(&self, url: &Url, req_type: RequestType) -> anyhow::Result<HttpResponse> {
+    fn get_text_with_type(&self, url: &Url, req_type: RequestType) -> Result<HttpResponse> {
         let future = async {
             self.select_client(req_type)
                 .get(url.clone())
@@ -53,18 +64,23 @@ impl HttpClient for TokioHttpClient {
                 .error_for_status()
         };
         let resp = self.runtime.block_on(future)?;
-        let http_resp = tokio_resp_to_tsumugu_resp(&resp)?;
+        let http_resp = tokio_resp_to_tsumugu_resp(&resp);
         let body_text = self.runtime.block_on(resp.text())?;
         Ok(HttpResponse {
             body: body_text,
             ..http_resp
         })
     }
-    fn head_with_type(&self, url: &Url, req_type: RequestType) -> anyhow::Result<HttpResponse> {
-        // do not use error_for_status here, because we need to get headers & status code
-        let future = async { self.select_client(req_type).head(url.clone()).send().await };
+    fn head_with_type(&self, url: &Url, req_type: RequestType) -> Result<HttpResponse> {
+        let future = async {
+            self.select_client(req_type)
+                .head(url.clone())
+                .send()
+                .await?
+                .error_for_status()
+        };
         let resp = self.runtime.block_on(future)?;
         trace!("HEAD {} -> {}: {:?}", url, resp.status(), resp);
-        tokio_resp_to_tsumugu_resp(&resp)
+        Ok(tokio_resp_to_tsumugu_resp(&resp))
     }
 }

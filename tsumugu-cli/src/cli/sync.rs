@@ -27,7 +27,7 @@ use tsumugu_parser::{
     utils::{again, relative_to_str},
 };
 
-use tsumugu_net::{client::impls::TokioHttpClient, utils::get_response_mtime};
+use tsumugu_net::client::impls::{get_response_mtime, TokioHttpClient};
 
 use crate::{
     bar::set_progress_bar,
@@ -85,9 +85,9 @@ fn download_file(
     check_header: bool,
     compare_size_only: bool,
 ) -> Result<()> {
-    let tokio_client = task_context.client;
-    let runtime = &tokio_client.runtime;
-    let client = &tokio_client.download_client;
+    let http_client = task_context.client;
+    let runtime = &http_client.runtime;
+    let client = &http_client.download_client;
     let timezone = task_context.timezone;
     // Here we use async to allow streaming and progress bar
     // Ref: https://gist.github.com/giuliano-oliveira/4d11d6b3bb003dba3a1b53f43d81b30d
