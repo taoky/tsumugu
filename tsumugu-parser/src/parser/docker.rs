@@ -1,0 +1,204 @@
+use crate::listing::{FileSize, FileType, ListItem};
+use chrono::NaiveDateTime;
+use scraper::{Html, Selector};
+// use tracing::debug;
+
+use tsumugu_net::client::HttpClient;
+
+use super::*;
+use anyhow::Result;
+use regex::Regex;
+
+#[derive(Debug, Clone)]
+pub struct DockerListingParser {
+    metadata_regex: Regex,
+}
+
+impl Default for DockerListingParser {
+    fn default() -> Self {
+        Self {
+            metadata_regex: Regex::new(
+                r"(\d{4}-\d{2}-\d{2} \d{2}:\d{2}(:\d{2})?)\s+([\d \w\.-]+)$",
+            )
+            .unwrap(),
+        }
+    }
+}
+
+impl Parser for DockerListingParser {
+    fn name(&self) -> &'static str {
+        "download.docker.com"
+    }
+
+    fn is_auto_redirect(&self) -> bool {
+        false
+    }
+
+    fn get_list(&self, client: &dyn HttpClient, url: &url::Url) -> Result<ListResult, ParserError> {
+        assert_if_url_has_no_trailing_slash(url);
+        let resp = handle_net!(client.get_text(url))?;
+        // if is a redirect?
+        if let Some(url) = resp.headers.get("location") {
+            let mut url = url
+                .to_str()
+                .map_err(|e| parse_error!("url to str error: {}", e))?
+                .to_string();
+            // replace /index.html at the end to /
+            if url.ends_with("/index.html") {
+                url = url.trim_end_matches("/index.html").to_string();
+                url.push('/');
+            }
+            return Ok(ListResult::Redirect(url));
+        }
+        let document = Html::parse_document(&resp.body);
+        let selector = Selector::parse("a").unwrap();
+        let mut items = Vec::new();
+        for element in document.select(&selector) {
+            let href = match element.value().attr("href") {
+                Some(href) => href,
+                None => continue,
+            };
+            let name = get_real_name_from_href(href);
+            let mut href = url.join(href)?;
+
+            if name == ".." {
+                continue;
+            }
+
+            let displayed_name = element.inner_html();
+
+            let (type_, size, date) = {
+                if href.as_str().ends_with('/') || displayed_name.ends_with('/') {
+                    (FileType::Directory, None, NaiveDateTime::default())
+                } else {
+                    let metadata_raw = element
+                        .next_sibling()
+                        .ok_or(parse_error!("No metadata found for <a> element"))?
+                        .value()
+                        .as_text()
+                        .ok_or(parse_error!("No text found in next sibling of <a> element"))?
+                        .to_string();
+                    let metadata_raw = metadata_raw.trim();
+                    let metadata = self
+                        .metadata_regex
+                        .captures(metadata_raw)
+                        .ok_or(parse_error!("Failed to parse metadata: {}", metadata_raw))?;
+                    let date = metadata
+                        .get(1)
+                        .ok_or(parse_error!(
+                            "Cannot get date from metadata: {}",
+                            metadata_raw
+                        ))?
+                        .as_str();
+                    let date = match NaiveDateTime::parse_from_str(date, "%Y-%m-%d %H:%M:%S") {
+                        Ok(date) => date,
+                        Err(_) => NaiveDateTime::parse_from_str(date, "%Y-%m-%d %H:%M")
+                            .map_err(|e| parse_error!("Failed to parse date '{}': {}", date, e))?,
+                    };
+                    let size = metadata
+                        .get(3)
+                        .ok_or(parse_error!(
+                            "Cannot get size from metadata: {}",
+                            metadata_raw
+                        ))?
+                        .as_str();
+                    if size == "-" {
+                        (FileType::Directory, None, date)
+                    } else {
+                        let (n_size, unit) = FileSize::get_humanized(size);
+                        (
+                            FileType::File,
+                            Some(FileSize::HumanizedBinary(n_size, unit)),
+                            date,
+                        )
+                    }
+                }
+            };
+            if type_ == FileType::Directory && !href.path().ends_with('/') {
+                href.set_path(&format!("{}/", href.path()));
+            }
+
+            items.push(ListItem::new(
+                href,
+                name.to_string(),
+                type_,
+                size,
+                date,
+                None,
+            ))
+        }
+        Ok(ListResult::List(items))
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use crate::listing::SizeUnit;
+
+    use super::*;
+    use crate::parser::tests::*;
+
+    #[test]
+    fn test_docker() {
+        let context = init_client();
+        let items = DockerListingParser::default()
+            .get_list(
+                &context,
+                &url::Url::parse("http://localhost:1921/docker/").unwrap(),
+            )
+            .unwrap();
+        match items {
+            ListResult::List(items) => {
+                assert_eq!(items.len(), 45);
+                assert_eq!(items[0].name, "7.0");
+                assert_eq!(items[0].type_, FileType::Directory);
+                assert_eq!(items[0].size, None);
+                assert_eq!(items[0].mtime, NaiveDateTime::default());
+                assert_eq!(items[42].name, "docker-ce-staging.repo");
+                assert_eq!(items[42].type_, FileType::File);
+                assert_eq!(
+                    items[42].size,
+                    Some(FileSize::HumanizedBinary(2.0, SizeUnit::K))
+                );
+                assert_eq!(
+                    items[42].mtime,
+                    NaiveDateTime::parse_from_str("2023-07-07 20:20:56", "%Y-%m-%d %H:%M:%S")
+                        .unwrap()
+                );
+            }
+            _ => unreachable!(),
+        }
+    }
+
+    #[test]
+    fn test_docker_2() {
+        let context = init_client();
+        let items = DockerListingParser::default()
+            .get_list(
+                &context,
+                &url::Url::parse("http://localhost:1921/docker/armv7l/").unwrap(),
+            )
+            .unwrap();
+        match items {
+            ListResult::List(items) => {
+                assert_eq!(items.len(), 2);
+                assert_eq!(items[0].name, "nightly");
+                assert_eq!(items[0].type_, FileType::Directory);
+                assert_eq!(items[0].size, None);
+                // Don't compare folder mtime here...
+                // assert_eq!(
+                //     items[0].mtime,
+                //     NaiveDateTime::parse_from_str("2020-01-21 07:38", "%Y-%m-%d %H:%M").unwrap()
+                // );
+                assert_eq!(items[1].name, "test");
+                assert_eq!(items[1].type_, FileType::Directory);
+                assert_eq!(items[1].size, None);
+                // assert_eq!(
+                //     items[1].mtime,
+                //     NaiveDateTime::parse_from_str("2020-01-21 07:38", "%Y-%m-%d %H:%M").unwrap()
+                // );
+            }
+            _ => unreachable!(),
+        }
+    }
+}

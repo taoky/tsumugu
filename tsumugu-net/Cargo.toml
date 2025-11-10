@@ -1,0 +1,26 @@
+[package]
+name = "tsumugu-net"
+version = "0.20250929.1"
+edition = "2024"
+description = "Network abstraction for tsumugu"
+license = "MIT"
+repository = "https://github.com/taoky/tsumugu"
+
+[dependencies]
+anyhow = { workspace = true }
+tracing = { workspace = true }
+chrono = { workspace = true }
+url = { workspace = true }
+http = { workspace = true }
+
+reqwest = { workspace = true, optional = true }
+tokio = { workspace = true, optional = true }
+
+[dev-dependencies]
+test-log = { workspace= true }
+
+[features]
+with-impl = [
+    "dep:reqwest",
+    "dep:tokio",
+] # otherwise interface only

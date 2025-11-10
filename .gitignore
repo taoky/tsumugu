@@ -4,3 +4,5 @@ Cargo.toml.cache
 
 # Add use nix if using direnv with nix
 .envrc
+
+.idea/

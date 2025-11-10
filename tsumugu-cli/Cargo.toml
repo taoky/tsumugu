@@ -1,0 +1,34 @@
+[package]
+name = "tsumugu"
+version = "0.20250929.1"
+edition = "2024"
+description = "A HTTP(S) syncing tool with lower overhead, for OSS mirrors"
+license = "MIT"
+repository = "https://github.com/taoky/tsumugu"
+
+[dependencies]
+tsumugu-parser = { version = "0", path = "../tsumugu-parser" }
+tsumugu-net = { version = "0", path = "../tsumugu-net", features = ["with-impl"] }
+
+clap = { workspace = true }
+tokio = { workspace = true }
+anyhow = { workspace = true }
+chrono = { workspace = true }
+url = { workspace = true }
+reqwest = { workspace = true }
+tracing = { workspace = true }
+
+walkdir = "2.5"
+crossbeam-deque = "0.8"
+humansize = "2.1"
+futures-util = "0.3"
+filetime = "0.2"
+kyuri = "0.2"
+tracing-subscriber = { version = "0.3", features = ["env-filter"] }
+shadow-rs = "1.4"
+
+[dev-dependencies]
+test-log = { workspace= true }
+
+[build-dependencies]
+shadow-rs = "1.4"
