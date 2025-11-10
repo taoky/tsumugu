@@ -1,6 +1,6 @@
 [package]
 name = "tsumugu-parser"
-version = "0.20250929.1"
+version = "0.20251111.0"
 edition = "2024"
 description = "Parser for various directory listing formats"
 license = "MIT"
