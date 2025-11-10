@@ -65,18 +65,28 @@ Options:
       --compare-size-only <COMPARE_SIZE_ONLY>
           Relative path regex for those compare size only **after** HEAD (head_before_get on) or GET (head_before_get off)
       --trust-mtime-from-parser
-          Allow mtime from parser if not available from HTTP headers [aliases: allow-mtime-from-parser]
+          Allow mtime from parser if not available from HTTP headers [aliases: --allow-mtime-from-parser]
       --apt-packages
           (Experimental) APT Packages file parser to find out missing packages
       --yum-packages
           (Experimental) YUM Packages file parser to find out missing packages
       --ignore-nonexist
           Ignore 404 NOT FOUND as error when downloading files
+      --ignore-forbidden
+          Ignore 403 FORBIDDEN as error when downloading files. It's recommended to use this with --no-delete if the upstream returns 403 non-deterministically or randomly
   -h, --help
           Print help
   -V, --version
           Print version
 > ./tsumugu list --help
+List files from upstream
+
+Usage: tsumugu list [OPTIONS] <UPSTREAM>
+
+Arguments:
+  <UPSTREAM>  The upstream URL
+
+Options:
       --parser <PARSER>                Choose a main parser [default: nginx] [possible values: nginx, apache-f2, docker, directory-lister, lighttpd, caddy, fancy-index, gradle, denoflare-r2, s3-indexbuilder, fallback]
       --user-agent <USER_AGENT>        Customize tsumugu's user agent [default: tsumugu]
       --header <HEADER>                Custom header for HTTP(S) requests in format "Headerkey: headervalue". Supports multiple

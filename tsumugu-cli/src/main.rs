@@ -185,6 +185,11 @@ pub struct SyncArgs {
     /// Ignore 404 NOT FOUND as error when downloading files.
     #[clap(long)]
     ignore_nonexist: bool,
+
+    /// Ignore 403 FORBIDDEN as error when downloading files. It's recommended to use this with --no-delete
+    /// if the upstream returns 403 non-deterministically or randomly.
+    #[clap(long)]
+    ignore_forbidden: bool,
 }
 
 #[derive(Parser, Debug)]
