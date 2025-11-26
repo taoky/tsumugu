@@ -2198,7 +2198,7 @@ checksum = "e421abadd41a4225275504ea4d6566923418b7f05506fbc9c0fe86ba7396114b"
 
 [[package]]
 name = "tsumugu"
-version = "0.20251111.0"
+version = "0.20251127.0"
 dependencies = [
  "anyhow",
  "chrono",

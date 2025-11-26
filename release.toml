@@ -1,5 +1,0 @@
-allow-branch = [ "pudding" ]
-shared-version = false
-tag = false
-push = false
-publish = false
