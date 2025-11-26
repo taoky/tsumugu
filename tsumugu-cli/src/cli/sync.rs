@@ -208,11 +208,16 @@ struct TaskContext<'a> {
 
 // Check if e is a 404 error and args.ignore_nonexist is set
 fn should_set_error(args: &SyncArgs, e: &anyhow::Error) -> bool {
-    if let Some(reqwest_err) = e.downcast_ref::<reqwest::Error>() {
-        if args.ignore_nonexist && reqwest_err.status() == Some(StatusCode::NOT_FOUND) {
+    if let Some(reqwest_err) = e.downcast_ref::<reqwest::Error>()
+        && let Some(status) = reqwest_err.status()
+    {
+        if args.ignore_nonexist && status == StatusCode::NOT_FOUND {
             return false;
         }
-        if args.ignore_forbidden && reqwest_err.status() == Some(StatusCode::FORBIDDEN) {
+        if args.ignore_forbidden && status == StatusCode::FORBIDDEN {
+            return false;
+        }
+        if args.ignore_status.contains(&status.as_u16()) {
             return false;
         }
     }

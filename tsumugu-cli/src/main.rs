@@ -118,6 +118,17 @@ impl CommonArgs {
     }
 }
 
+fn http_error_code(s: &str) -> Result<u16, String> {
+    let code: u16 = s
+        .parse()
+        .map_err(|_| format!("`{}` is not a valid HTTP status code", s))?;
+    if (400..600).contains(&code) {
+        Ok(code)
+    } else {
+        Err(format!("`{}` is not a valid HTTP error status code", s))
+    }
+}
+
 #[derive(Parser, Debug)]
 pub struct SyncArgs {
     #[clap(flatten)]
@@ -190,6 +201,10 @@ pub struct SyncArgs {
     /// if the upstream returns 403 non-deterministically or randomly.
     #[clap(long)]
     ignore_forbidden: bool,
+
+    /// Ignore given 4xx or 5xx status code as error when downloading files. Supports multiple.
+    #[clap(long, value_parser = http_error_code)]
+    ignore_status: Vec<u16>,
 }
 
 #[derive(Parser, Debug)]

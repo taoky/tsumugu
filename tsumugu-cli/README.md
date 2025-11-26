@@ -74,6 +74,8 @@ Options:
           Ignore 404 NOT FOUND as error when downloading files
       --ignore-forbidden
           Ignore 403 FORBIDDEN as error when downloading files. It's recommended to use this with --no-delete if the upstream returns 403 non-deterministically or randomly
+      --ignore-status <IGNORE_STATUS>
+          Ignore given 4xx or 5xx status code as error when downloading files. Supports multiple
   -h, --help
           Print help
   -V, --version
