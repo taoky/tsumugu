@@ -206,7 +206,6 @@ struct TaskContext<'a> {
     client: &'a TokioHttpClient,
 }
 
-// Check if e is a 404 error and args.ignore_nonexist is set
 fn should_set_error(args: &SyncArgs, e: &anyhow::Error) -> bool {
     if let Some(reqwest_err) = e.downcast_ref::<reqwest::Error>()
         && let Some(status) = reqwest_err.status()
@@ -222,6 +221,15 @@ fn should_set_error(args: &SyncArgs, e: &anyhow::Error) -> bool {
         }
     }
     true
+}
+
+// Check if the error should be counted as failure
+fn parser_should_set_error(args: &SyncArgs, e: &parser::ParserError) -> bool {
+    let e = match e {
+        parser::ParserError::ParseError(_) => return true,
+        parser::ParserError::NetworkError(parser::AnyNetworkError::Inner(e)) => e,
+    };
+    should_set_error(args, e)
 }
 
 fn list_handler(
@@ -254,10 +262,7 @@ fn list_handler(
         Ok(items) => items,
         Err(e) => {
             error!("Failed to list {}: {:?}", task.url, e);
-            if match e {
-                parser::ParserError::ParseError(_) => true,
-                parser::ParserError::NetworkError(e) => should_set_error(args, &e.into()),
-            } {
+            if parser_should_set_error(args, &e) {
                 thr_context.mark_failure_listing();
             }
             return;
