@@ -15,9 +15,9 @@ const REGEX_REPLACEMENTS: &[(&str, &str)] = &[
     ),
     // https://endoflife.date/ubuntu (excluding ESM)
     ("${UBUNTU_LTS}", "(?<distro_ver>jammy|noble)"),
-    ("${UBUNTU_NONLTS}", "(?<distro_ver>plucky|questing)"),
+    ("${UBUNTU_NONLTS}", "(?<distro_ver>questing)"),
     // https://endoflife.date/fedora
-    ("${FEDORA_CURRENT}", "(?<distro_ver>41|42|43)"),
+    ("${FEDORA_CURRENT}", "(?<distro_ver>42|43)"),
     // CentOS is no longer supported -- this regex is replaced to something that could match nothing
     (
         "${CENTOS_CURRENT}",
