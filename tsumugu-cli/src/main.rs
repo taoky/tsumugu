@@ -181,7 +181,7 @@ pub struct SyncArgs {
     #[clap(long, value_parser)]
     compare_size_only: Vec<ExpandedRegex>,
 
-    /// Allow mtime from parser if not available from HTTP headers.
+    /// Use mtime from parser, instead of the one from HTTP headers.
     #[clap(long, visible_alias = "allow-mtime-from-parser")]
     trust_mtime_from_parser: bool,
 
