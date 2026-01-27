@@ -7,11 +7,13 @@ envs:
     --skip-if-exists /static/
     --skip-if-exists 0.0.0 --skip-if-exists 2019 --skip-if-exists 2018
     --skip-if-exists (nightly|edge|s390x|ppc64le|ppc64el|test|debug-.+)/.+\.(rpm|deb)
-    --compare-size-only \.(rpm|deb)$
   TSUMUGU_EXCLUDE: >
     --exclude /debian/
     --include /debian/dists/${DEBIAN_CURRENT}
     --include /debian/gpg
+    --exclude /raspbian/
+    --include /raspbian/dists/${DEBIAN_CURRENT}
+    --include /raspbian/gpg
     --exclude /fedora/
     --include /fedora/docker-ce.+
     --include /fedora/${FEDORA_CURRENT}/
