@@ -76,6 +76,10 @@ Options:
           Ignore 403 FORBIDDEN as error when downloading files. It's recommended to use this with --no-delete if the upstream returns 403 non-deterministically or randomly
       --ignore-status <IGNORE_STATUS>
           Ignore given 4xx or 5xx status code as error when downloading files. Supports multiple
+      --delay-update-metadata
+          Do not update known package metadata till all other downloads are done
+      --delay-update
+          Do not update all existing files till all downloads are done
   -h, --help
           Print help
   -V, --version

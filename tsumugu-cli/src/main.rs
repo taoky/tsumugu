@@ -205,6 +205,14 @@ pub struct SyncArgs {
     /// Ignore given 4xx or 5xx status code as error when downloading files. Supports multiple.
     #[clap(long, value_parser = http_error_code)]
     ignore_status: Vec<u16>,
+
+    /// Do not update known package metadata till all other downloads are done.
+    #[clap(long)]
+    delay_update_metadata: bool,
+
+    /// Do not update all existing files till all downloads are done.
+    #[clap(long)]
+    delay_update: bool,
 }
 
 #[derive(Parser, Debug)]

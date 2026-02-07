@@ -75,6 +75,31 @@ fn extension_push_task(worker: &Worker<Task>, wake: &AtomicUsize, package: &Exte
     );
 }
 
+const KNOWN_METADATA_FILES: [&str; 10] = [
+    // deb
+    "Release",
+    "Release.gpg",
+    "InRelease",
+    "Packages",
+    "Packages.gz",
+    "Packages.xz",
+    "Sources",
+    "Sources.gz",
+    "Sources.xz",
+    // rpm
+    "repomd.xml",
+];
+
+fn should_delay_update(args: &SyncArgs, item: &ListItem) -> bool {
+    if args.delay_update {
+        true
+    } else if args.delay_update_metadata {
+        KNOWN_METADATA_FILES.contains(&item.name.as_str())
+    } else {
+        false
+    }
+}
+
 fn download_file(
     task_context: &TaskContext,
     item: &ListItem,
@@ -84,6 +109,7 @@ fn download_file(
     cwd: &Path,
     check_header: bool,
     compare_size_only: bool,
+    do_rename: bool,
 ) -> Result<()> {
     let http_client = task_context.client;
     let runtime = &http_client.runtime;
@@ -157,12 +183,14 @@ fn download_file(
                 .unwrap();
             }
             // move tmp file to expected path
-            std::fs::rename(&tmp_path, path).unwrap_or_else(|_| {
-                panic!(
-                    "renaming from {:?} to {:?} shall never fail",
-                    tmp_path, path
-                )
-            });
+            if do_rename {
+                std::fs::rename(&tmp_path, path).unwrap_or_else(|_| {
+                    panic!(
+                        "renaming from {:?} to {:?} shall never fail",
+                        tmp_path, path
+                    )
+                });
+            }
             bar.finish();
             bar.set_visible(false);
             Ok(())
@@ -181,6 +209,7 @@ struct ThreadsContext<'a> {
     failure_listing: &'a AtomicBool,
     failure_downloading: &'a AtomicBool,
     pb_manager: &'a kyuri::Manager,
+    delayed_updates: &'a Arc<Mutex<Vec<PathBuf>>>,
 }
 
 impl ThreadsContext<'_> {
@@ -462,6 +491,7 @@ fn download_handler(
     }
 
     if should_download && !args.dry_run {
+        let should_delay = should_delay_update(args, item) && expected_path.exists();
         if let Err(e) = download_file(
             task_context,
             item,
@@ -473,9 +503,18 @@ fn download_handler(
             !args.head_before_get && !args.trust_mtime_from_parser,
             // compare_size_only to give to should_download_by_header() inside (when check_header is true)
             compare_size_only,
-        ) && should_set_error(args, &e)
-        {
-            thr_context.mark_failure_downloading();
+            !should_delay,
+        ) {
+            if should_set_error(args, &e) {
+                thr_context.mark_failure_downloading();
+            }
+        } else if should_delay {
+            info!("Delaying update of {:?} to the end", expected_path);
+            thr_context
+                .delayed_updates
+                .lock()
+                .unwrap()
+                .push(expected_path.clone());
         }
     } else if should_download {
         info!("Dry run, not downloading {}", task.url);
@@ -653,6 +692,7 @@ pub(crate) fn sync(args: &SyncArgs, bind_address: Option<String>, pb_manager: ky
     let download_dir = args.local.as_path();
 
     let remote_list = Arc::new(Mutex::new(HashSet::new()));
+    let delayed_updates = Arc::new(Mutex::new(Vec::new()));
 
     let stat_objects = AtomicUsize::new(0);
     let stat_size = AtomicU64::new(0);
@@ -672,8 +712,27 @@ pub(crate) fn sync(args: &SyncArgs, bind_address: Option<String>, pb_manager: ky
             failure_listing: &failure_listing,
             failure_downloading: &failure_downloading,
             pb_manager: &pb_manager,
+            delayed_updates: &delayed_updates,
         },
     );
+
+    // Process delayed updates
+    {
+        let delayed_updates = delayed_updates.lock().unwrap();
+        for path in delayed_updates.iter() {
+            info!("Updating delayed file {:?}", path);
+            let tmp_path = path.with_file_name(format!(
+                ".tmp.{}",
+                path.file_name().unwrap().to_string_lossy()
+            ));
+            std::fs::rename(&tmp_path, path).unwrap_or_else(|_| {
+                panic!(
+                    "renaming from {:?} to {:?} shall never fail",
+                    tmp_path, path
+                )
+            });
+        }
+    }
 
     let mut exit_code = 0;
 
