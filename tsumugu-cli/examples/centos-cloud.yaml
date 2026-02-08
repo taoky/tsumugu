@@ -1,0 +1,17 @@
+envs:
+  UPSTREAM: https://cloud.centos.org/
+  TSUMUGU_EXCLUDE: >
+    --exclude ^/centos-design/
+    --exclude ^/centos/6/
+    --exclude ^/centos/7/
+    --exclude ^/centos/8/
+    --exclude ^/centos/8-stream/
+    --exclude /ppc64le/
+    --exclude /s390x/
+    --exclude ^/altarch/
+  TSUMUGU_PARSER: apache-f2
+image: ustcmirror/tsumugu:latest
+#cron: 48 3 * * *
+logRotCycle: 10
+name: centos-cloud
+storageDir: /srv/repo/centos-cloud/
