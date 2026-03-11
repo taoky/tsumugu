@@ -110,7 +110,7 @@ fn download_file(
     check_header: bool,
     compare_size_only: bool,
     do_rename: bool,
-) -> Result<()> {
+) -> Result<bool> {
     let http_client = task_context.client;
     let runtime = &http_client.runtime;
     let client = &http_client.download_client;
@@ -129,7 +129,7 @@ fn download_file(
             };
             if check_header && !should_download_by_header(path, &resp, compare_size_only) {
                 warn!("Skipping {} (GET header matches local file)", url);
-                return Ok(());
+                return Ok(false);
             }
             let total_size = match resp.content_length() {
                 Some(s) => s,
@@ -193,7 +193,7 @@ fn download_file(
             }
             bar.finish();
             bar.set_visible(false);
-            Ok(())
+            Ok(true)
         },
         args.retry,
     );
@@ -492,7 +492,7 @@ fn download_handler(
 
     if should_download && !args.dry_run {
         let should_delay = should_delay_update(args, item) && expected_path.exists();
-        if let Err(e) = download_file(
+        match download_file(
             task_context,
             item,
             &expected_path,
@@ -505,16 +505,20 @@ fn download_handler(
             compare_size_only,
             !should_delay,
         ) {
-            if should_set_error(args, &e) {
-                thr_context.mark_failure_downloading();
+            Err(e) => {
+                if should_set_error(args, &e) {
+                    thr_context.mark_failure_downloading();
+                }
             }
-        } else if should_delay {
-            info!("Delaying update of {:?} to the end", expected_path);
-            thr_context
-                .delayed_updates
-                .lock()
-                .unwrap()
-                .push(expected_path.clone());
+            Ok(true) if should_delay => {
+                info!("Delaying update of {:?} to the end", expected_path);
+                thr_context
+                    .delayed_updates
+                    .lock()
+                    .unwrap()
+                    .push(expected_path.clone());
+            }
+            Ok(_) => {}
         }
     } else if should_download {
         info!("Dry run, not downloading {}", task.url);
