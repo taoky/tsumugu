@@ -184,10 +184,10 @@ fn download_file(
             }
             // move tmp file to expected path
             if do_rename {
-                std::fs::rename(&tmp_path, path).unwrap_or_else(|_| {
+                std::fs::rename(&tmp_path, path).unwrap_or_else(|e| {
                     panic!(
-                        "renaming from {:?} to {:?} shall never fail",
-                        tmp_path, path
+                        "renaming from {:?} to {:?} shall never fail: {}",
+                        tmp_path, path, e
                     )
                 });
             }
@@ -729,10 +729,10 @@ pub(crate) fn sync(args: &SyncArgs, bind_address: Option<String>, pb_manager: ky
                 ".tmp.{}",
                 path.file_name().unwrap().to_string_lossy()
             ));
-            std::fs::rename(&tmp_path, path).unwrap_or_else(|_| {
+            std::fs::rename(&tmp_path, path).unwrap_or_else(|e| {
                 panic!(
-                    "renaming from {:?} to {:?} shall never fail",
-                    tmp_path, path
+                    "renaming from {:?} to {:?} shall never fail: {}",
+                    tmp_path, path, e
                 )
             });
         }
