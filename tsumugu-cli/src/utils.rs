@@ -178,7 +178,10 @@ where
 pub(crate) fn is_symlink(path: &std::path::Path) -> bool {
     path.symlink_metadata()
         .map(|m| m.file_type().is_symlink())
-        .unwrap_or(false)
+        .unwrap_or_else(|e| {
+            warn!("cannot get if {} is symlink or not", e);
+            false
+        })
 }
 
 pub(crate) fn naive_to_utc(
