@@ -1,6 +1,6 @@
 [package]
 name = "tsumugu"
-version = "0.20260321.0"
+version = "0.20260323.0"
 edition = "2024"
 description = "A HTTP(S) syncing tool with lower overhead, for OSS mirrors"
 license = "MIT"
