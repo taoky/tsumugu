@@ -1,3 +1,5 @@
+use std::os::unix::ffi::OsStrExt;
+
 use anyhow::Result;
 use chrono::FixedOffset;
 use chrono::TimeZone;
@@ -175,11 +177,31 @@ where
     }
 }
 
+fn strip_path_trailing_slashes(path: &std::path::Path) -> std::borrow::Cow<'_, std::path::Path> {
+    let bytes = path.as_os_str().as_bytes();
+    let mut end = bytes.len();
+
+    while end > 1 && bytes[end - 1] == b'/' {
+        end -= 1;
+    }
+
+    if end == bytes.len() {
+        std::borrow::Cow::Borrowed(path)
+    } else {
+        std::borrow::Cow::Owned(std::path::PathBuf::from(std::ffi::OsStr::from_bytes(
+            &bytes[..end],
+        )))
+    }
+}
+
 pub(crate) fn is_symlink(path: &std::path::Path) -> bool {
+    // trailing slash of dir shall be removed, otherwise symlink_metadata still gets resolved result.
+    let path = strip_path_trailing_slashes(path);
+
     path.symlink_metadata()
         .map(|m| m.file_type().is_symlink())
         .unwrap_or_else(|e| {
-            warn!("cannot get if {} is symlink or not", e);
+            debug!("cannot get if {:?} is symlink or not: {}", path, e);
             false
         })
 }
@@ -209,5 +231,41 @@ mod tests {
         assert_eq!(utc.to_string(), "2020-12-31 16:00:00 UTC");
         let utc = naive_to_utc(&naive, None);
         assert_eq!(utc.to_string(), "2021-01-01 00:00:00 UTC");
+    }
+
+    #[test]
+    fn test_path_strip_trailing_slashes() {
+        let path = std::path::Path::new("/");
+        assert_eq!(
+            strip_path_trailing_slashes(path)
+                .as_os_str()
+                .to_str()
+                .unwrap(),
+            "/"
+        );
+        let path = std::path::Path::new("/bin/");
+        assert_eq!(
+            strip_path_trailing_slashes(path)
+                .as_os_str()
+                .to_str()
+                .unwrap(),
+            "/bin"
+        );
+        let path = std::path::Path::new("/bin");
+        assert_eq!(
+            strip_path_trailing_slashes(path)
+                .as_os_str()
+                .to_str()
+                .unwrap(),
+            "/bin"
+        );
+        let path = std::path::Path::new("/bin////////");
+        assert_eq!(
+            strip_path_trailing_slashes(path)
+                .as_os_str()
+                .to_str()
+                .unwrap(),
+            "/bin"
+        );
     }
 }
