@@ -14,7 +14,7 @@ const REGEX_REPLACEMENTS: &[(&str, &str)] = &[
         "(?<distro_ver>bullseye|bookworm|trixie)",
     ),
     // https://endoflife.date/ubuntu (excluding ESM)
-    ("${UBUNTU_LTS}", "(?<distro_ver>jammy|noble)"),
+    ("${UBUNTU_LTS}", "(?<distro_ver>jammy|noble|resolute)"),
     ("${UBUNTU_NONLTS}", "(?<distro_ver>questing)"),
     // https://endoflife.date/fedora
     ("${FEDORA_CURRENT}", "(?<distro_ver>42|43)"),
@@ -28,7 +28,7 @@ const REGEX_REPLACEMENTS: &[(&str, &str)] = &[
     // https://endoflife.date/opensuse
     ("${OPENSUSE_CURRENT}", "(?<distro_ver>15.6|16.0)"),
     // https://endoflife.date/sles
-    ("${SLES_CURRENT}", "(?<distro_ver>15)"),
+    ("${SLES_CURRENT}", "(?<distro_ver>15|16)"),
 ];
 
 /// ExpandedRegex contains inner and rev_inner, and would transparently add '/' before string
