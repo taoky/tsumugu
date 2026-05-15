@@ -47,14 +47,10 @@ pub fn build_client(
 
 pub struct DownloadResponse {
     response: reqwest::Response,
-    http_response: HttpResponse,
+    pub http_response: HttpResponse,
 }
 
 impl DownloadResponse {
-    pub fn http_response(&self) -> &HttpResponse {
-        &self.http_response
-    }
-
     pub async fn next_chunk(&mut self) -> Result<Option<Vec<u8>>> {
         Ok(self.response.chunk().await?.map(|chunk| chunk.to_vec()))
     }
@@ -110,10 +106,10 @@ impl TokioHttpClient {
         Self::new(client.clone(), client)
     }
 
-    pub async fn download(&self, url: Url) -> Result<DownloadResponse> {
+    pub async fn download(&self, url: &Url) -> Result<DownloadResponse> {
         let response = self
             .download_client
-            .get(url)
+            .get(url.clone())
             .send()
             .await?
             .error_for_status()?;

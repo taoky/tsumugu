@@ -120,20 +120,19 @@ fn download_file(
     let future = again_async(
         || async {
             let url = item.url.clone();
-            let mut resp = match http_client.download(url.clone()).await {
+            let mut resp = match http_client.download(&url).await {
                 Ok(resp) => resp,
                 Err(e) => {
                     error!("Failed to GET {}: {:?}", url, e);
                     return Err(e);
                 }
             };
-            if check_header
-                && !should_download_by_header(path, resp.http_response(), compare_size_only)
-            {
+            let http_resp = &resp.http_response;
+            if check_header && !should_download_by_header(path, http_resp, compare_size_only) {
                 warn!("Skipping {} (GET header matches local file)", url);
                 return Ok(false);
             }
-            let total_size = match resp.http_response().content_length {
+            let total_size = match http_resp.content_length {
                 Some(s) => s,
                 None => {
                     warn!("URL {} does not give a content length", url);
@@ -146,7 +145,7 @@ fn download_file(
             let mtime = if args.trust_mtime_from_parser {
                 naive_to_utc(&item.mtime, timezone)
             } else {
-                match get_response_mtime(resp.http_response()) {
+                match get_response_mtime(http_resp) {
                     Ok(mtime) => mtime,
                     Err(e) => {
                         let mtime = naive_to_utc(&item.mtime, timezone);

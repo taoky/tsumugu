@@ -104,9 +104,9 @@ pub(crate) fn should_download_by_header(path: &Path, resp: &HttpResponse, size_o
     // Construct a valid "ListItem" and pass to should_download_by_list
     debug!("Checking {:?} by header: {:?}", path, resp);
     let item = ListItem {
-        url: resp.url().clone(),
+        url: resp.final_url.clone(),
         name: path.file_name().unwrap().to_str().unwrap().to_string(),
-        type_: if resp.url().as_str().ends_with('/') {
+        type_: if resp.final_url.as_str().ends_with('/') {
             FileType::Directory
         } else {
             FileType::File
@@ -116,7 +116,7 @@ pub(crate) fn should_download_by_header(path: &Path, resp: &HttpResponse, size_o
             None => {
                 warn!(
                     "No content-length from upstream ({}), go downloading anyway",
-                    resp.url()
+                    resp.final_url
                 );
                 return true;
             }
@@ -126,8 +126,7 @@ pub(crate) fn should_download_by_header(path: &Path, resp: &HttpResponse, size_o
             Err(e) => {
                 warn!(
                     "Cannot get mtime from {} ({}), go downloading anyway",
-                    resp.url(),
-                    e
+                    resp.final_url, e
                 );
                 return true;
             }

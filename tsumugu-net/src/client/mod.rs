@@ -18,12 +18,6 @@ pub struct HttpResponse {
     pub headers: HeaderMap,
 }
 
-impl HttpResponse {
-    pub fn url(&self) -> &Url {
-        &self.final_url
-    }
-}
-
 pub fn get_response_mtime(resp: &HttpResponse) -> Result<DateTime<Utc>> {
     crate::utils::last_modified_from_header(&resp.headers)
 }
