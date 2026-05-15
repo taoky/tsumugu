@@ -8,6 +8,7 @@ pub enum RequestType {
     Download,
 }
 
+#[derive(Debug)]
 pub struct HttpResponse {
     pub body: String,
     pub final_url: Url,
@@ -15,6 +16,16 @@ pub struct HttpResponse {
     pub content_length: Option<u64>,
     pub modified_time: Result<DateTime<Utc>>,
     pub headers: HeaderMap,
+}
+
+impl HttpResponse {
+    pub fn url(&self) -> &Url {
+        &self.final_url
+    }
+}
+
+pub fn get_response_mtime(resp: &HttpResponse) -> Result<DateTime<Utc>> {
+    crate::utils::last_modified_from_header(&resp.headers)
 }
 
 /// A trait for HTTP clients used by the parser.

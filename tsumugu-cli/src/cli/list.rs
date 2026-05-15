@@ -4,12 +4,9 @@ use tsumugu_parser::{
     utils::relative_str_process,
 };
 
-use crate::{
-    ListArgs,
-    utils::{build_client, get_exclusion_manager},
-};
+use crate::{ListArgs, utils::get_exclusion_manager};
 
-use tsumugu_net::client::impls::TokioHttpClient;
+use tsumugu_net::client::impls::{TokioHttpClient, build_client};
 
 // TODO: clean code
 pub(crate) fn list(args: &ListArgs, bind_address: Option<String>) -> ! {
@@ -18,12 +15,14 @@ pub(crate) fn list(args: &ListArgs, bind_address: Option<String>) -> ! {
         args.parser_match.clone(),
         args.auto_fallback,
     );
-    let req_client = build_client(args, parser.is_auto_redirect(), bind_address.as_ref(), true);
-    let client = TokioHttpClient {
-        runtime: tokio::runtime::Runtime::new().unwrap(),
-        listing_client: req_client.clone(),
-        download_client: req_client,
-    };
+    let req_client = build_client(
+        &args.user_agent,
+        bind_address.as_deref(),
+        args.headers(),
+        parser.is_auto_redirect(),
+        true,
+    );
+    let client = TokioHttpClient::new(req_client.clone(), req_client);
     let exclusion_manager = get_exclusion_manager(args);
     // get relative
     let upstream = &args.upstream;

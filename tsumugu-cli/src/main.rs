@@ -2,6 +2,7 @@
 use std::{ops::Deref, path::PathBuf, sync::Mutex};
 
 use clap::{Parser, Subcommand};
+use http::HeaderMap;
 
 use tracing::level_filters::LevelFilter;
 use tracing_subscriber::EnvFilter;
@@ -113,7 +114,7 @@ pub struct CommonArgs {
 }
 
 impl CommonArgs {
-    pub fn headers(&self) -> reqwest::header::HeaderMap {
+    pub fn headers(&self) -> HeaderMap {
         headers_to_headermap(&self.header)
     }
 }

@@ -13,8 +13,6 @@ use std::{
 use anyhow::Result;
 use chrono::{FixedOffset, NaiveDateTime};
 use crossbeam_deque::{Injector, Worker};
-use futures_util::StreamExt;
-use reqwest::StatusCode;
 use tracing::{debug, error, info, warn};
 use url::Url;
 
@@ -27,13 +25,16 @@ use tsumugu_parser::{
     utils::{again, relative_to_str},
 };
 
-use tsumugu_net::client::impls::{TokioHttpClient, get_response_mtime};
+use tsumugu_net::client::{
+    get_response_mtime,
+    impls::{TokioHttpClient, build_client, error_status_code},
+};
 
 use crate::{
     SyncArgs,
     bar::set_progress_bar,
     compare::{should_download_by_header, should_download_by_list},
-    utils::{again_async, build_client, get_exclusion_manager, is_symlink, naive_to_utc},
+    utils::{again_async, get_exclusion_manager, is_symlink, naive_to_utc},
 };
 
 #[derive(Debug, Clone)]
@@ -113,25 +114,26 @@ fn download_file(
 ) -> Result<bool> {
     let http_client = task_context.client;
     let runtime = &http_client.runtime;
-    let client = &http_client.download_client;
     let timezone = task_context.timezone;
     // Here we use async to allow streaming and progress bar
     // Ref: https://gist.github.com/giuliano-oliveira/4d11d6b3bb003dba3a1b53f43d81b30d
     let future = again_async(
         || async {
             let url = item.url.clone();
-            let resp = match client.get(url.clone()).send().await?.error_for_status() {
+            let mut resp = match http_client.download(url.clone()).await {
                 Ok(resp) => resp,
                 Err(e) => {
                     error!("Failed to GET {}: {:?}", url, e);
-                    return Err(e.into());
+                    return Err(e);
                 }
             };
-            if check_header && !should_download_by_header(path, &resp, compare_size_only) {
+            if check_header
+                && !should_download_by_header(path, resp.http_response(), compare_size_only)
+            {
                 warn!("Skipping {} (GET header matches local file)", url);
                 return Ok(false);
             }
-            let total_size = match resp.content_length() {
+            let total_size = match resp.http_response().content_length {
                 Some(s) => s,
                 None => {
                     warn!("URL {} does not give a content length", url);
@@ -144,7 +146,7 @@ fn download_file(
             let mtime = if args.trust_mtime_from_parser {
                 naive_to_utc(&item.mtime, timezone)
             } else {
-                match get_response_mtime(&resp) {
+                match get_response_mtime(resp.http_response()) {
                     Ok(mtime) => mtime,
                     Err(e) => {
                         let mtime = naive_to_utc(&item.mtime, timezone);
@@ -161,16 +163,8 @@ fn download_file(
             let tmp_path = cwd.join(format!(".tmp.{}", item.name));
             {
                 let mut dest_file = File::create(&tmp_path).unwrap();
-                let mut stream = resp.bytes_stream();
 
-                while let Some(item) = stream.next().await {
-                    let chunk = match item {
-                        Ok(i) => i,
-                        Err(e) => {
-                            error!("Failed when downloading {}: {:?}", url, e);
-                            return Err(e.into());
-                        }
-                    };
+                while let Some(chunk) = resp.next_chunk().await? {
                     dest_file.write_all(&chunk).unwrap();
                     let new = std::cmp::min(bar.get_pos() + (chunk.len() as u64), total_size);
                     bar.set_pos(new);
@@ -236,16 +230,14 @@ struct TaskContext<'a> {
 }
 
 fn should_set_error(args: &SyncArgs, e: &anyhow::Error) -> bool {
-    if let Some(reqwest_err) = e.downcast_ref::<reqwest::Error>()
-        && let Some(status) = reqwest_err.status()
-    {
-        if args.ignore_nonexist && status == StatusCode::NOT_FOUND {
+    if let Some(status) = error_status_code(e) {
+        if args.ignore_nonexist && status == 404 {
             return false;
         }
-        if args.ignore_forbidden && status == StatusCode::FORBIDDEN {
+        if args.ignore_forbidden && status == 403 {
             return false;
         }
-        if args.ignore_status.contains(&status.as_u16()) {
+        if args.ignore_status.contains(&status) {
             return false;
         }
     }
@@ -462,20 +454,7 @@ fn download_handler(
     }
 
     if should_download && args.head_before_get {
-        match again(
-            || {
-                let future = async {
-                    task_context
-                        .client
-                        .download_client
-                        .head(task.url.clone())
-                        .send()
-                        .await
-                };
-                task_context.client.runtime.block_on(future)
-            },
-            args.retry,
-        ) {
+        match again(|| task_context.client.head_download(&task.url), args.retry) {
             Ok(resp) => {
                 if !should_download_by_header(&expected_path, &resp, compare_size_only) {
                     info!("Skipping (by HEAD) {}", task.url);
@@ -541,30 +520,25 @@ fn sync_threads(args: &SyncArgs, parser: &ParserMux, thr_context: &ThreadsContex
 
     // Handling listing
     let listing_client = build_client(
-        args,
+        &args.user_agent,
+        thr_context.bind_address.as_deref(),
+        args.headers(),
         parser.is_auto_redirect(),
-        thr_context.bind_address.as_ref(),
         // some servers (such as download.zerotier.com) would give you gzipped list even if you don't ask for that,
         // so just enable auto compression when requesting listing
         true,
     );
     // Handling download
     let download_client = build_client(
-        args,
+        &args.user_agent,
+        thr_context.bind_address.as_deref(),
+        args.headers(),
         true,
-        thr_context.bind_address.as_ref(),
         // auto compression is set to off here, as is known that some servers would wrongly report Content-Encoding for compressed files
         // like cloud.centos.org
         false,
     );
-    // async runtime support
-    let runtime = tokio::runtime::Runtime::new().unwrap();
-
-    let client = TokioHttpClient {
-        download_client,
-        listing_client,
-        runtime,
-    };
+    let client = TokioHttpClient::new(listing_client, download_client);
 
     let timezone = determinate_timezone(
         &args.upstream,

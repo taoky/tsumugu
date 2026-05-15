@@ -3,6 +3,7 @@ use std::path::Path;
 use chrono::{DateTime, FixedOffset, Utc};
 use tracing::{debug, warn};
 
+use tsumugu_net::client::{HttpResponse, get_response_mtime};
 use tsumugu_parser::listing::{FileSize, FileType, ListItem, SizeUnit};
 
 use crate::utils::naive_to_utc;
@@ -99,11 +100,7 @@ pub(crate) fn should_download_by_list(
     }
 }
 
-pub(crate) fn should_download_by_header(
-    path: &Path,
-    resp: &reqwest::Response,
-    size_only: bool,
-) -> bool {
+pub(crate) fn should_download_by_header(path: &Path, resp: &HttpResponse, size_only: bool) -> bool {
     // Construct a valid "ListItem" and pass to should_download_by_list
     debug!("Checking {:?} by header: {:?}", path, resp);
     let item = ListItem {
@@ -114,7 +111,7 @@ pub(crate) fn should_download_by_header(
         } else {
             FileType::File
         },
-        size: Some(FileSize::Precise(match resp.content_length() {
+        size: Some(FileSize::Precise(match resp.content_length {
             Some(l) => l,
             None => {
                 warn!(
@@ -124,7 +121,7 @@ pub(crate) fn should_download_by_header(
                 return true;
             }
         })),
-        mtime: match tsumugu_net::client::impls::get_response_mtime(resp) {
+        mtime: match get_response_mtime(resp) {
             Ok(m) => m,
             Err(e) => {
                 warn!(
