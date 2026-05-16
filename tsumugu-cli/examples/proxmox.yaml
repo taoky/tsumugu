@@ -4,8 +4,11 @@ envs:
     --exclude ^/temp
     --exclude /pmg/dists/.+changelog$
     --exclude /devel/dists/.+changelog$
+    --exclude ^/debian/dists/trixie/pve-test/binary-arm64/
+    --exclude ^/debian/pve/dists/trixie/pve-test/binary-arm64/
   TSUMUGU_TIMEZONEFILE: http://download.proxmox.com/images/aplinfo.dat
   TSUMUGU_THREADS: 1
+  TSUMUGU_EXTRA: --parser-match fallback:^/iso/
 image: ustcmirror/tsumugu:latest
 #cron: 17 5 * * *
 logRotCycle: 10
