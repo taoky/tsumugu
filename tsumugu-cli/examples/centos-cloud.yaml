@@ -10,6 +10,7 @@ envs:
     --exclude /s390x/
     --exclude ^/altarch/
   TSUMUGU_PARSER: apache-f2
+  TSUMUGU_EXTRA: --timezone 0
 image: ustcmirror/tsumugu:latest
 #cron: 48 3 * * *
 logRotCycle: 10
