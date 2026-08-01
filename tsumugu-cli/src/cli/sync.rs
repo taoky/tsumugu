@@ -76,12 +76,13 @@ fn extension_push_task(worker: &Worker<Task>, wake: &AtomicUsize, package: &Exte
     );
 }
 
-const KNOWN_METADATA_FILES: [&str; 10] = [
+const KNOWN_METADATA_FILES: [&str; 11] = [
     // deb
     "Release",
     "Release.gpg",
     "InRelease",
     "Packages",
+    "Packages.bz2",
     "Packages.gz",
     "Packages.xz",
     "Sources",
