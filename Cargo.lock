@@ -2254,7 +2254,7 @@ checksum = "e421abadd41a4225275504ea4d6566923418b7f05506fbc9c0fe86ba7396114b"
 
 [[package]]
 name = "tsumugu"
-version = "0.20260801.0"
+version = "0.20260921.0"
 dependencies = [
  "anyhow",
  "chrono",
@@ -2292,7 +2292,7 @@ dependencies = [
 
 [[package]]
 name = "tsumugu-parser"
-version = "0.20260424.0"
+version = "0.20260921.0"
 dependencies = [
  "anyhow",
  "apt-parser",
