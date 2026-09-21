@@ -24,7 +24,7 @@ impl Parser for NginxListingParser {
         let selector = Selector::parse("a").unwrap();
         let mut items = Vec::new();
         let mut date_fmt = None;
-        let mut date_regex = None;
+        let mut date_regex: Option<Regex> = None;
         for element in document.select(&selector) {
             if let Some(target) = element.value().attr("target")
                 && target == "_blank"
@@ -91,7 +91,12 @@ impl Parser for NginxListingParser {
             let date;
             let size;
             if !skip_date {
-                if date_fmt.is_none() {
+                // A listing can mix date formats (for example, nodejs.org/dist/).
+                // Reuse the current format only while it matches the entry.
+                if date_regex
+                    .as_ref()
+                    .is_none_or(|regex| !regex.is_match(metadata_raw))
+                {
                     let (f, r) = guess_date_fmt(metadata_raw);
                     date_fmt = Some(f);
                     date_regex = Some(Regex::new(&format!(
@@ -356,6 +361,46 @@ mod tests {
                 );
             }
             _ => unreachable!(),
+        }
+    }
+
+    #[test]
+    fn test_nodejs_mixed_date_formats() {
+        let context = init_client();
+        let ListResult::List(items) = NginxListingParser::default()
+            .get_list(
+                &context,
+                &Url::parse("http://localhost:1921/nodejs/").unwrap(),
+            )
+            .unwrap()
+        else {
+            panic!("Expected a directory listing");
+        };
+        assert_eq!(items.len(), 6);
+        assert_eq!(items[0].name, "latest");
+        assert_eq!(items[0].type_, FileType::Directory);
+        assert_eq!(items[0].mtime, DateTime::UNIX_EPOCH.naive_utc());
+        assert_eq!(items[0].size, None);
+
+        for (item, (name, date, size, unit)) in items[1..].iter().zip([
+            ("index.json", "2026-09-16 18:15", 331.0, SizeUnit::K),
+            ("index.tab", "2026-09-16 18:15", 210.0, SizeUnit::K),
+            ("node-0.0.1.tar.gz", "2024-11-04 16:54", 2.8, SizeUnit::M),
+            ("node-latest.tar.gz", "2026-09-16 18:15", 127.0, SizeUnit::M),
+            (
+                "node-v0.10.14.tar.gz",
+                "2024-10-30 17:10",
+                14.0,
+                SizeUnit::M,
+            ),
+        ]) {
+            assert_eq!(item.name, name);
+            assert_eq!(item.type_, FileType::File);
+            assert_eq!(
+                item.mtime,
+                NaiveDateTime::parse_from_str(date, "%Y-%m-%d %H:%M").unwrap()
+            );
+            assert_eq!(item.size, Some(FileSize::HumanizedBinary(size, unit)));
         }
     }
 
