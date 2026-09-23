@@ -515,9 +515,12 @@ fn download_handler(
     );
 }
 
-fn sync_threads(args: &SyncArgs, parser: &ParserMux, thr_context: &ThreadsContext) {
-    let exclusion_manager = get_exclusion_manager(args);
-
+fn sync_threads(
+    args: &SyncArgs,
+    parser: &ParserMux,
+    thr_context: &ThreadsContext,
+    exclusion_manager: &dyn ExclusionManagerTrait,
+) {
     // Handling listing
     let listing_client = build_client(
         &args.user_agent,
@@ -546,7 +549,7 @@ fn sync_threads(args: &SyncArgs, parser: &ParserMux, thr_context: &ThreadsContex
         args.timezone_file.as_deref(),
         args.retry,
         parser,
-        &*exclusion_manager,
+        exclusion_manager,
         &client,
     );
 
@@ -605,7 +608,7 @@ fn sync_threads(args: &SyncArgs, parser: &ParserMux, thr_context: &ThreadsContex
                             worker: &worker,
                             wake: &wake,
                             exclusion_result,
-                            exclusion_manager: &*exclusion_manager,
+                            exclusion_manager,
                             timezone,
                             client: &client,
                         };
@@ -659,6 +662,126 @@ fn sync_threads(args: &SyncArgs, parser: &ParserMux, thr_context: &ThreadsContex
     });
 }
 
+/// Check whether a local path (or any of its parent directories) is excluded,
+/// so that cleanup shall keep it when `--exclude-no-delete` is set.
+///
+/// `is_dir` follows the same convention as syncing: directories get a relative
+/// path with a trailing '/', while files do not.
+fn is_delete_protected(
+    exclusion_manager: &dyn ExclusionManagerTrait,
+    download_dir: &Path,
+    path: &Path,
+    is_dir: bool,
+) -> bool {
+    let relative_components: Vec<String> = match path.strip_prefix(download_dir) {
+        Ok(relative) => relative
+            .components()
+            .map(|c| c.as_os_str().to_string_lossy().into_owned())
+            .collect(),
+        Err(_) => {
+            warn!("unexpected path {:?} outside of download dir", path);
+            return false;
+        }
+    };
+    if relative_components.is_empty() {
+        // the download dir itself, never excluded here
+        return false;
+    }
+    let (dir_components, filename) = if is_dir {
+        (&relative_components[..], None)
+    } else {
+        (
+            &relative_components[..relative_components.len() - 1],
+            relative_components.last().map(|s| s.as_str()),
+        )
+    };
+    if exclusion_manager.match_str(&relative_to_str(dir_components, filename))
+        != regex_manager::Comparison::Ok
+    {
+        return true;
+    }
+    // An excluded directory protects its whole subtree from deletion (like rsync),
+    // even when the exclusion regex does not match the children directly.
+    for i in 1..relative_components.len() {
+        if exclusion_manager.match_str(&relative_to_str(&relative_components[..i], None))
+            != regex_manager::Comparison::Ok
+        {
+            return true;
+        }
+    }
+    false
+}
+
+/// Remove local files and directories that are not in remote list.
+/// Returns the exit code of this stage.
+fn cleanup(
+    args: &SyncArgs,
+    download_dir: &Path,
+    remote_list: &HashSet<PathBuf>,
+    exclusion_manager: &dyn ExclusionManagerTrait,
+) -> i32 {
+    let mut exit_code = 0;
+    let mut del_cnt = 0;
+    // Don't even walkdir when dry_run, to prevent no dir error
+    for entry in walkdir::WalkDir::new(download_dir).contents_first(true) {
+        let entry = match entry {
+            Ok(entry) => entry,
+            Err(e) => {
+                error!("Failed to walkdir: {:?}", e);
+                if !args.dry_run {
+                    exit_code = 1;
+                }
+                break;
+            }
+        };
+        let path = entry.path();
+        if remote_list.contains(&path.to_path_buf()) {
+            continue;
+        }
+        if args.exclude_no_delete
+            && is_delete_protected(
+                exclusion_manager,
+                download_dir,
+                path,
+                entry.file_type().is_dir(),
+            )
+        {
+            info!("{:?} not in remote, but excluded, keeping it", path);
+            continue;
+        }
+        if args.no_delete {
+            info!("{:?} not in remote", path);
+            continue;
+        }
+        // always make sure that we are deleting the right thing
+        if del_cnt >= args.max_delete {
+            info!("Exceeding max delete count, aborting");
+            // exit with 25 to indicate that the deletion has been aborted
+            // this is the same as rsync
+            exit_code = 25;
+            break;
+        }
+        del_cnt += 1;
+        assert!(path.starts_with(download_dir));
+        if args.dry_run {
+            info!("Dry run, not deleting {:?}", path);
+            continue;
+        }
+
+        info!("Deleting {:?}", path);
+        if entry.file_type().is_dir() {
+            if let Err(e) = std::fs::remove_dir(path) {
+                error!("Failed to remove {:?}: {:?}", path, e);
+                exit_code = 4;
+            }
+        } else if let Err(e) = std::fs::remove_file(path) {
+            error!("Failed to remove {:?}: {:?}", path, e);
+            exit_code = 4;
+        }
+    }
+    exit_code
+}
+
 pub(crate) fn sync(args: &SyncArgs, bind_address: Option<String>, pb_manager: kyuri::Manager) -> ! {
     debug!("{:?}", args);
     let parser = ParserMux::new(
@@ -668,6 +791,8 @@ pub(crate) fn sync(args: &SyncArgs, bind_address: Option<String>, pb_manager: ky
     );
 
     let download_dir = args.local.as_path();
+
+    let exclusion_manager = get_exclusion_manager(args);
 
     let remote_list = Arc::new(Mutex::new(HashSet::new()));
     let delayed_updates = Arc::new(Mutex::new(Vec::new()));
@@ -692,6 +817,7 @@ pub(crate) fn sync(args: &SyncArgs, bind_address: Option<String>, pb_manager: ky
             pb_manager: &pb_manager,
             delayed_updates: &delayed_updates,
         },
+        &*exclusion_manager,
     );
 
     // Process delayed updates
@@ -712,61 +838,14 @@ pub(crate) fn sync(args: &SyncArgs, bind_address: Option<String>, pb_manager: ky
         }
     }
 
-    let mut exit_code = 0;
-
     // Removing files that are not in remote list
-    let mut del_cnt = 0;
     let remote_list = remote_list.lock().unwrap();
-    if failure_listing.load(Ordering::SeqCst) {
+    let mut exit_code = if failure_listing.load(Ordering::SeqCst) {
         error!("Failed to list remote, not to delete anything");
-        exit_code = 1;
+        1
     } else {
-        // Don't even walkdir when dry_run, to prevent no dir error
-        for entry in walkdir::WalkDir::new(download_dir).contents_first(true) {
-            let entry = match entry {
-                Ok(entry) => entry,
-                Err(e) => {
-                    error!("Failed to walkdir: {:?}", e);
-                    if !args.dry_run {
-                        exit_code = 1;
-                    }
-                    break;
-                }
-            };
-            let path = entry.path();
-            if !remote_list.contains(&path.to_path_buf()) {
-                if args.no_delete {
-                    info!("{:?} not in remote", path);
-                } else {
-                    // always make sure that we are deleting the right thing
-                    if del_cnt >= args.max_delete {
-                        info!("Exceeding max delete count, aborting");
-                        // exit with 25 to indicate that the deletion has been aborted
-                        // this is the same as rsync
-                        exit_code = 25;
-                        break;
-                    }
-                    del_cnt += 1;
-                    assert!(path.starts_with(download_dir));
-                    if args.dry_run {
-                        info!("Dry run, not deleting {:?}", path);
-                        continue;
-                    }
-
-                    info!("Deleting {:?}", path);
-                    if entry.file_type().is_dir() {
-                        if let Err(e) = std::fs::remove_dir(path) {
-                            error!("Failed to remove {:?}: {:?}", path, e);
-                            exit_code = 4;
-                        }
-                    } else if let Err(e) = std::fs::remove_file(path) {
-                        error!("Failed to remove {:?}: {:?}", path, e);
-                        exit_code = 4;
-                    }
-                }
-            }
-        }
-    }
+        cleanup(args, download_dir, &remote_list, &*exclusion_manager)
+    };
 
     if failure_downloading.load(Ordering::SeqCst) {
         error!("Failed to download some files");
@@ -781,4 +860,147 @@ pub(crate) fn sync(args: &SyncArgs, bind_address: Option<String>, pb_manager: ky
     );
 
     std::process::exit(exit_code);
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+    use clap::Parser;
+    use test_log::test;
+    use tsumugu_parser::regex_manager::get_exclusion_manager_v2;
+
+    struct TempDir(PathBuf);
+
+    impl TempDir {
+        fn new(name: &str) -> Self {
+            let path = std::env::temp_dir().join(format!(
+                "tsumugu-cleanup-test-{}-{}",
+                std::process::id(),
+                name
+            ));
+            let _ = std::fs::remove_dir_all(&path);
+            std::fs::create_dir_all(&path).unwrap();
+            Self(path)
+        }
+    }
+
+    impl Drop for TempDir {
+        fn drop(&mut self) {
+            let _ = std::fs::remove_dir_all(&self.0);
+        }
+    }
+
+    /// Build a local tree and return the remote list containing only "current" files.
+    ///
+    /// The tree contains:
+    /// - current/c.txt: in remote list, shall always be kept
+    /// - frozen/a.txt, frozen/sub/b.txt, frozen/empty_sub/: excluded, not in remote list
+    /// - skip.me: excluded by file pattern, not in remote list
+    /// - stale/s.txt, stale_empty/, drop.me: not excluded, not in remote list
+    fn build_tree(root: &Path) -> HashSet<PathBuf> {
+        let file = |p: PathBuf| {
+            std::fs::create_dir_all(p.parent().unwrap()).unwrap();
+            std::fs::write(p, b"test").unwrap();
+        };
+        file(root.join("current/c.txt"));
+        file(root.join("frozen/a.txt"));
+        file(root.join("frozen/sub/b.txt"));
+        std::fs::create_dir_all(root.join("frozen/empty_sub")).unwrap();
+        file(root.join("skip.me"));
+        file(root.join("stale/s.txt"));
+        std::fs::create_dir_all(root.join("stale_empty")).unwrap();
+        file(root.join("drop.me"));
+
+        HashSet::from([
+            root.to_path_buf(),
+            root.join("current"),
+            root.join("current/c.txt"),
+        ])
+    }
+
+    fn test_args(root: &Path, excludes: &[&str], exclude_no_delete: bool) -> SyncArgs {
+        let mut argv = vec!["tsumugu".to_string()];
+        for exclude in excludes {
+            argv.push("--exclude".to_string());
+            argv.push(exclude.to_string());
+        }
+        if exclude_no_delete {
+            argv.push("--exclude-no-delete".to_string());
+        }
+        argv.push("http://example.com/".to_string());
+        argv.push(root.to_str().unwrap().to_string());
+        SyncArgs::parse_from(argv)
+    }
+
+    fn assert_stale_removed(exit_code: i32, root: &Path) {
+        assert_eq!(exit_code, 0);
+        assert!(root.join("current/c.txt").exists());
+        assert!(!root.join("stale").exists());
+        assert!(!root.join("stale_empty").exists());
+        assert!(!root.join("drop.me").exists());
+    }
+
+    fn assert_excluded_kept(root: &Path) {
+        assert!(root.join("frozen/a.txt").exists());
+        assert!(root.join("frozen/sub/b.txt").exists());
+        assert!(root.join("frozen/empty_sub").exists());
+        assert!(root.join("skip.me").exists());
+    }
+
+    #[test]
+    fn test_cleanup_exclude_no_delete_v1() {
+        let tmp = TempDir::new("v1-on");
+        let remote_list = build_tree(&tmp.0);
+        let args = test_args(&tmp.0, &["^/frozen/", r"/skip\.me$"], true);
+        let manager = get_exclusion_manager(&args);
+        let exit_code = cleanup(&args, &tmp.0, &remote_list, &*manager);
+        assert_stale_removed(exit_code, &tmp.0);
+        assert_excluded_kept(&tmp.0);
+    }
+
+    #[test]
+    fn test_cleanup_default_still_deletes_excluded_v1() {
+        let tmp = TempDir::new("v1-off");
+        let remote_list = build_tree(&tmp.0);
+        let args = test_args(&tmp.0, &["^/frozen/", r"/skip\.me$"], false);
+        let manager = get_exclusion_manager(&args);
+        let exit_code = cleanup(&args, &tmp.0, &remote_list, &*manager);
+        assert_stale_removed(exit_code, &tmp.0);
+        // without --exclude-no-delete, excluded paths are deleted as before
+        assert!(!tmp.0.join("frozen").exists());
+        assert!(!tmp.0.join("skip.me").exists());
+    }
+
+    #[test]
+    fn test_cleanup_exclude_no_delete_v2() {
+        let tmp = TempDir::new("v2-on");
+        let remote_list = build_tree(&tmp.0);
+        let args = test_args(&tmp.0, &["^/frozen/", r"/skip\.me$"], true);
+        let argv = vec![
+            "tsumugu".to_string(),
+            "--exclude=^/frozen/".to_string(),
+            r"--exclude=/skip\.me$".to_string(),
+        ];
+        let manager = get_exclusion_manager_v2(&argv);
+        let exit_code = cleanup(&args, &tmp.0, &remote_list, &*manager);
+        assert_stale_removed(exit_code, &tmp.0);
+        assert_excluded_kept(&tmp.0);
+    }
+
+    #[test]
+    fn test_cleanup_excluded_dir_protects_subtree() {
+        let tmp = TempDir::new("anchored");
+        let remote_list = build_tree(&tmp.0);
+        // This regex matches the directory itself only, not its children.
+        // The whole subtree shall still be kept, like rsync.
+        let args = test_args(&tmp.0, &["^/frozen/$"], true);
+        let manager = get_exclusion_manager(&args);
+        let exit_code = cleanup(&args, &tmp.0, &remote_list, &*manager);
+        assert_stale_removed(exit_code, &tmp.0);
+        assert!(tmp.0.join("frozen/a.txt").exists());
+        assert!(tmp.0.join("frozen/sub/b.txt").exists());
+        assert!(tmp.0.join("frozen/empty_sub").exists());
+        // skip.me is not excluded here
+        assert!(!tmp.0.join("skip.me").exists());
+    }
 }

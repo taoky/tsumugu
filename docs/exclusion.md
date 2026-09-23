@@ -97,3 +97,9 @@ So you could **write `/something$` to exclude ALL files and directories with nam
 And also, `upstream` itself is NOT included when comparing. So if your upstream is set to `https://some.example.com/dir/`, you need to exclude `^something/` to exclude `https://some.example.com/dir/something/` instead of `^dir/something/`.
 
 Test with [tsumugu list](./parser.md#debugging), if in doubt.
+
+## Exclusion and cleanup (deletion)
+
+Exclusion rules primarily decide what gets **downloaded**. By default, they do not protect local files from cleanup: any local file or directory that is absent from the upstream listing is deleted after syncing, even if it matches an exclusion rule.
+
+With `--exclude-no-delete`, paths matching exclusion rules (and everything under an excluded directory) are also kept during cleanup, like how rsync's `--exclude` protects matching files from `--delete`. This allows "freezing" a path by excluding it: no new files are downloaded, while the existing local copy is preserved.
