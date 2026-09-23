@@ -147,6 +147,13 @@ pub struct SyncArgs {
     #[clap(long)]
     no_delete: bool,
 
+    /// Do not clean up files and directories that match exclusion rules.
+    /// This allows "freezing" a path by excluding it: no new files are downloaded,
+    /// while the existing local copy is kept (like rsync, where --exclude also
+    /// protects matching files from --delete).
+    #[clap(long)]
+    exclude_no_delete: bool,
+
     /// Set max delete count.
     #[clap(long, default_value_t = 100)]
     max_delete: usize,
