@@ -771,6 +771,12 @@ fn cleanup(
         info!("Deleting {:?}", path);
         if entry.file_type().is_dir() {
             if let Err(e) = std::fs::remove_dir(path) {
+                // With --exclude-no-delete, children kept by exclusion rules make
+                // the directory non-empty; keep it instead of failing (like rsync).
+                if args.exclude_no_delete && e.kind() == std::io::ErrorKind::DirectoryNotEmpty {
+                    info!("{:?} still has excluded children, keeping it", path);
+                    continue;
+                }
                 error!("Failed to remove {:?}: {:?}", path, e);
                 exit_code = 4;
             }
@@ -896,6 +902,7 @@ mod tests {
     /// - current/c.txt: in remote list, shall always be kept
     /// - frozen/a.txt, frozen/sub/b.txt, frozen/empty_sub/: excluded, not in remote list
     /// - skip.me: excluded by file pattern, not in remote list
+    /// - mixed/keep.me: excluded by file pattern while "mixed" itself is not
     /// - stale/s.txt, stale_empty/, drop.me: not excluded, not in remote list
     fn build_tree(root: &Path) -> HashSet<PathBuf> {
         let file = |p: PathBuf| {
@@ -907,6 +914,7 @@ mod tests {
         file(root.join("frozen/sub/b.txt"));
         std::fs::create_dir_all(root.join("frozen/empty_sub")).unwrap();
         file(root.join("skip.me"));
+        file(root.join("mixed/keep.me"));
         file(root.join("stale/s.txt"));
         std::fs::create_dir_all(root.join("stale_empty")).unwrap();
         file(root.join("drop.me"));
@@ -926,10 +934,19 @@ mod tests {
         }
         if exclude_no_delete {
             argv.push("--exclude-no-delete".to_string());
+            argv.push("--exclusion-v2".to_string());
         }
         argv.push("http://example.com/".to_string());
         argv.push(root.to_str().unwrap().to_string());
         SyncArgs::parse_from(argv)
+    }
+
+    fn v2_excludes(excludes: &[&str]) -> Vec<String> {
+        let mut argv = vec!["tsumugu".to_string()];
+        for exclude in excludes {
+            argv.push(format!("--exclude={exclude}"));
+        }
+        argv
     }
 
     fn assert_stale_removed(exit_code: i32, root: &Path) {
@@ -948,14 +965,19 @@ mod tests {
     }
 
     #[test]
-    fn test_cleanup_exclude_no_delete_v1() {
-        let tmp = TempDir::new("v1-on");
-        let remote_list = build_tree(&tmp.0);
-        let args = test_args(&tmp.0, &["^/frozen/", r"/skip\.me$"], true);
-        let manager = get_exclusion_manager(&args);
-        let exit_code = cleanup(&args, &tmp.0, &remote_list, &*manager);
-        assert_stale_removed(exit_code, &tmp.0);
-        assert_excluded_kept(&tmp.0);
+    fn test_cleanup_exclude_no_delete_requires_v2() {
+        // --exclude-no-delete requires --exclusion-v2 (v1 rules have ListOnly
+        // semantics that cannot express delete protection)
+        let argv = vec![
+            "tsumugu".to_string(),
+            "--exclude-no-delete".to_string(),
+            "http://example.com/".to_string(),
+            "/tmp/whatever".to_string(),
+        ];
+        assert!(SyncArgs::try_parse_from(&argv).is_err());
+        let mut argv_ok = argv.clone();
+        argv_ok.push("--exclusion-v2".to_string());
+        assert!(SyncArgs::try_parse_from(&argv_ok).is_ok());
     }
 
     #[test]
@@ -976,12 +998,7 @@ mod tests {
         let tmp = TempDir::new("v2-on");
         let remote_list = build_tree(&tmp.0);
         let args = test_args(&tmp.0, &["^/frozen/", r"/skip\.me$"], true);
-        let argv = vec![
-            "tsumugu".to_string(),
-            "--exclude=^/frozen/".to_string(),
-            r"--exclude=/skip\.me$".to_string(),
-        ];
-        let manager = get_exclusion_manager_v2(&argv);
+        let manager = get_exclusion_manager_v2(&v2_excludes(&["^/frozen/", r"/skip\.me$"]));
         let exit_code = cleanup(&args, &tmp.0, &remote_list, &*manager);
         assert_stale_removed(exit_code, &tmp.0);
         assert_excluded_kept(&tmp.0);
@@ -994,7 +1011,7 @@ mod tests {
         // This regex matches the directory itself only, not its children.
         // The whole subtree shall still be kept, like rsync.
         let args = test_args(&tmp.0, &["^/frozen/$"], true);
-        let manager = get_exclusion_manager(&args);
+        let manager = get_exclusion_manager_v2(&v2_excludes(&["^/frozen/$"]));
         let exit_code = cleanup(&args, &tmp.0, &remote_list, &*manager);
         assert_stale_removed(exit_code, &tmp.0);
         assert!(tmp.0.join("frozen/a.txt").exists());
@@ -1002,5 +1019,19 @@ mod tests {
         assert!(tmp.0.join("frozen/empty_sub").exists());
         // skip.me is not excluded here
         assert!(!tmp.0.join("skip.me").exists());
+    }
+
+    #[test]
+    fn test_cleanup_keeps_dir_with_protected_children() {
+        let tmp = TempDir::new("mixed");
+        let remote_list = build_tree(&tmp.0);
+        // "mixed" itself is not excluded, but mixed/keep.me is, so rmdir on
+        // "mixed" would fail with ENOTEMPTY; it shall be kept instead.
+        let args = test_args(&tmp.0, &[r"/keep\.me$"], true);
+        let manager = get_exclusion_manager_v2(&v2_excludes(&[r"/keep\.me$"]));
+        let exit_code = cleanup(&args, &tmp.0, &remote_list, &*manager);
+        assert_stale_removed(exit_code, &tmp.0);
+        assert!(tmp.0.join("mixed/keep.me").exists());
+        assert!(tmp.0.join("mixed").exists());
     }
 }

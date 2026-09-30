@@ -151,7 +151,9 @@ pub struct SyncArgs {
     /// This allows "freezing" a path by excluding it: no new files are downloaded,
     /// while the existing local copy is kept (like rsync, where --exclude also
     /// protects matching files from --delete).
-    #[clap(long)]
+    /// Requires --exclusion-v2: v1 regex rules have ListOnly semantics that
+    /// cannot be mapped to delete protection.
+    #[clap(long, requires = "exclusion_v2")]
     exclude_no_delete: bool,
 
     /// Set max delete count.
