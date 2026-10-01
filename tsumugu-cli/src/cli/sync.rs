@@ -774,6 +774,7 @@ fn cleanup(
                 // With --exclude-no-delete, children kept by exclusion rules make
                 // the directory non-empty; keep it instead of failing (like rsync).
                 if args.exclude_no_delete && e.kind() == std::io::ErrorKind::DirectoryNotEmpty {
+                    del_cnt -= 1;
                     info!("{:?} still has excluded children, keeping it", path);
                     continue;
                 }
