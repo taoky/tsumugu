@@ -50,6 +50,8 @@ Options:
           Threads at work [default: 2]
       --no-delete
           Do not clean up after sync
+      --exclude-no-delete
+          Do not clean up files and directories that match exclusion rules. This allows "freezing" a path by excluding it: no new files are downloaded, while the existing local copy is kept (like rsync, where --exclude also protects matching files from --delete). Requires --exclusion-v2: v1 regex rules have ListOnly semantics that cannot be mapped to delete protection
       --max-delete <MAX_DELETE>
           Set max delete count [default: 100]
       --timezone-file <TIMEZONE_FILE>
